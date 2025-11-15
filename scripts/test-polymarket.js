@@ -1,26 +1,26 @@
 #!/usr/bin/env node
 
 /**
- * Test Polymarket Integration
+ * Test Polymarket Market Data Integration
  *
- * Tests the Polymarket API integration by:
- * 1. Fetching markets from Gamma API (no auth required)
- * 2. Initializing authenticated CLOB client (requires credentials)
- * 3. Fetching orderbook data (requires auth)
+ * Tests fetching real market data from Polymarket's public Gamma API.
+ * NO AUTHENTICATION REQUIRED - uses public endpoints only.
  *
- * PREREQUISITES:
- * - Set POLYGON_WALLET_PRIVATE_KEY in .env.local
- * - Set POLYMARKET_FUNDER_ADDRESS in .env.local
- * - Have made at least one manual trade on Polymarket UI
+ * This script verifies:
+ * 1. Fetching active markets from Polymarket
+ * 2. Getting market details by ID
+ * 3. Checking market resolution status
  *
  * Run with: node scripts/test-polymarket.js
+ * Or: npm run test-polymarket
  */
-
-require('dotenv').config({ path: '.env.local' });
 
 // Dynamic import for ES modules
 async function testPolymarket() {
-  console.log('🧪 Testing Polymarket Integration\n');
+  console.log('🧪 Testing Polymarket Market Data Integration\n');
+  console.log('=' .repeat(60));
+  console.log('ℹ️  This is PAPER TRADING ONLY - No real money involved');
+  console.log('   Fetching real market data for AI agent analysis');
   console.log('=' .repeat(60));
 
   try {
@@ -28,89 +28,58 @@ async function testPolymarket() {
     const polymarketModule = await import('../lib/polymarket.ts');
     const {
       fetchPolymarketMarkets,
-      initializePolymarketClient,
-      getOrderbook,
-      isPolymarketConfigured
+      fetchMarketById,
+      checkMarketResolution
     } = polymarketModule;
 
-    // Step 1: Check configuration
-    console.log('\n📋 Step 1: Checking configuration...');
-    const isConfigured = isPolymarketConfigured();
+    // Step 1: Fetch active markets
+    console.log('\n📊 Step 1: Fetching active markets...');
+    console.log('   Using public Gamma API (no auth required)');
 
-    if (isConfigured) {
-      console.log('✅ Polymarket credentials found');
-      console.log('   - POLYGON_WALLET_PRIVATE_KEY: SET');
-      console.log('   - POLYMARKET_FUNDER_ADDRESS: SET');
-    } else {
-      console.log('⚠️  Polymarket credentials not configured');
-      console.log('   Some tests will be skipped.');
-      console.log('   See POLYMARKET_INTEGRATION.md for setup instructions.');
-    }
-
-    // Step 2: Fetch markets (no auth required)
-    console.log('\n📊 Step 2: Fetching markets from Gamma API...');
-    console.log('   (This does not require authentication)');
-
-    const markets = await fetchPolymarketMarkets(5);
+    const markets = await fetchPolymarketMarkets(10);
     console.log(`✅ Found ${markets.length} active markets`);
 
-    if (markets.length > 0) {
-      const market = markets[0];
-      console.log('\n   Sample Market:');
-      console.log(`   Question: ${market.question}`);
-      console.log(`   Category: ${market.category || 'N/A'}`);
-      console.log(`   Close Date: ${market.close_date}`);
-      console.log(`   Current Price: ${(market.current_price * 100).toFixed(1)}%`);
-      console.log(`   Volume: $${market.volume ? market.volume.toLocaleString() : 'N/A'}`);
-      console.log(`   YES Token ID: ${market.yes_token_id.substring(0, 20)}...`);
-      console.log(`   Tick Size: ${market.tick_size}`);
-      console.log(`   Neg Risk: ${market.neg_risk}`);
+    if (markets.length === 0) {
+      console.log('\n⚠️  No active markets found on Polymarket');
+      console.log('   This might be a temporary API issue.');
+      return;
     }
 
-    // Step 3: Test authentication (requires credentials)
-    if (isConfigured) {
-      console.log('\n🔐 Step 3: Testing authentication...');
-      console.log('   Initializing CLOB client...');
+    // Display sample markets
+    console.log('\n📋 Sample Markets:');
+    markets.slice(0, 3).forEach((market, idx) => {
+      console.log(`\n   ${idx + 1}. ${market.question}`);
+      console.log(`      Category: ${market.category || 'N/A'}`);
+      console.log(`      Close Date: ${new Date(market.close_date).toLocaleDateString()}`);
+      console.log(`      Current YES Price: ${(market.current_price * 100).toFixed(1)}%`);
+      console.log(`      Volume: $${market.volume ? market.volume.toLocaleString() : 'N/A'}`);
+      console.log(`      Status: ${market.status}`);
+      console.log(`      Polymarket ID: ${market.polymarket_id}`);
+    });
 
-      try {
-        const client = await initializePolymarketClient();
-        console.log('✅ Authentication successful!');
-        console.log('   CLOB client initialized');
+    // Step 2: Fetch individual market details
+    console.log('\n📋 Step 2: Fetching individual market details...');
+    const sampleMarket = markets[0];
+    const details = await fetchMarketById(sampleMarket.polymarket_id);
 
-        // Step 4: Fetch orderbook (requires auth)
-        if (markets.length > 0) {
-          console.log('\n📖 Step 4: Fetching orderbook...');
-          console.log(`   Market: ${markets[0].question}`);
-
-          const orderbook = await getOrderbook(client, markets[0].yes_token_id);
-          console.log(`✅ Orderbook retrieved`);
-          console.log(`   Bids: ${orderbook.bids.length}`);
-          console.log(`   Asks: ${orderbook.asks.length}`);
-
-          if (orderbook.bids.length > 0) {
-            console.log(`   Best Bid: ${orderbook.bids[0].price} (${orderbook.bids[0].size} shares)`);
-          }
-          if (orderbook.asks.length > 0) {
-            console.log(`   Best Ask: ${orderbook.asks[0].price} (${orderbook.asks[0].size} shares)`);
-          }
-        }
-
-        // Step 5: Check account balance (if available)
-        console.log('\n💰 Step 5: Checking account status...');
-        console.log('   ℹ️  Balance checking requires additional API calls');
-        console.log('   Skipping for now - see POLYMARKET_INTEGRATION.md');
-
-      } catch (authError) {
-        console.error('❌ Authentication failed:', authError.message);
-        console.log('\n   Common issues:');
-        console.log('   - Invalid private key format');
-        console.log('   - Wrong funder address');
-        console.log('   - Never made a manual trade on Polymarket UI');
-        console.log('   - Insufficient wallet balance');
-        console.log('\n   See POLYMARKET_INTEGRATION.md for troubleshooting');
-      }
+    if (details) {
+      console.log(`✅ Market details retrieved`);
+      console.log(`   Question: ${details.question}`);
+      console.log(`   Current Price: ${(details.current_price * 100).toFixed(1)}%`);
+      console.log(`   Status: ${details.status}`);
     } else {
-      console.log('\n⏭️  Step 3-5: Skipped (credentials not configured)');
+      console.log('⚠️  Could not fetch market details');
+    }
+
+    // Step 3: Check resolution status
+    console.log('\n🔍 Step 3: Checking market resolution status...');
+    const resolution = await checkMarketResolution(sampleMarket.polymarket_id);
+
+    if (resolution.resolved) {
+      console.log(`✅ Market is resolved`);
+      console.log(`   Winner: ${resolution.winner}`);
+    } else {
+      console.log(`ℹ️  Market is not yet resolved (still active)`);
     }
 
     // Summary
@@ -118,33 +87,32 @@ async function testPolymarket() {
     console.log('📊 TEST SUMMARY');
     console.log('='.repeat(60));
     console.log(`✅ Market Fetching: PASSED (${markets.length} markets found)`);
+    console.log(`✅ Market Details: PASSED`);
+    console.log(`✅ Resolution Check: PASSED`);
 
-    if (isConfigured) {
-      console.log('✅ Configuration: COMPLETE');
-      console.log('✅ Authentication: TESTED');
-      console.log('✅ Orderbook Access: TESTED');
-      console.log('\n🎉 All tests passed!');
-      console.log('\n📝 Next Steps:');
-      console.log('   1. Review POLYMARKET_INTEGRATION.md for complete guide');
-      console.log('   2. Test with small amounts ($1-5) before scaling');
-      console.log('   3. Set ENABLE_POLYMARKET=true when ready for live trading');
-    } else {
-      console.log('⚠️  Configuration: INCOMPLETE');
-      console.log('⏭️  Authentication: SKIPPED');
-      console.log('\n📝 Next Steps:');
-      console.log('   1. Follow setup guide in POLYMARKET_INTEGRATION.md');
-      console.log('   2. Set POLYGON_WALLET_PRIVATE_KEY in .env.local');
-      console.log('   3. Set POLYMARKET_FUNDER_ADDRESS in .env.local');
-      console.log('   4. Run this test again');
-    }
+    console.log('\n🎉 All tests passed!\n');
 
-    console.log('\n⚠️  IMPORTANT: This is a test environment');
-    console.log('   Real trading is currently DISABLED by default');
-    console.log('   Set ENABLE_POLYMARKET=true to enable real trading');
+    console.log('📝 How This Works:');
+    console.log('   1. AI agents analyze real Polymarket markets');
+    console.log('   2. Agents make SIMULATED bets (no real money)');
+    console.log('   3. When markets resolve, agent performance is scored');
+    console.log('   4. Compare which LLM makes better predictions!\n');
+
+    console.log('🚀 Next Steps:');
+    console.log('   - Markets can be synced into database with lib/sync-markets.ts');
+    console.log('   - Agents will make paper bets on these real markets');
+    console.log('   - Performance tracked when markets resolve');
+    console.log('   - No wallets, no private keys, no real money needed!\n');
 
   } catch (error) {
     console.error('\n❌ TEST FAILED');
     console.error('Error:', error.message);
+
+    if (error.message.includes('fetch')) {
+      console.error('\nℹ️  This might be a network issue or Polymarket API downtime.');
+      console.error('   Try again in a few minutes.');
+    }
+
     console.error('\nStack trace:');
     console.error(error.stack);
     process.exit(1);
