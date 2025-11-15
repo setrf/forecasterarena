@@ -398,9 +398,9 @@ export const queries = {
    * @returns Object with totalValue, totalPL, activeBets, activeMarkets
    */
   getStats: () => {
-    const agents = db.prepare('SELECT balance, total_pl FROM agents WHERE status = "active"').all() as Array<{balance: number, total_pl: number}>;
-    const activeBets = db.prepare('SELECT COUNT(*) as count FROM bets WHERE status = "pending"').get() as { count: number };
-    const activeMarkets = db.prepare('SELECT COUNT(*) as count FROM markets WHERE status = "active"').get() as { count: number };
+    const agents = db.prepare('SELECT balance, total_pl FROM agents WHERE status = \'active\'').all() as Array<{balance: number, total_pl: number}>;
+    const activeBets = db.prepare('SELECT COUNT(*) as count FROM bets WHERE status = \'pending\'').get() as { count: number };
+    const activeMarkets = db.prepare('SELECT COUNT(*) as count FROM markets WHERE status = \'active\'').get() as { count: number };
 
     // Calculate total portfolio value and P/L across all agents
     const totalValue = agents.reduce((sum, a) => sum + a.balance, 0);
