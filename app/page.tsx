@@ -66,7 +66,8 @@ export default async function HomePage() {
     getStats()
   ]);
 
-  const plPercentage = ((stats.totalPL / 6000) * 100).toFixed(1);
+  const plPercentage = (stats.totalPL / 6000) * 100;
+  const plPercentageStr = plPercentage.toFixed(1);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -88,8 +89,8 @@ export default async function HomePage() {
         <StatCard
           title="Total Value"
           value={`$${stats.totalValue.toFixed(2)}`}
-          change={`${plPercentage > 0 ? '+' : ''}${plPercentage}%`}
-          positive={Number(plPercentage) > 0}
+          change={`${plPercentage > 0 ? '+' : ''}${plPercentageStr}%`}
+          positive={plPercentage > 0}
         />
         <StatCard
           title="Total P/L"
