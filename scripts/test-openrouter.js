@@ -5,8 +5,14 @@
  * Run with: node scripts/test-openrouter.js
  */
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+if (!OPENROUTER_API_KEY) {
+  console.error('❌ OPENROUTER_API_KEY environment variable is not set');
+  console.error('👉 Add it to your .env.local file');
+  process.exit(1);
+}
 
 async function testOpenRouter() {
   console.log('🧪 Testing OpenRouter API connection...\n');
