@@ -75,7 +75,8 @@ export async function executeBet(
       agent.pending_bets + 1
     );
 
-    console.log(`[${agent.display_name}] ✓ Bet placed: $${decision.amount} ${decision.side} on "${market.question}"`);
+    console.log(`[${agent.display_name}] ✓ Paper bet placed: $${decision.amount} ${decision.side} on "${market.question}"`);
+    console.log(`   Price at entry: ${(market.current_price * 100).toFixed(1)}% | Confidence: ${decision.confidence || 'N/A'}`);
 
     return { id: betId };
   } catch (error) {
