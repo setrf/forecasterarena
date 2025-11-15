@@ -1,38 +1,21 @@
 /**
- * Polymarket Integration Module
+ * Polymarket Market Data Integration
  *
- * Provides functions to interact with Polymarket's CLOB (Central Limit Order Book)
- * for fetching markets and placing bets programmatically.
+ * Fetches real prediction market data from Polymarket's public Gamma API.
+ * This allows our AI agents to make paper trading decisions on real markets.
  *
- * Official SDK: @polymarket/clob-client
+ * NO AUTHENTICATION REQUIRED - Uses public API only
+ * NO REAL TRADING - Purely for market data fetching
+ *
+ * Official API: https://gamma-api.polymarket.com
  * Documentation: https://docs.polymarket.com
- *
- * IMPORTANT PREREQUISITES:
- * 1. Create a Polygon wallet and fund it with USDC
- * 2. Make at least ONE manual trade on Polymarket UI first
- * 3. Export your private key (NEVER commit this!)
- * 4. Set POLYGON_WALLET_PRIVATE_KEY in .env.local
- * 5. Set POLYMARKET_FUNDER_ADDRESS (your profile address) in .env.local
- *
- * Installation:
- *   npm install @polymarket/clob-client ethers@5
  */
 
-import { ClobClient, Side, OrderType, OrderArgs, OrderBookSummary } from '@polymarket/clob-client';
-import { Wallet } from '@ethersproject/wallet';
-
-// Polymarket configuration
-const CLOB_HOST = 'https://clob.polymarket.com';
+// Polymarket API endpoints
 const GAMMA_API_HOST = 'https://gamma-api.polymarket.com';
-const POLYGON_CHAIN_ID = 137; // Polygon Mainnet
-const SIGNATURE_TYPE = 0; // 0 = Browser wallet (MetaMask, etc), 1 = Magic/email login
-
-// Environment variables
-const POLYGON_PRIVATE_KEY = process.env.POLYGON_WALLET_PRIVATE_KEY;
-const FUNDER_ADDRESS = process.env.POLYMARKET_FUNDER_ADDRESS;
 
 /**
- * Market data from Gamma API
+ * Market data from Polymarket Gamma API
  */
 export type PolymarketMarket = {
   id: string;
@@ -45,11 +28,14 @@ export type PolymarketMarket = {
     price: string;
     winner?: boolean;
   }>;
-  tick_size: string;
-  neg_risk: boolean;
+  closed: boolean;
+  archived: boolean;
+  active: boolean;
+  category?: string;
   liquidity?: string;
   volume?: string;
-  category?: string;
+  resolving?: boolean;
+  resolved?: boolean;
 };
 
 /**
@@ -61,80 +47,32 @@ export type SimplifiedMarket = {
   description: string | null;
   category: string | null;
   close_date: string;
-  current_price: number; // YES token price
+  current_price: number; // YES token price (0-1)
   volume: number | null;
-  yes_token_id: string;
-  no_token_id: string;
-  tick_size: string;
-  neg_risk: boolean;
+  status: 'active' | 'closed' | 'resolved';
 };
 
 /**
- * Order result from Polymarket
- */
-export type PolymarketOrderResult = {
-  success: boolean;
-  orderID?: string;
-  error?: string;
-  transactionHash?: string;
-};
-
-/**
- * Initialize Polymarket CLOB client
+ * Fetch active markets from Polymarket Gamma API
  *
- * Creates authenticated client for placing orders.
- * Generates API credentials deterministically from wallet signature.
- *
- * @returns ClobClient instance
- * @throws Error if credentials are missing
- */
-export async function initializePolymarketClient(): Promise<ClobClient> {
-  if (!POLYGON_PRIVATE_KEY) {
-    throw new Error('POLYGON_WALLET_PRIVATE_KEY environment variable is required');
-  }
-
-  if (!FUNDER_ADDRESS) {
-    throw new Error('POLYMARKET_FUNDER_ADDRESS environment variable is required');
-  }
-
-  // Create wallet signer
-  const signer = new Wallet(POLYGON_PRIVATE_KEY);
-
-  // Create or derive API credentials (deterministic based on signature)
-  const tempClient = new ClobClient(CLOB_HOST, POLYGON_CHAIN_ID, signer);
-  const credentials = await tempClient.createOrDeriveApiKey();
-
-  // Initialize authenticated client
-  const client = new ClobClient(
-    CLOB_HOST,
-    POLYGON_CHAIN_ID,
-    signer,
-    credentials,
-    SIGNATURE_TYPE,
-    FUNDER_ADDRESS
-  );
-
-  console.log('✅ Polymarket client initialized');
-  return client;
-}
-
-/**
- * Fetch all active markets from Polymarket Gamma API
- *
- * Uses pagination to fetch all available markets.
- * Filters for active markets that haven't closed yet.
+ * Uses public API (no authentication required) to get real prediction markets.
+ * Agents will make paper trading decisions on these markets.
  *
  * @param limit - Maximum number of markets to fetch (default: 100)
+ * @param offset - Pagination offset (default: 0)
  * @returns Array of active markets
  */
-export async function fetchPolymarketMarkets(limit: number = 100): Promise<SimplifiedMarket[]> {
+export async function fetchPolymarketMarkets(
+  limit: number = 100,
+  offset: number = 0
+): Promise<SimplifiedMarket[]> {
   const url = `${GAMMA_API_HOST}/markets`;
   const params = new URLSearchParams({
     active: 'true',
     closed: 'false',
     archived: 'false',
     limit: limit.toString(),
-    offset: '0'
+    offset: offset.toString()
   });
 
   try {
@@ -147,19 +85,21 @@ export async function fetchPolymarketMarkets(limit: number = 100): Promise<Simpl
     const markets: PolymarketMarket[] = await response.json();
 
     // Convert to simplified format for our database
-    return markets.map(market => ({
-      polymarket_id: market.id,
-      question: market.question,
-      description: market.description || null,
-      category: market.category || null,
-      close_date: market.end_date_iso,
-      current_price: parseFloat(market.tokens.find(t => t.outcome === 'Yes')?.price || '0.5'),
-      volume: market.volume ? parseFloat(market.volume) : null,
-      yes_token_id: market.tokens.find(t => t.outcome === 'Yes')?.token_id || '',
-      no_token_id: market.tokens.find(t => t.outcome === 'No')?.token_id || '',
-      tick_size: market.tick_size,
-      neg_risk: market.neg_risk
-    }));
+    return markets.map(market => {
+      const yesToken = market.tokens.find(t => t.outcome === 'Yes');
+      const currentPrice = yesToken ? parseFloat(yesToken.price) : 0.5;
+
+      return {
+        polymarket_id: market.id,
+        question: market.question,
+        description: market.description || null,
+        category: market.category || null,
+        close_date: market.end_date_iso,
+        current_price: currentPrice,
+        volume: market.volume ? parseFloat(market.volume) : null,
+        status: 'active' as const
+      };
+    });
 
   } catch (error) {
     console.error('Error fetching Polymarket markets:', error);
@@ -168,142 +108,101 @@ export async function fetchPolymarketMarkets(limit: number = 100): Promise<Simpl
 }
 
 /**
- * Place a bet on Polymarket
+ * Fetch a single market by ID to check its current status
  *
- * Creates and posts an order to the Polymarket CLOB.
+ * Useful for updating market prices and checking resolution status.
  *
- * IMPORTANT NOTES:
- * - Price must be between 0.001 and 0.999
- * - Price must be a multiple of tickSize
- * - Size is in USDC (e.g., 10 = $10)
- * - Must have USDC balance and allowances set
- * - Orders are limit orders (GTC = Good Till Canceled)
- *
- * @param client - Initialized ClobClient
- * @param tokenId - Token ID to buy (YES or NO token)
- * @param side - 'BUY' or 'SELL'
- * @param price - Limit price (0.001 to 0.999)
- * @param size - Order size in USDC
- * @param tickSize - Market tick size (e.g., '0.001')
- * @param negRisk - Market neg_risk parameter
- * @returns Order result with orderID if successful
+ * @param marketId - Polymarket market ID
+ * @returns Market data or null if not found
  */
-export async function placePolymarketBet(
-  client: ClobClient,
-  tokenId: string,
-  side: 'BUY' | 'SELL',
-  price: number,
-  size: number,
-  tickSize: string,
-  negRisk: boolean
-): Promise<PolymarketOrderResult> {
+export async function fetchMarketById(marketId: string): Promise<SimplifiedMarket | null> {
+  const url = `${GAMMA_API_HOST}/markets/${marketId}`;
+
   try {
-    // Validate price
-    if (price < 0.001 || price > 0.999) {
-      throw new Error('Price must be between 0.001 and 0.999');
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Gamma API error: ${response.status} ${response.statusText}`);
     }
 
-    // Validate price is multiple of tick size
-    const tick = parseFloat(tickSize);
-    if (Math.abs((price % tick) - 0) > 0.0000001 && Math.abs((price % tick) - tick) > 0.0000001) {
-      throw new Error(`Price must be a multiple of tick size ${tickSize}`);
+    const market: PolymarketMarket = await response.json();
+    const yesToken = market.tokens.find(t => t.outcome === 'Yes');
+    const noToken = market.tokens.find(t => t.outcome === 'No');
+    const currentPrice = yesToken ? parseFloat(yesToken.price) : 0.5;
+
+    // Determine status
+    let status: 'active' | 'closed' | 'resolved' = 'active';
+    if (market.resolved || yesToken?.winner !== undefined) {
+      status = 'resolved';
+    } else if (market.closed || !market.active) {
+      status = 'closed';
     }
-
-    // Create order
-    const orderArgs: OrderArgs = {
-      tokenID: tokenId,
-      price: price,
-      side: side === 'BUY' ? Side.BUY : Side.SELL,
-      size: size
-    };
-
-    const response = await client.createAndPostOrder(
-      orderArgs,
-      {
-        tickSize: tickSize,
-        negRisk: negRisk
-      },
-      OrderType.GTC // Good Till Canceled
-    );
-
-    console.log('✅ Order placed successfully:', response);
 
     return {
-      success: true,
-      orderID: response.orderID,
-      transactionHash: response.transactionHash
+      polymarket_id: market.id,
+      question: market.question,
+      description: market.description || null,
+      category: market.category || null,
+      close_date: market.end_date_iso,
+      current_price: currentPrice,
+      volume: market.volume ? parseFloat(market.volume) : null,
+      status
     };
 
   } catch (error) {
-    console.error('❌ Error placing Polymarket bet:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
+    console.error(`Error fetching market ${marketId}:`, error);
+    return null;
   }
 }
 
 /**
- * Get current orderbook for a token
+ * Check if a market has been resolved and get the winning outcome
  *
- * @param client - Initialized ClobClient
- * @param tokenId - Token ID to get orderbook for
- * @returns Orderbook summary with bids and asks
+ * @param marketId - Polymarket market ID
+ * @returns { resolved: boolean, winner?: 'YES' | 'NO' }
  */
-export async function getOrderbook(
-  client: ClobClient,
-  tokenId: string
-): Promise<OrderBookSummary> {
-  return await client.getOrderBook(tokenId);
-}
+export async function checkMarketResolution(marketId: string): Promise<{
+  resolved: boolean;
+  winner?: 'YES' | 'NO';
+}> {
+  const url = `${GAMMA_API_HOST}/markets/${marketId}`;
 
-/**
- * Cancel an open order
- *
- * @param client - Initialized ClobClient
- * @param orderID - ID of order to cancel
- * @returns Success boolean
- */
-export async function cancelOrder(
-  client: ClobClient,
-  orderID: string
-): Promise<boolean> {
   try {
-    await client.cancelOrder(orderID);
-    console.log('✅ Order canceled:', orderID);
-    return true;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return { resolved: false };
+    }
+
+    const market: PolymarketMarket = await response.json();
+
+    const yesToken = market.tokens.find(t => t.outcome === 'Yes');
+    const noToken = market.tokens.find(t => t.outcome === 'No');
+
+    // Check if market is resolved
+    if (market.resolved || yesToken?.winner !== undefined || noToken?.winner !== undefined) {
+      const winner = yesToken?.winner ? 'YES' : noToken?.winner ? 'NO' : undefined;
+      return {
+        resolved: true,
+        winner
+      };
+    }
+
+    return { resolved: false };
+
   } catch (error) {
-    console.error('❌ Error canceling order:', error);
-    return false;
+    console.error(`Error checking resolution for market ${marketId}:`, error);
+    return { resolved: false };
   }
-}
-
-/**
- * Get all open orders
- *
- * @param client - Initialized ClobClient
- * @returns Array of open orders
- */
-export async function getOpenOrders(client: ClobClient): Promise<any[]> {
-  return await client.getOpenOrders();
-}
-
-/**
- * Check if Polymarket is configured
- *
- * @returns true if all required environment variables are set
- */
-export function isPolymarketConfigured(): boolean {
-  return !!(POLYGON_PRIVATE_KEY && FUNDER_ADDRESS);
 }
 
 /**
  * Example usage function (for testing)
  *
- * Demonstrates the complete flow:
- * 1. Initialize client
- * 2. Fetch markets
- * 3. Place a bet
+ * Demonstrates fetching markets from Polymarket.
  *
  * @example
  * ```typescript
@@ -311,50 +210,32 @@ export function isPolymarketConfigured(): boolean {
  * ```
  */
 export async function testPolymarketIntegration() {
-  if (!isPolymarketConfigured()) {
-    console.error('❌ Polymarket not configured. Set POLYGON_WALLET_PRIVATE_KEY and POLYMARKET_FUNDER_ADDRESS');
-    return;
-  }
-
   try {
-    // 1. Fetch markets
-    console.log('📊 Fetching markets...');
+    console.log('📊 Fetching markets from Polymarket...');
     const markets = await fetchPolymarketMarkets(10);
-    console.log(`Found ${markets.length} markets`);
-    console.log('Sample market:', markets[0]?.question);
+    console.log(`✅ Found ${markets.length} active markets`);
 
-    // 2. Initialize client
-    console.log('\n🔐 Initializing client...');
-    const client = await initializePolymarketClient();
+    if (markets.length > 0) {
+      const market = markets[0];
+      console.log('\nSample Market:');
+      console.log(`  Question: ${market.question}`);
+      console.log(`  Category: ${market.category || 'N/A'}`);
+      console.log(`  Close Date: ${new Date(market.close_date).toLocaleDateString()}`);
+      console.log(`  Current YES Price: ${(market.current_price * 100).toFixed(1)}%`);
+      console.log(`  Volume: $${market.volume ? market.volume.toLocaleString() : 'N/A'}`);
+      console.log(`  Status: ${market.status}`);
 
-    // 3. Get orderbook for first market
-    if (markets[0]) {
-      console.log('\n📖 Fetching orderbook...');
-      const orderbook = await getOrderbook(client, markets[0].yes_token_id);
-      console.log('Orderbook:', {
-        bids: orderbook.bids.length,
-        asks: orderbook.asks.length,
-        bestBid: orderbook.bids[0],
-        bestAsk: orderbook.asks[0]
-      });
+      // Test fetching single market
+      console.log('\n📋 Fetching market details...');
+      const details = await fetchMarketById(market.polymarket_id);
+      if (details) {
+        console.log(`✅ Market details retrieved`);
+        console.log(`  Current Price: ${(details.current_price * 100).toFixed(1)}%`);
+      }
     }
 
-    // 4. Example: Place a small test bet (commented out for safety)
-    /*
-    console.log('\n💰 Placing test bet...');
-    const result = await placePolymarketBet(
-      client,
-      markets[0].yes_token_id,
-      'BUY',
-      0.50, // 50% probability
-      1.0,  // $1 bet
-      markets[0].tick_size,
-      markets[0].neg_risk
-    );
-    console.log('Bet result:', result);
-    */
-
-    console.log('\n✅ Test completed successfully!');
+    console.log('\n✅ Polymarket integration test completed successfully!');
+    console.log('   Market data can be used for paper trading.');
 
   } catch (error) {
     console.error('❌ Test failed:', error);
