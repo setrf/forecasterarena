@@ -1,0 +1,47 @@
+{
+  "name": "forecaster-arena",
+  "version": "0.1.0",
+  "description": "AI models competing in prediction markets - inspired by nof1.ai",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "node scripts/test-all.js",
+    "verify-db": "node scripts/verify-sqlite.js",
+    "test-openrouter": "node scripts/test-openrouter.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "better-sqlite3": "^9.2.2",
+    "next": "14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "recharts": "^2.12.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.0",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  },
+  "keywords": [
+    "ai",
+    "prediction-markets",
+    "llm",
+    "polymarket",
+    "openrouter",
+    "nextjs",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT"
+}
