@@ -130,7 +130,6 @@ export async function fetchMarketById(marketId: string): Promise<SimplifiedMarke
 
     const market: PolymarketMarket = await response.json();
     const yesToken = market.tokens.find(t => t.outcome === 'Yes');
-    const noToken = market.tokens.find(t => t.outcome === 'No');
     const currentPrice = yesToken ? parseFloat(yesToken.price) : 0.5;
 
     // Determine status
@@ -178,7 +177,6 @@ export async function checkMarketResolution(marketId: string): Promise<{
     }
 
     const market: PolymarketMarket = await response.json();
-
     const yesToken = market.tokens.find(t => t.outcome === 'Yes');
     const noToken = market.tokens.find(t => t.outcome === 'No');
 
@@ -196,48 +194,5 @@ export async function checkMarketResolution(marketId: string): Promise<{
   } catch (error) {
     console.error(`Error checking resolution for market ${marketId}:`, error);
     return { resolved: false };
-  }
-}
-
-/**
- * Example usage function (for testing)
- *
- * Demonstrates fetching markets from Polymarket.
- *
- * @example
- * ```typescript
- * await testPolymarketIntegration();
- * ```
- */
-export async function testPolymarketIntegration() {
-  try {
-    console.log('📊 Fetching markets from Polymarket...');
-    const markets = await fetchPolymarketMarkets(10);
-    console.log(`✅ Found ${markets.length} active markets`);
-
-    if (markets.length > 0) {
-      const market = markets[0];
-      console.log('\nSample Market:');
-      console.log(`  Question: ${market.question}`);
-      console.log(`  Category: ${market.category || 'N/A'}`);
-      console.log(`  Close Date: ${new Date(market.close_date).toLocaleDateString()}`);
-      console.log(`  Current YES Price: ${(market.current_price * 100).toFixed(1)}%`);
-      console.log(`  Volume: $${market.volume ? market.volume.toLocaleString() : 'N/A'}`);
-      console.log(`  Status: ${market.status}`);
-
-      // Test fetching single market
-      console.log('\n📋 Fetching market details...');
-      const details = await fetchMarketById(market.polymarket_id);
-      if (details) {
-        console.log(`✅ Market details retrieved`);
-        console.log(`  Current Price: ${(details.current_price * 100).toFixed(1)}%`);
-      }
-    }
-
-    console.log('\n✅ Polymarket integration test completed successfully!');
-    console.log('   Market data can be used for paper trading.');
-
-  } catch (error) {
-    console.error('❌ Test failed:', error);
   }
 }
