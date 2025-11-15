@@ -1,4 +1,4 @@
-import { Agent } from '@/lib/supabase';
+import { Agent } from '@/lib/types';
 
 export default function LeaderboardTable({
   agents,

@@ -1,11 +1,6 @@
-import { Bet } from '@/lib/supabase';
+type BetData = any; // SQLite returns plain objects
 
-type BetWithRelations = Bet & {
-  agents: { display_name: string };
-  markets: { question: string };
-};
-
-export default function RecentActivity({ bets }: { bets: BetWithRelations[] }) {
+export default function RecentActivity({ bets }: { bets: BetData[] }) {
   return (
     <div className="border border-gray-200 rounded divide-y divide-gray-100">
       {bets.length === 0 ? (
@@ -22,7 +17,7 @@ export default function RecentActivity({ bets }: { bets: BetWithRelations[] }) {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs text-gray-500">{timeAgo}</span>
-                    <span className="font-bold">{bet.agents.display_name}</span>
+                    <span className="font-bold">{bet.agent_name}</span>
                     <span className={`px-2 py-0.5 rounded text-xs ${
                       bet.side === 'YES' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
@@ -30,7 +25,7 @@ export default function RecentActivity({ bets }: { bets: BetWithRelations[] }) {
                     </span>
                   </div>
                   <div className="text-sm text-gray-600">
-                    {bet.markets.question}
+                    {bet.market_question}
                   </div>
                   {bet.reasoning && (
                     <div className="text-xs text-gray-400 mt-1 italic">

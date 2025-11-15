@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase';
+import { queries } from '@/lib/database';
+import { Agent } from '@/lib/types';
 import LeaderboardTable from '@/components/LeaderboardTable';
 import EquityCurve from '@/components/EquityCurve';
 import StatCard from '@/components/StatCard';
@@ -8,63 +9,23 @@ import AutoRefresh from '@/components/AutoRefresh';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-async function getLeaderboardData() {
-  const { data: agents } = await supabase
-    .from('agents')
-    .select('*')
-    .eq('status', 'active')
-    .order('total_pl', { ascending: false });
-
-  return agents || [];
+function getLeaderboardData(): Agent[] {
+  const agents = queries.getActiveAgents() as Agent[];
+  return agents.sort((a, b) => b.total_pl - a.total_pl);
 }
 
-async function getRecentBets() {
-  const { data: bets } = await supabase
-    .from('bets')
-    .select(`
-      *,
-      agents!inner(display_name),
-      markets!inner(question)
-    `)
-    .order('placed_at', { ascending: false })
-    .limit(10);
-
-  return bets || [];
+function getRecentBets() {
+  return queries.getRecentBets(10);
 }
 
-async function getStats() {
-  const { data: agents } = await supabase
-    .from('agents')
-    .select('balance, total_pl')
-    .eq('status', 'active');
-
-  const { count: activeBets } = await supabase
-    .from('bets')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending');
-
-  const { count: activeMarkets } = await supabase
-    .from('markets')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'active');
-
-  const totalValue = agents?.reduce((sum, a) => sum + Number(a.balance), 0) || 0;
-  const totalPL = agents?.reduce((sum, a) => sum + Number(a.total_pl), 0) || 0;
-
-  return {
-    totalValue,
-    totalPL,
-    activeBets: activeBets || 0,
-    activeMarkets: activeMarkets || 0
-  };
+function getStats() {
+  return queries.getStats();
 }
 
-export default async function HomePage() {
-  const [agents, recentBets, stats] = await Promise.all([
-    getLeaderboardData(),
-    getRecentBets(),
-    getStats()
-  ]);
+export default function HomePage() {
+  const agents = getLeaderboardData();
+  const recentBets = getRecentBets();
+  const stats = getStats();
 
   const plPercentage = (stats.totalPL / 6000) * 100;
   const plPercentageStr = plPercentage.toFixed(1);
