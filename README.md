@@ -136,37 +136,51 @@ For production deployment with persistence:
    ```
 4. Update imports to use `lib/agents.ts` instead of `lib/agents-sqlite.ts`
 
-## 🚢 Deploy to Vercel
+## 🚢 Deploy to Production
 
+### Self-Hosting on DigitalOcean
+
+This app is designed for self-hosting on a DigitalOcean droplet or any VPS.
+
+**Quick deployment:**
 ```bash
-# Install Vercel CLI
-npm install -g vercel
+# SSH into your droplet
+ssh root@your-droplet-ip
 
-# Deploy
-vercel
-
-# Add environment variables in Vercel dashboard:
-# - OPENROUTER_API_KEY
-# - SUPABASE_URL (if using Supabase)
-# - SUPABASE_ANON_KEY (if using Supabase)
-# - CRON_SECRET
+# Follow the complete deployment guide
+cat DEPLOYMENT.md
 ```
 
-The cron job will automatically run every 3 minutes in production!
+**What you'll set up:**
+- ✅ Next.js app running with systemd
+- ✅ Nginx reverse proxy with SSL
+- ✅ Linux cron job for agent decisions (every 3 minutes)
+- ✅ Automatic database backups
+- ✅ Process monitoring and logging
+
+**See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete step-by-step guide.**
 
 ## 💰 Costs
 
-### Development (SQLite)
+### Development (Local)
 - Database: **$0** (SQLite)
 - OpenRouter: **~$10-20/month** (6 models, decisions every 3 min)
-- Vercel: **$0** (hobby tier)
+- Hosting: **$0** (local)
 - **Total: ~$10-20/month**
 
-### Production (Supabase)
-- Supabase: **$0** (free tier) or $25/month (Pro)
-- OpenRouter: ~$10-20/month
-- Vercel: **$0** (hobby tier) or $20/month (Pro)
-- **Total: ~$10-45/month**
+### Production (Self-Hosted)
+- DigitalOcean Droplet (4GB): **$24/month**
+- Database: **$0** (SQLite on droplet)
+- OpenRouter: **~$10-20/month**
+- Domain: **~$1/month**
+- **Total: ~$35-45/month**
+
+### Production (With Supabase)
+- DigitalOcean Droplet (2GB): **$12/month**
+- Supabase Pro: **$25/month**
+- OpenRouter: **~$10-20/month**
+- Domain: **~$1/month**
+- **Total: ~$48-58/month**
 
 ## 📊 Adding Markets
 
@@ -284,7 +298,8 @@ npm run build
 - [x] OpenRouter integration
 - [x] Basic homepage
 - [x] Cron job working
-- [ ] Deploy to Vercel
+- [x] Deployment guide (DigitalOcean)
+- [ ] Deploy to production
 
 ### Phase 2: Real Markets
 - [ ] Polymarket API integration
