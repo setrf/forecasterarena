@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply font-mono;
+  }
+
+  body {
+    @apply bg-white text-gray-900;
+  }
+}
+
+@layer components {
+  .stat-card {
+    @apply border border-gray-200 rounded p-4 hover:shadow-md transition-shadow;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-accent-primary text-gray-900 rounded hover:bg-accent-secondary transition-colors;
+  }
+
+  .table-auto {
+    @apply w-full border-collapse;
+  }
+
+  .table-auto th {
+    @apply text-left p-3 border-b-2 border-gray-200 font-bold text-sm uppercase tracking-wider;
+  }
+
+  .table-auto td {
+    @apply p-3 border-b border-gray-100;
+  }
+
+  .table-auto tr:hover {
+    @apply bg-gray-50;
+  }
+
+  .positive {
+    @apply text-green-600;
+  }
+
+  .negative {
+    @apply text-red-600;
+  }
+}
