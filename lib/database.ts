@@ -147,6 +147,40 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_snapshots_agent_time ON equity_snapshots(agent_id, timestamp DESC); -- For charts
   `);
 
+  // Add Polymarket-specific fields to markets table (if they don't exist)
+  // These fields are needed for real Polymarket trading integration
+  const addPolymarketColumns = `
+    -- Add columns one by one with IF NOT EXISTS check using PRAGMA
+    -- SQLite doesn't support IF NOT EXISTS in ALTER TABLE, so we check first
+  `;
+
+  try {
+    // Get existing columns
+    const columns = db.prepare("PRAGMA table_info(markets)").all() as Array<{ name: string }>;
+    const columnNames = columns.map(col => col.name);
+
+    // Add missing Polymarket columns
+    if (!columnNames.includes('yes_token_id')) {
+      db.prepare('ALTER TABLE markets ADD COLUMN yes_token_id TEXT').run();
+      console.log('  ✓ Added yes_token_id column to markets table');
+    }
+    if (!columnNames.includes('no_token_id')) {
+      db.prepare('ALTER TABLE markets ADD COLUMN no_token_id TEXT').run();
+      console.log('  ✓ Added no_token_id column to markets table');
+    }
+    if (!columnNames.includes('tick_size')) {
+      db.prepare('ALTER TABLE markets ADD COLUMN tick_size TEXT DEFAULT \'0.001\'').run();
+      console.log('  ✓ Added tick_size column to markets table');
+    }
+    if (!columnNames.includes('neg_risk')) {
+      db.prepare('ALTER TABLE markets ADD COLUMN neg_risk INTEGER DEFAULT 0').run();
+      console.log('  ✓ Added neg_risk column to markets table');
+    }
+  } catch (error) {
+    // Columns might already exist, that's okay
+    console.log('  ℹ️  Polymarket columns already exist or error adding them');
+  }
+
   // Check if we need to seed initial data
   const seasonCount = db.prepare('SELECT COUNT(*) as count FROM seasons').get() as { count: number };
 

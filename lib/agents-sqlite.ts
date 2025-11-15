@@ -1,5 +1,10 @@
 import db, { queries } from './database';
 import { callLLM, buildSystemPrompt, buildUserPrompt, LLMDecision } from './openrouter';
+import {
+  initializePolymarketClient,
+  placePolymarketBet,
+  isPolymarketConfigured
+} from './polymarket';
 
 /**
  * Get agent's decision for current markets
@@ -76,6 +81,50 @@ export async function executeBet(
     );
 
     console.log(`[${agent.display_name}] ✓ Bet placed: $${decision.amount} ${decision.side} on "${market.question}"`);
+
+    // Place REAL bet on Polymarket (if enabled and configured)
+    if (process.env.ENABLE_POLYMARKET === 'true' && isPolymarketConfigured()) {
+      try {
+        console.log(`[${agent.display_name}] 📊 Placing real bet on Polymarket...`);
+
+        const client = await initializePolymarketClient();
+
+        // Determine which token to buy based on decision
+        const tokenId = decision.side === 'YES' ? market.yes_token_id : market.no_token_id;
+
+        // Place the order on Polymarket
+        const result = await placePolymarketBet(
+          client,
+          tokenId,
+          'BUY',
+          market.current_price || 0.5,
+          decision.amount,
+          market.tick_size || '0.001',
+          market.neg_risk || false
+        );
+
+        if (result.success) {
+          console.log(`[${agent.display_name}] ✅ Real bet placed on Polymarket!`);
+          console.log(`   Order ID: ${result.orderID}`);
+
+          // Store Polymarket order ID in bet record
+          db.prepare('UPDATE bets SET polymarket_order_id = ? WHERE id = ?')
+            .run(result.orderID, betId);
+        } else {
+          console.error(`[${agent.display_name}] ❌ Polymarket bet failed: ${result.error}`);
+          console.log('   Continuing with simulation only');
+        }
+      } catch (polymarketError) {
+        console.error(`[${agent.display_name}] ❌ Polymarket error:`, polymarketError);
+        console.log('   Continuing with simulation only');
+      }
+    } else {
+      // Simulation mode
+      console.log(`[${agent.display_name}] 🎮 SIMULATION MODE - No real bet placed`);
+      if (process.env.ENABLE_POLYMARKET !== 'true') {
+        console.log('   Set ENABLE_POLYMARKET=true to enable real trading');
+      }
+    }
 
     return { id: betId };
   } catch (error) {
