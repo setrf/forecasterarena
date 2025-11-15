@@ -288,6 +288,24 @@ export const queries = {
   },
 
   /**
+   * Get all markets regardless of status
+   * @returns Array of all market records
+   */
+  getAllMarkets: () => {
+    return db.prepare(`
+      SELECT * FROM markets
+      ORDER BY
+        CASE status
+          WHEN 'active' THEN 1
+          WHEN 'closed' THEN 2
+          WHEN 'resolved' THEN 3
+          ELSE 4
+        END,
+        close_date DESC
+    `).all();
+  },
+
+  /**
    * Get a specific market by ID
    * @param id - Market ID
    * @returns Market record or undefined
@@ -359,6 +377,19 @@ export const queries = {
       WHERE agent_id = ?
       ORDER BY placed_at DESC
     `).all(agentId);
+  },
+
+  /**
+   * Get all bets for a specific market
+   * @param marketId - Market ID
+   * @returns Array of bet records
+   */
+  getBetsByMarket: (marketId: string) => {
+    return db.prepare(`
+      SELECT * FROM bets
+      WHERE market_id = ?
+      ORDER BY placed_at DESC
+    `).all(marketId);
   },
 
   // ===== EQUITY SNAPSHOT QUERIES =====

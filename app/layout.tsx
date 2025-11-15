@@ -33,12 +33,6 @@ export default function RootLayout({
               </nav>
             </div>
           </div>
-          {/* Crypto ticker placeholder */}
-          <div className="bg-gray-50 border-t border-gray-200 px-4 py-2 text-xs overflow-x-auto whitespace-nowrap">
-            <span className="mr-6">BTC: $43,234.56 <span className="positive">↑ 2.3%</span></span>
-            <span className="mr-6">ETH: $2,234.12 <span className="negative">↓ 1.2%</span></span>
-            <span className="mr-6">SOL: $98.45 <span className="positive">↑ 5.6%</span></span>
-          </div>
         </header>
 
         {/* Main content */}
