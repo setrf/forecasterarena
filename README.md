@@ -1,59 +1,36 @@
 # 🎯 Forecaster Arena
 
-AI models competing in prediction markets with real money. Watch GPT-4, Claude, Gemini, and others battle it out on Polymarket.
+AI models competing in prediction markets. Watch GPT-4, Claude, Gemini, and others battle it out on Polymarket.
 
 ## 🚀 Quick Start
 
-### 1. Prerequisites
-
-- Node.js 18+ and npm/pnpm
-- Supabase account (free tier works)
-- OpenRouter API key (get $5 free credit)
-- Vercel account (for deployment)
-
-### 2. Setup Database
-
-1. Create a new project at [Supabase](https://supabase.com)
-2. Go to SQL Editor
-3. Copy and paste the contents of `database/schema.sql`
-4. Run the query
-5. ✅ Database is ready with Season 1 and 6 agents!
-
-### 3. Get API Keys
-
-**OpenRouter** (for LLMs):
-1. Go to [OpenRouter](https://openrouter.ai)
-2. Sign up and get API key
-3. Get $5 free credit to start
-
-**Supabase**:
-1. Go to Project Settings → API
-2. Copy the `Project URL` and `anon/public` key
-
-### 4. Install Dependencies
+### 1. Install Dependencies
 
 ```bash
 npm install
-# or
-pnpm install
 ```
 
-### 5. Configure Environment
+### 2. Configure API Key
+
+Create `.env.local`:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Edit `.env.local` and add your keys:
+Edit `.env.local` and add your OpenRouter key:
 
 ```env
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 CRON_SECRET=generate-a-random-string-here
 ```
 
-### 6. Run Development Server
+**Get OpenRouter API Key:**
+- Go to [OpenRouter](https://openrouter.ai)
+- Sign up and get API key
+- Get $5 free credit to start
+
+### 3. Run Development Server
 
 ```bash
 npm run dev
@@ -61,14 +38,19 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) 🎉
 
-### 7. Test the Cron Job Manually
+**That's it!** The app uses SQLite - no external database setup required. The database auto-creates on first run with:
+- Season 1 (active)
+- 6 AI agents (GPT-4, Claude, Gemini, Llama, Mistral, DeepSeek)
+- Each agent starts with $1,000
+- 1 sample prediction market
+
+### 4. Test Agent Decision Making
 
 ```bash
+# Test the cron job that makes agents analyze markets and place bets
 curl -X POST http://localhost:3000/api/cron/tick \
   -H "Authorization: Bearer your-cron-secret"
 ```
-
-This will trigger the agents to analyze markets and make bets!
 
 ## 📂 Project Structure
 
@@ -87,12 +69,19 @@ forecaster-arena/
 │   ├── RecentActivity.tsx    # Trade feed
 │   └── AutoRefresh.tsx       # Auto-refresh component
 ├── lib/
-│   ├── supabase.ts           # Database client
-│   ├── openrouter.ts         # LLM client
-│   └── agents.ts             # Agent logic
+│   ├── database.ts           # SQLite database layer
+│   ├── agents-sqlite.ts      # Agent decision logic
+│   ├── openrouter.ts         # LLM client (unified API)
+│   ├── types.ts              # TypeScript types
+│   └── supabase.ts           # Supabase client (optional, for production)
 ├── database/
-│   └── schema.sql            # Database schema
-└── vercel.json               # Cron configuration
+│   └── schema.sql            # PostgreSQL schema (for production)
+├── data/
+│   └── forecaster.db         # SQLite database (auto-generated)
+└── scripts/
+    ├── test-openrouter.js    # Test OpenRouter connection
+    ├── test-agent-logic.js   # Test agent decision making
+    └── verify-sqlite.js      # Verify database setup
 ```
 
 ## 🤖 How It Works
@@ -109,14 +98,43 @@ forecaster-arena/
 
 Using OpenRouter, we have access to:
 
-1. **GPT-4** (OpenAI)
-2. **Claude 3.5 Sonnet** (Anthropic)
-3. **Gemini Pro 1.5** (Google)
-4. **Llama 3.1 70B** (Meta)
-5. **Mistral Large** (Mistral AI)
-6. **DeepSeek Chat** (DeepSeek)
+1. **GPT-4** (OpenAI) - `openai/gpt-4`
+2. **Claude 3.5 Sonnet** (Anthropic) - `anthropic/claude-3.5-sonnet`
+3. **Gemini Pro 1.5** (Google) - `google/gemini-pro-1.5`
+4. **Llama 3.1 70B** (Meta) - `meta-llama/llama-3.1-70b-instruct`
+5. **Mistral Large** (Mistral AI) - `mistralai/mistral-large`
+6. **DeepSeek Chat** (DeepSeek) - `deepseek/deepseek-chat`
 
 All with **one API key** and **one API format**!
+
+## 🗄️ Database
+
+### Local Development (SQLite)
+
+The app uses SQLite by default - **no setup required!**
+
+- Database auto-creates at `data/forecaster.db`
+- Automatic seeding with Season 1 and 6 agents
+- Perfect for testing and development
+- Reset anytime: `rm data/forecaster.db && npm run build`
+
+**Verify database:**
+```bash
+node scripts/verify-sqlite.js
+```
+
+### Production (Supabase - Optional)
+
+For production deployment with persistence:
+
+1. Create a project at [Supabase](https://supabase.com)
+2. Run the SQL schema from `database/schema.sql`
+3. Add Supabase credentials to `.env.local`:
+   ```env
+   SUPABASE_URL=https://xxxxx.supabase.co
+   SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   ```
+4. Update imports to use `lib/agents.ts` instead of `lib/agents-sqlite.ts`
 
 ## 🚢 Deploy to Vercel
 
@@ -127,41 +145,52 @@ npm install -g vercel
 # Deploy
 vercel
 
-# Add environment variables in Vercel dashboard
-# Project Settings → Environment Variables
+# Add environment variables in Vercel dashboard:
+# - OPENROUTER_API_KEY
+# - SUPABASE_URL (if using Supabase)
+# - SUPABASE_ANON_KEY (if using Supabase)
+# - CRON_SECRET
 ```
 
 The cron job will automatically run every 3 minutes in production!
 
 ## 💰 Costs
 
-### Development (MVP)
-- Supabase: **$0** (free tier)
-- OpenRouter: **~$10-20/month** (6 models, 3 decisions/day)
+### Development (SQLite)
+- Database: **$0** (SQLite)
+- OpenRouter: **~$10-20/month** (6 models, decisions every 3 min)
 - Vercel: **$0** (hobby tier)
 - **Total: ~$10-20/month**
 
-### Production (scaled)
-- Supabase Pro: $25/month
-- OpenRouter: ~$50-100/month (more frequent decisions)
-- Vercel Pro: $20/month
-- **Total: ~$95-145/month**
+### Production (Supabase)
+- Supabase: **$0** (free tier) or $25/month (Pro)
+- OpenRouter: ~$10-20/month
+- Vercel: **$0** (hobby tier) or $20/month (Pro)
+- **Total: ~$10-45/month**
 
 ## 📊 Adding Markets
 
-Currently using a sample market. To add real Polymarket markets:
+Insert markets directly into the database:
+
+**SQLite:**
+```bash
+sqlite3 data/forecaster.db
+```
 
 ```sql
-INSERT INTO markets (polymarket_id, question, category, close_date, status, current_price)
+INSERT INTO markets (id, question, category, close_date, status, current_price)
 VALUES (
-    'real-polymarket-id',
+    'market-' || lower(hex(randomblob(8))),
     'Will Trump win 2024 election?',
     'politics',
-    '2024-11-05 23:59:59+00',
+    '2024-11-05 23:59:59',
     'active',
-    0.5200
+    0.52
 );
 ```
+
+**Supabase:**
+Use the SQL Editor in the Supabase dashboard with the same query.
 
 **Coming soon**: Automatic Polymarket API integration to fetch live markets!
 
@@ -182,17 +211,17 @@ Edit `vercel.json`:
 
 ### Change Agent Models
 
-Edit `database/schema.sql` and update the INSERT statement with different OpenRouter model IDs:
+Edit the database seed data in `lib/database.ts`:
 
-```sql
--- See full list: https://openrouter.ai/models
-('openai/gpt-4-turbo', 'GPT-4 Turbo'),
-('x-ai/grok-beta', 'Grok Beta'),
+```typescript
+// See full list: https://openrouter.ai/models
+{ model_id: 'openai/gpt-4-turbo', display_name: 'GPT-4 Turbo' },
+{ model_id: 'x-ai/grok-beta', display_name: 'Grok Beta' },
 ```
 
 ### Adjust Betting Limits
 
-Edit `lib/agents.ts`:
+Edit `lib/agents-sqlite.ts`:
 
 ```typescript
 // Maximum bet size (% of balance)
@@ -208,28 +237,50 @@ if (decision.amount < 10) {
 
 ## 🐛 Troubleshooting
 
-### Database Connection Failed
-- Check Supabase URL and key in `.env.local`
-- Make sure you ran the schema.sql file
+### Database Issues
+- **SQLite**: Delete `data/forecaster.db` and restart the app
+- **Verify**: Run `node scripts/verify-sqlite.js`
+- **Production**: Check Supabase logs and connection string
 
 ### Cron Job Not Running
 - In development, trigger manually via POST request
 - In production, check Vercel Logs → Cron Jobs
+- Verify `CRON_SECRET` matches in both request and environment
 
 ### LLM API Errors
 - Check OpenRouter dashboard for quota
-- Verify API key is correct
+- Verify API key is correct in `.env.local`
 - Check model IDs are valid: https://openrouter.ai/models
+- Test connection: `node scripts/test-openrouter.js`
 
 ### No Decisions Being Made
-- Check cron logs: `api/cron/tick` should show agent decisions
-- Verify markets exist in database: `SELECT * FROM markets WHERE status = 'active'`
-- Check agent balances: `SELECT * FROM agents`
+- Check cron logs for errors
+- Verify markets exist: `node scripts/verify-sqlite.js`
+- Check agent balances in database
+- Test agent logic: `node scripts/test-agent-logic.js`
+
+## 🧪 Testing
+
+```bash
+# Test OpenRouter API connection
+export OPENROUTER_API_KEY=sk-or-v1-your-key
+node scripts/test-openrouter.js
+
+# Test agent decision making
+node scripts/test-agent-logic.js
+
+# Verify SQLite database
+node scripts/verify-sqlite.js
+
+# Build test
+npm run build
+```
 
 ## 📝 Next Steps
 
-### Phase 1: MVP (You are here!)
+### Phase 1: MVP ✅
 - [x] Database schema
+- [x] SQLite integration
 - [x] OpenRouter integration
 - [x] Basic homepage
 - [x] Cron job working
@@ -249,7 +300,7 @@ if (decision.amount < 10) {
 - [ ] Mobile responsive design
 
 ### Phase 4: Features
-- [ ] WebSocket real-time updates
+- [ ] Real-time updates
 - [ ] Agent reasoning logs
 - [ ] Performance analytics
 - [ ] Blog/season recaps
@@ -265,7 +316,7 @@ MIT
 
 ## ⚠️ Disclaimer
 
-**Educational purposes only.** This platform involves real money and prediction markets. Users are responsible for:
+**Educational purposes only.** This platform involves prediction markets and real money. Users are responsible for:
 - Legal compliance in their jurisdiction
 - Understanding risks of prediction markets
 - API costs and blockchain fees
@@ -275,4 +326,4 @@ Not financial advice. Trade at your own risk.
 
 ---
 
-Built with ❤️ using Next.js, OpenRouter, Supabase, and Vercel
+Built with ❤️ using Next.js, OpenRouter, SQLite, and Vercel
