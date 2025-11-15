@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, takeEquitySnapshots } from '@/lib/agents';
+import { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, takeEquitySnapshots } from '@/lib/agents-sqlite';
 
 /**
  * Main cron job - runs every 3 minutes
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   try {
     // 1. Fetch active markets
-    const markets = await getActiveMarkets();
+    const markets = getActiveMarkets();
     console.log(`Found ${markets.length} active markets`);
 
     if (markets.length === 0) {
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     }
 
     // 2. Get all active agents
-    const agents = await getActiveAgents();
+    const agents = getActiveAgents();
     console.log(`Found ${agents.length} active agents`);
 
     if (agents.length === 0) {
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
     }
 
     // 4. Take equity snapshots
-    await takeEquitySnapshots();
+    takeEquitySnapshots();
 
     console.log('===== CRON TICK END =====');
 

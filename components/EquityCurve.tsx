@@ -1,6 +1,6 @@
 'use client';
 
-import { Agent } from '@/lib/supabase';
+import { Agent } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
 // Placeholder component - will integrate Recharts later
