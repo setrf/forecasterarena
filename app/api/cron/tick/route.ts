@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, sellBets, takeEquitySnapshots } from '@/lib/agents-sqlite';
-import db from '@/lib/database';
+import db, { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, sellBets, takeEquitySnapshots } from '@/lib/database';
 
 /**
  * Main cron job - runs every 3 minutes
