@@ -5,11 +5,11 @@ import LeaderboardTable from '@/components/LeaderboardTable';
 export const dynamic = 'force-dynamic';
 
 export default function LeaderboardPage() {
-  const agents = queries.getActiveAgents() as Agent[];
+  const agents = queries.getActiveAgentsWithMTM() as Agent[];
   const stats = queries.getStats();
 
-  // Sort agents by total P/L
-  const sortedAgents = [...agents].sort((a, b) => b.total_pl - a.total_pl);
+  // Sort agents by total P/L (including unrealized)
+  const sortedAgents = [...agents].sort((a, b) => (b.total_pl_with_mtm || b.total_pl) - (a.total_pl_with_mtm || a.total_pl));
 
   return (
     <div className="min-h-screen bg-white">

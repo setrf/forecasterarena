@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, takeEquitySnapshots } from '@/lib/agents-sqlite';
+import { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, sellBets, takeEquitySnapshots } from '@/lib/agents-sqlite';
 
 /**
  * Main cron job - runs every 3 minutes
@@ -42,15 +42,26 @@ export async function GET(request: Request) {
       });
     }
 
-    // 3. For each agent, get decision and execute bet
+    // 3. For each agent, get decision and execute action
     const results = [];
     for (const agent of agents) {
       try {
         // Get decision from LLM
         const decision = await getAgentDecision(agent, markets);
 
+        // Execute sell action if decided to sell bets
+        if (decision.action === 'SELL' && decision.betsToSell && decision.betsToSell.length > 0) {
+          const sellResult = await sellBets(agent, decision.betsToSell);
+          results.push({
+            agent: agent.display_name,
+            action: 'SELL',
+            betsSold: sellResult.sold,
+            totalPL: sellResult.totalPL,
+            reasoning: decision.reasoning
+          });
+        }
         // Execute bet if decided to bet
-        if (decision.action === 'BET' && decision.marketId) {
+        else if (decision.action === 'BET' && decision.marketId) {
           const market = markets.find(m => m.id === decision.marketId);
           if (market) {
             const bet = await executeBet(agent, decision, market);
@@ -70,7 +81,9 @@ export async function GET(request: Request) {
               error: 'Market not found'
             });
           }
-        } else {
+        }
+        // Hold - no action
+        else {
           results.push({
             agent: agent.display_name,
             action: 'HOLD',
