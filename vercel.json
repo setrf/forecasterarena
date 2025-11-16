@@ -8,6 +8,10 @@
     {
       "path": "/api/sync-markets",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/resolve-markets",
+      "schedule": "0 * * * *"
     }
   ]
 }
