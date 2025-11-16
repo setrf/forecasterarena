@@ -369,9 +369,18 @@ export const queries = {
   /**
    * Get all bets for a specific agent
    * @param agentId - Agent ID
+   * @param limit - Optional limit on number of results
    * @returns Array of bet records
    */
-  getBetsByAgent: (agentId: string) => {
+  getBetsByAgent: (agentId: string, limit?: number) => {
+    if (limit) {
+      return db.prepare(`
+        SELECT * FROM bets
+        WHERE agent_id = ?
+        ORDER BY placed_at DESC
+        LIMIT ?
+      `).all(agentId, limit);
+    }
     return db.prepare(`
       SELECT * FROM bets
       WHERE agent_id = ?
