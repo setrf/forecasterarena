@@ -98,6 +98,7 @@ export function initializeDatabase() {
       resolution_date TEXT,                             -- When market resolves
       status TEXT NOT NULL DEFAULT 'active',            -- active | closed | resolved | cancelled
       current_price REAL,                               -- Current YES price (0-1)
+      price_updated_at TEXT,                            -- When price was last updated
       winning_outcome TEXT,                             -- 'YES' or 'NO' after resolution
       volume REAL,                                      -- Total trading volume
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -116,7 +117,7 @@ export function initializeDatabase() {
       confidence REAL,                                  -- AI confidence score (0-1)
       reasoning TEXT,                                   -- AI reasoning for the bet
       raw_response TEXT,                                -- Full LLM response (for debugging)
-      status TEXT NOT NULL DEFAULT 'pending',           -- pending | won | lost | cancelled | refunded
+      status TEXT NOT NULL DEFAULT 'pending',           -- pending | won | lost | sold | cancelled | refunded
       pnl REAL,                                         -- Profit/loss after resolution
       polymarket_order_id TEXT,                         -- Polymarket order ID (if placed on-chain)
       placed_at TEXT DEFAULT CURRENT_TIMESTAMP,         -- When bet was placed
@@ -137,6 +138,33 @@ export function initializeDatabase() {
       FOREIGN KEY (agent_id) REFERENCES agents(id)
     );
 
+    -- ===== MARKET SYNC LOG TABLE =====
+    -- Audit log for market price sync operations
+    CREATE TABLE IF NOT EXISTS market_sync_log (
+      id TEXT PRIMARY KEY,                              -- Unique log ID
+      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,         -- When sync occurred
+      markets_added INTEGER NOT NULL DEFAULT 0,         -- Number of new markets added
+      markets_updated INTEGER NOT NULL DEFAULT 0,       -- Number of markets updated
+      errors TEXT                                       -- Any errors encountered
+    );
+
+    -- ===== AGENT DECISIONS TABLE =====
+    -- Log of all AI decision-making for analysis
+    CREATE TABLE IF NOT EXISTS agent_decisions (
+      id TEXT PRIMARY KEY,                              -- Unique decision ID
+      agent_id TEXT NOT NULL,                           -- Which agent made the decision
+      decision_timestamp TEXT DEFAULT CURRENT_TIMESTAMP,-- When decision was made
+      action TEXT NOT NULL,                             -- BET | SELL | HOLD
+      raw_llm_response TEXT,                            -- Full LLM response
+      reasoning TEXT,                                   -- AI reasoning
+      confidence REAL,                                  -- Confidence score if applicable
+      bets_to_sell TEXT,                                -- JSON array of bet IDs to sell
+      market_id TEXT,                                   -- Market ID if BET action
+      side TEXT,                                        -- YES or NO if BET action
+      amount REAL,                                      -- Bet amount if BET action
+      FOREIGN KEY (agent_id) REFERENCES agents(id)
+    );
+
     -- ===== PERFORMANCE INDEXES =====
     -- Optimize common query patterns
     CREATE INDEX IF NOT EXISTS idx_agents_season ON agents(season_id);
@@ -144,7 +172,12 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_bets_agent ON bets(agent_id, placed_at DESC); -- For bet history
     CREATE INDEX IF NOT EXISTS idx_bets_market ON bets(market_id);
     CREATE INDEX IF NOT EXISTS idx_bets_status ON bets(status);                  -- For pending bets
+    CREATE INDEX IF NOT EXISTS idx_bets_resolved_at ON bets(resolved_at DESC) WHERE resolved_at IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_snapshots_agent_time ON equity_snapshots(agent_id, timestamp DESC); -- For charts
+    CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON equity_snapshots(timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_markets_status_updated ON markets(status, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_markets_price_updated ON markets(price_updated_at DESC) WHERE price_updated_at IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_decisions_agent_time ON agent_decisions(agent_id, decision_timestamp DESC);
   `);
 
   // Check if we need to seed initial data

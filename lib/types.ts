@@ -71,10 +71,10 @@ export type Bet = {
   price: number;                                   // Price at time of bet (0.0 to 1.0)
   confidence: number | null;                       // AI confidence score (0.0 to 1.0)
   reasoning: string | null;                        // AI's reasoning for this bet
-  status: 'pending' | 'won' | 'lost' | 'cancelled' | 'refunded';  // Bet status
-  pnl: number | null;                              // Profit/loss after resolution
+  status: 'pending' | 'won' | 'lost' | 'sold' | 'cancelled' | 'refunded';  // Bet status
+  pnl: number | null;                              // Profit/loss after resolution (or sale)
   placed_at: string;                               // When bet was placed (ISO 8601 timestamp)
-  resolved_at: string | null;                      // When bet was resolved (ISO 8601 timestamp)
+  resolved_at: string | null;                      // When bet was resolved/sold (ISO 8601 timestamp)
 };
 
 /**
