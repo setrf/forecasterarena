@@ -132,6 +132,7 @@ export async function executeBet(
 
 /**
  * Sell bets (realize MTM P/L and return cash to balance)
+ * Wrapped in transaction for atomicity
  */
 export async function sellBets(
   agent: any,
@@ -144,8 +145,11 @@ export async function sellBets(
   let soldCount = 0;
   let totalPL = 0;
 
-  for (const betId of betIds) {
-    try {
+  // Start transaction
+  db.prepare('BEGIN').run();
+
+  try {
+    for (const betId of betIds) {
       // Get bet with current market price
       const bet = db.prepare(`
         SELECT b.*, m.current_price
@@ -173,10 +177,10 @@ export async function sellBets(
 
       const pnl = currentValue - bet.amount;
 
-      // Update bet status to "sold" (we'll use 'cancelled' status with pnl set)
+      // Update bet status to "sold"
       db.prepare(`
         UPDATE bets
-        SET status = 'cancelled', pnl = ?, resolved_at = CURRENT_TIMESTAMP
+        SET status = 'sold', pnl = ?, resolved_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(pnl, betId);
 
@@ -218,16 +222,22 @@ export async function sellBets(
       totalPL += pnl;
 
       console.log(`[${agent.display_name}] ✓ Sold bet: ${bet.side} on market, P/L: $${pnl.toFixed(2)}`);
-    } catch (error) {
-      console.error(`[${agent.display_name}] Failed to sell bet ${betId}:`, error);
     }
-  }
 
-  if (soldCount > 0) {
-    console.log(`[${agent.display_name}] ✓ Sold ${soldCount} bet(s), Total P/L: $${totalPL.toFixed(2)}`);
-  }
+    // Commit transaction
+    db.prepare('COMMIT').run();
 
-  return { sold: soldCount, totalPL };
+    if (soldCount > 0) {
+      console.log(`[${agent.display_name}] ✓ Sold ${soldCount} bet(s), Total P/L: $${totalPL.toFixed(2)}`);
+    }
+
+    return { sold: soldCount, totalPL };
+  } catch (error) {
+    // Rollback on error
+    db.prepare('ROLLBACK').run();
+    console.error(`[${agent.display_name}] Transaction failed, rolled back:`, error);
+    throw error;
+  }
 }
 
 /**

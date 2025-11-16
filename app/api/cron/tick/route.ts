@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, sellBets, takeEquitySnapshots } from '@/lib/agents-sqlite';
+import db from '@/lib/database';
 
 /**
  * Main cron job - runs every 3 minutes
@@ -48,6 +49,25 @@ export async function GET(request: Request) {
       try {
         // Get decision from LLM
         const decision = await getAgentDecision(agent, markets);
+
+        // Log the decision
+        const decisionId = `decision-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        db.prepare(`
+          INSERT INTO agent_decisions (
+            id, agent_id, action, reasoning, confidence,
+            bets_to_sell, market_id, side, amount
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          decisionId,
+          agent.id,
+          decision.action,
+          decision.reasoning || null,
+          decision.confidence || null,
+          decision.betsToSell ? JSON.stringify(decision.betsToSell) : null,
+          decision.marketId || null,
+          decision.side || null,
+          decision.amount || null
+        );
 
         // Execute sell action if decided to sell bets
         if (decision.action === 'SELL' && decision.betsToSell && decision.betsToSell.length > 0) {

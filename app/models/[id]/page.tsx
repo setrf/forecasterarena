@@ -29,7 +29,7 @@ export default function ModelPage({ params }: PageProps) {
 
   // Get all bets for history
   const allBets = queries.getBetsByAgent(agent.id, 50) as Bet[];
-  const resolvedBets = allBets.filter(b => b.status === 'won' || b.status === 'lost' || b.status === 'cancelled');
+  const resolvedBets = allBets.filter(b => b.status === 'won' || b.status === 'lost' || b.status === 'sold');
 
   // Category performance
   const categoryStats: Record<string, { pl: number; count: number }> = {};
@@ -168,7 +168,7 @@ export default function ModelPage({ params }: PageProps) {
                 {resolvedBets.map(bet => {
                   const market = queries.getMarketById(bet.market_id) as any;
                   const isProfit = (bet.pnl || 0) > 0;
-                  const action = bet.status === 'cancelled' ? 'Sold' : bet.status === 'won' ? 'Won' : 'Lost';
+                  const action = bet.status === 'sold' ? 'Sold' : bet.status === 'won' ? 'Won' : 'Lost';
 
                   return (
                     <div key={bet.id} className="border-b border-gray-200 p-4 hover:bg-gray-50">
