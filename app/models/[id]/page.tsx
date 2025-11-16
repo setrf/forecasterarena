@@ -1,6 +1,5 @@
-import { queries } from '@/lib/database';
+import { queries, getAgentPendingBetsWithMTM } from '@/lib/database';
 import { Agent, Bet } from '@/lib/types';
-import { getAgentPendingBetsWithMTM } from '@/lib/agents-sqlite';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
