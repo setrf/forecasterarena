@@ -3,7 +3,11 @@
   "crons": [
     {
       "path": "/api/cron/tick",
-      "schedule": "*/3 * * * *"
+      "schedule": "0 0 * * 0"
+    },
+    {
+      "path": "/api/sync-markets",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

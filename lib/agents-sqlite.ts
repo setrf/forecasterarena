@@ -2,6 +2,46 @@ import db, { queries } from './database';
 import { callLLM, buildSystemPrompt, buildUserPrompt, LLMDecision } from './openrouter';
 
 /**
+ * Get agent's pending bets with mark-to-market information
+ */
+export function getAgentPendingBetsWithMTM(agentId: string): any[] {
+  const bets = db.prepare(`
+    SELECT
+      b.id as bet_id,
+      b.amount as bet_amount,
+      b.price as entry_price,
+      b.side,
+      m.id as market_id,
+      m.question as market_question,
+      m.current_price
+    FROM bets b
+    JOIN markets m ON b.market_id = m.id
+    WHERE b.agent_id = ? AND b.status = 'pending'
+    ORDER BY b.placed_at DESC
+  `).all(agentId) as any[];
+
+  return bets.map(bet => {
+    let currentValue = 0;
+    if (bet.current_price && bet.entry_price) {
+      if (bet.side === 'YES') {
+        const shares = bet.bet_amount / bet.entry_price;
+        currentValue = shares * bet.current_price;
+      } else {
+        const shares = bet.bet_amount / (1 - bet.entry_price);
+        currentValue = shares * (1 - bet.current_price);
+      }
+    }
+    const mtm_pnl = currentValue - bet.bet_amount;
+
+    return {
+      ...bet,
+      current_value: currentValue,
+      mtm_pnl
+    };
+  });
+}
+
+/**
  * Get agent's decision for current markets
  */
 export async function getAgentDecision(
@@ -10,13 +50,18 @@ export async function getAgentDecision(
 ): Promise<LLMDecision & { agentId: string }> {
   console.log(`[${agent.display_name}] Analyzing ${markets.length} markets...`);
 
+  // Get agent's pending bets with MTM info
+  const pendingBets = getAgentPendingBetsWithMTM(agent.id);
+  console.log(`[${agent.display_name}] Has ${pendingBets.length} pending bets`);
+
   const systemPrompt = buildSystemPrompt(agent.display_name);
-  const userPrompt = buildUserPrompt(agent.balance, agent.total_bets, markets);
+  const userPrompt = buildUserPrompt(agent.balance, agent.total_bets, markets, pendingBets);
 
   const decision = await callLLM(agent.model_id, systemPrompt, userPrompt);
 
   console.log(`[${agent.display_name}] Decision: ${decision.action}`,
-    decision.action === 'BET' ? `- ${decision.side} on market ${decision.marketId}` : '');
+    decision.action === 'BET' ? `- ${decision.side} on market ${decision.marketId}` :
+    decision.action === 'SELL' ? `- Selling ${decision.betsToSell?.length || 0} bet(s)` : '');
 
   return {
     ...decision,
@@ -83,6 +128,106 @@ export async function executeBet(
     console.error(`[${agent.display_name}] Failed to execute bet:`, error);
     return null;
   }
+}
+
+/**
+ * Sell bets (realize MTM P/L and return cash to balance)
+ */
+export async function sellBets(
+  agent: any,
+  betIds: string[]
+): Promise<{ sold: number; totalPL: number }> {
+  if (!betIds || betIds.length === 0) {
+    return { sold: 0, totalPL: 0 };
+  }
+
+  let soldCount = 0;
+  let totalPL = 0;
+
+  for (const betId of betIds) {
+    try {
+      // Get bet with current market price
+      const bet = db.prepare(`
+        SELECT b.*, m.current_price
+        FROM bets b
+        JOIN markets m ON b.market_id = m.id
+        WHERE b.id = ? AND b.agent_id = ? AND b.status = 'pending'
+      `).get(betId, agent.id) as any;
+
+      if (!bet) {
+        console.warn(`[${agent.display_name}] Bet ${betId} not found or already closed`);
+        continue;
+      }
+
+      // Calculate current value using MTM
+      let currentValue = 0;
+      if (bet.current_price && bet.price) {
+        if (bet.side === 'YES') {
+          const shares = bet.amount / bet.price;
+          currentValue = shares * bet.current_price;
+        } else {
+          const shares = bet.amount / (1 - bet.price);
+          currentValue = shares * (1 - bet.current_price);
+        }
+      }
+
+      const pnl = currentValue - bet.amount;
+
+      // Update bet status to "sold" (we'll use 'cancelled' status with pnl set)
+      db.prepare(`
+        UPDATE bets
+        SET status = 'cancelled', pnl = ?, resolved_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(pnl, betId);
+
+      // Return current value to agent's balance and update stats
+      const newBalance = agent.balance + currentValue;
+      const newTotalPL = agent.total_pl + pnl;
+
+      // Determine if this was a winning or losing bet for stats
+      const winCount = pnl > 0 ? agent.winning_bets + 1 : agent.winning_bets;
+      const loseCount = pnl < 0 ? agent.losing_bets + 1 : agent.losing_bets;
+
+      db.prepare(`
+        UPDATE agents
+        SET
+          balance = ?,
+          total_pl = ?,
+          winning_bets = ?,
+          losing_bets = ?,
+          pending_bets = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(
+        newBalance,
+        newTotalPL,
+        winCount,
+        loseCount,
+        agent.pending_bets - 1,
+        agent.id
+      );
+
+      // Update agent object for next iteration
+      agent.balance = newBalance;
+      agent.total_pl = newTotalPL;
+      agent.winning_bets = winCount;
+      agent.losing_bets = loseCount;
+      agent.pending_bets = agent.pending_bets - 1;
+
+      soldCount++;
+      totalPL += pnl;
+
+      console.log(`[${agent.display_name}] ✓ Sold bet: ${bet.side} on market, P/L: $${pnl.toFixed(2)}`);
+    } catch (error) {
+      console.error(`[${agent.display_name}] Failed to sell bet ${betId}:`, error);
+    }
+  }
+
+  if (soldCount > 0) {
+    console.log(`[${agent.display_name}] ✓ Sold ${soldCount} bet(s), Total P/L: $${totalPL.toFixed(2)}`);
+  }
+
+  return { sold: soldCount, totalPL };
 }
 
 /**

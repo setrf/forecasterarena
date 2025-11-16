@@ -10,8 +10,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 function getLeaderboardData(): Agent[] {
-  const agents = queries.getActiveAgents() as Agent[];
-  return agents.sort((a, b) => b.total_pl - a.total_pl);
+  const agents = queries.getActiveAgentsWithMTM() as Agent[];
+  return agents.sort((a, b) => (b.total_pl_with_mtm || b.total_pl) - (a.total_pl_with_mtm || a.total_pl));
 }
 
 function getRecentBets() {

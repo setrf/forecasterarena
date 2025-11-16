@@ -16,7 +16,9 @@ export default function LeaderboardTable({
           <tr>
             <th className="w-12">#</th>
             <th>Model</th>
-            <th className="text-right">Balance</th>
+            <th className="text-right">Cash</th>
+            <th className="text-right">Realized P/L</th>
+            <th className="text-right">Unrealized P/L</th>
             <th className="text-right">Total P/L</th>
             <th className="text-right">Return %</th>
             <th className="text-right">Bets</th>
@@ -25,7 +27,9 @@ export default function LeaderboardTable({
         </thead>
         <tbody>
           {displayAgents.map((agent, index) => {
-            const returnPct = ((agent.total_pl / 1000) * 100).toFixed(1);
+            const totalPL = agent.total_pl_with_mtm ?? agent.total_pl;
+            const unrealizedPL = agent.mtm_pl ?? 0;
+            const returnPct = ((totalPL / 1000) * 100).toFixed(1);
             const winRate = agent.total_bets > 0
               ? ((agent.winning_bets / agent.total_bets) * 100).toFixed(1)
               : '0.0';
@@ -43,6 +47,12 @@ export default function LeaderboardTable({
                 </td>
                 <td className={`text-right ${agent.total_pl >= 0 ? 'positive' : 'negative'}`}>
                   {agent.total_pl >= 0 ? '+' : ''}${agent.total_pl.toFixed(2)}
+                </td>
+                <td className={`text-right ${unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
+                  {unrealizedPL >= 0 ? '+' : ''}${unrealizedPL.toFixed(2)}
+                </td>
+                <td className={`text-right font-bold ${totalPL >= 0 ? 'positive' : 'negative'}`}>
+                  {totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)}
                 </td>
                 <td className={`text-right ${Number(returnPct) >= 0 ? 'positive' : 'negative'}`}>
                   {Number(returnPct) >= 0 ? '+' : ''}{returnPct}%

@@ -422,6 +422,84 @@ export const queries = {
     `).all(agentId, limit);
   },
 
+  // ===== MARK-TO-MARKET CALCULATIONS =====
+
+  /**
+   * Calculate mark-to-market P/L for an agent's pending bets
+   * @param agentId - Agent ID
+   * @returns Unrealized P/L from pending bets
+   */
+  getMarkToMarketPL: (agentId: string): number => {
+    const pendingBets = db.prepare(`
+      SELECT b.id, b.amount, b.price, b.side, m.current_price
+      FROM bets b
+      JOIN markets m ON b.market_id = m.id
+      WHERE b.agent_id = ? AND b.status = 'pending'
+    `).all(agentId) as Array<{
+      id: string;
+      amount: number;
+      price: number;
+      side: string;
+      current_price: number;
+    }>;
+
+    let totalUnrealizedPL = 0;
+
+    for (const bet of pendingBets) {
+      if (!bet.current_price) continue; // Skip if no current price
+
+      let currentValue = 0;
+
+      if (bet.side === 'YES') {
+        // YES bet: shares = amount / entry_price, value = shares * current_price
+        const shares = bet.amount / bet.price;
+        currentValue = shares * bet.current_price;
+      } else {
+        // NO bet: shares = amount / (1 - entry_price), value = shares * (1 - current_price)
+        const shares = bet.amount / (1 - bet.price);
+        currentValue = shares * (1 - bet.current_price);
+      }
+
+      const unrealizedPL = currentValue - bet.amount;
+      totalUnrealizedPL += unrealizedPL;
+    }
+
+    return totalUnrealizedPL;
+  },
+
+  /**
+   * Get agent with mark-to-market P/L included
+   * @param agentId - Agent ID
+   * @returns Agent with mtm_pl field added
+   */
+  getAgentWithMTM: (agentId: string) => {
+    const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(agentId) as any;
+    if (!agent) return null;
+
+    const mtmPL = queries.getMarkToMarketPL(agentId);
+    return {
+      ...agent,
+      mtm_pl: mtmPL,
+      total_pl_with_mtm: agent.total_pl + mtmPL
+    };
+  },
+
+  /**
+   * Get all active agents with mark-to-market P/L
+   * @returns Array of agents with mtm_pl field
+   */
+  getActiveAgentsWithMTM: () => {
+    const agents = db.prepare('SELECT * FROM agents WHERE status = \'active\'').all() as any[];
+    return agents.map(agent => {
+      const mtmPL = queries.getMarkToMarketPL(agent.id);
+      return {
+        ...agent,
+        mtm_pl: mtmPL,
+        total_pl_with_mtm: agent.total_pl + mtmPL
+      };
+    });
+  },
+
   // ===== STATISTICS QUERIES =====
 
   /**

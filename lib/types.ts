@@ -25,7 +25,7 @@ export type Agent = {
   model_id: string;                                // OpenRouter model ID (e.g., 'openai/gpt-4')
   display_name: string;                            // Human-readable name (e.g., 'GPT-4')
   balance: number;                                 // Current available funds in dollars
-  total_pl: number;                                // Total profit/loss since season start
+  total_pl: number;                                // Total realized profit/loss since season start
   total_bets: number;                              // Total number of bets placed
   winning_bets: number;                            // Number of winning bets
   losing_bets: number;                             // Number of losing bets
@@ -33,6 +33,8 @@ export type Agent = {
   status: 'active' | 'paused' | 'eliminated';      // Agent status
   created_at: string;                              // ISO 8601 timestamp
   updated_at: string;                              // ISO 8601 timestamp
+  mtm_pl?: number;                                 // Mark-to-market unrealized P/L (computed field)
+  total_pl_with_mtm?: number;                      // Total P/L including unrealized (computed field)
 };
 
 /**
