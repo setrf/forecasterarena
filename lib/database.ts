@@ -17,6 +17,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { callLLM, buildSystemPrompt, buildUserPrompt, LLMDecision } from './openrouter';
+import { Agent, Market } from './types';
 
 // Database file location - stored in data/ directory (gitignored)
 const DB_PATH = path.join(process.cwd(), 'data', 'forecaster.db');
@@ -26,6 +27,10 @@ const dataDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
+
+// Betting constraints
+const MIN_BET_SIZE = 10;
+const MAX_BET_PERCENTAGE = 0.3;
 
 // Initialize SQLite database connection
 // verbose: () => null disables logging for cleaner output
@@ -630,8 +635,8 @@ export function getAgentPendingBetsWithMTM(agentId: string): any[] {
  * Get agent's decision for current markets using LLM
  */
 export async function getAgentDecision(
-  agent: any,
-  markets: any[]
+  agent: Agent,
+  markets: Market[]
 ): Promise<LLMDecision & { agentId: string }> {
   console.log(`[${agent.display_name}] Analyzing ${markets.length} markets...`);
 
@@ -682,9 +687,9 @@ export async function getAgentDecision(
  * Execute a bet (record in DB, update balance)
  */
 export async function executeBet(
-  agent: any,
+  agent: Agent,
   decision: LLMDecision,
-  market: any
+  market: Market
 ): Promise<any | null> {
   if (decision.action !== 'BET' || !decision.marketId || !decision.side || !decision.amount) {
     return null;
@@ -708,14 +713,14 @@ export async function executeBet(
     return null;
   }
 
-  if (decision.amount < 10) {
+  if (decision.amount < MIN_BET_SIZE) {
     console.warn(`[${agent.display_name}] Bet too small: $${decision.amount}`);
     return null;
   }
 
-  if (decision.amount > agent.balance * 0.3) {
+  if (decision.amount > agent.balance * MAX_BET_PERCENTAGE) {
     console.warn(`[${agent.display_name}] Bet too large (>30% of balance), capping`);
-    decision.amount = Math.floor(agent.balance * 0.3);
+    decision.amount = Math.floor(agent.balance * MAX_BET_PERCENTAGE);
   }
 
   // CRITICAL: Wrap in transaction to prevent partial bet execution
@@ -749,7 +754,7 @@ export async function executeBet(
     db.prepare('COMMIT').run();
 
     console.log(`[${agent.display_name}] ✓ Paper bet placed: $${decision.amount} ${decision.side} on "${market.question}"`);
-    console.log(`   Price at entry: ${(market.current_price * 100).toFixed(1)}% | Confidence: ${decision.confidence || 'N/A'}`);
+    console.log(`   Price at entry: ${((market.current_price || 0.5) * 100).toFixed(1)}% | Confidence: ${decision.confidence || 'N/A'}`);
 
     return { id: betId };
   } catch (error) {
@@ -765,7 +770,7 @@ export async function executeBet(
  * Wrapped in transaction for atomicity
  */
 export async function sellBets(
-  agent: any,
+  agent: Agent,
   betIds: string[]
 ): Promise<{ sold: number; totalPL: number }> {
   if (!betIds || betIds.length === 0) {
@@ -886,15 +891,15 @@ export function takeEquitySnapshots(): void {
 /**
  * Get active markets (not closed or resolved)
  */
-export function getActiveMarkets(): any[] {
-  return queries.getActiveMarkets();
+export function getActiveMarkets(): Market[] {
+  return queries.getActiveMarkets() as Market[];
 }
 
 /**
  * Get all active agents
  */
-export function getActiveAgents(): any[] {
-  return queries.getActiveAgents();
+export function getActiveAgents(): Agent[] {
+  return queries.getActiveAgents() as Agent[];
 }
 
 

@@ -148,7 +148,6 @@ async function fetchWithRetry(url: string, maxRetries: number = MAX_RETRIES): Pr
         lastResponse = response;
         if (attempt < maxRetries) {
           const delay = RETRY_DELAYS[attempt] || RETRY_DELAYS[RETRY_DELAYS.length - 1];
-          console.log(`⚠️  Retry ${attempt + 1}/${maxRetries} after ${delay}ms for ${response.status} error on ${url}`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
@@ -160,7 +159,6 @@ async function fetchWithRetry(url: string, maxRetries: number = MAX_RETRIES): Pr
 
       if (isRetryableError(error) && attempt < maxRetries) {
         const delay = RETRY_DELAYS[attempt] || RETRY_DELAYS[RETRY_DELAYS.length - 1];
-        console.log(`⚠️  Retry ${attempt + 1}/${maxRetries} after ${delay}ms due to network error: ${error.message}`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
@@ -407,7 +405,6 @@ export async function fetchAllPolymarketMarkets(): Promise<SimplifiedMarket[]> {
 
       // Add this batch to our collection
       allMarkets.push(...batch);
-      console.log(`   Page ${pageNumber}: Fetched ${batch.length} markets (${allMarkets.length} total so far)`);
 
       // If we got fewer than the limit, we've reached the last page
       if (batch.length < limit) {

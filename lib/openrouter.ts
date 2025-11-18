@@ -106,8 +106,6 @@ export async function callLLM(
   // Main retry loop
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`[OpenRouter] Attempt ${attempt + 1}/${MAX_RETRIES + 1} for model ${modelId}`);
-
       // Make request to OpenRouter API with timeout
       const response = await fetchWithTimeout(
         OPENROUTER_URL,
@@ -158,7 +156,6 @@ export async function callLLM(
             ? RATE_LIMIT_RETRY_DELAYS[attempt]
             : RETRY_DELAYS[attempt];
 
-          console.log(`[OpenRouter] Retrying in ${delay / 1000}s...`);
           await sleep(delay);
           continue; // Retry
         }
@@ -280,7 +277,6 @@ export async function callLLM(
         }
       }
 
-      console.log(`[OpenRouter] Successfully received decision from ${modelId}`);
       return decision;
 
     } catch (error) {
