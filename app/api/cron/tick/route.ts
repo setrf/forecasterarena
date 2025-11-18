@@ -3,10 +3,10 @@ import db, { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, se
 
 /**
  * Main cron job - runs every 3 minutes
- * Vercel Cron: https://vercel.com/docs/cron-jobs
+ * Triggered by Linux cron job or manual POST request
  */
 export async function GET(request: Request) {
-  // Verify request is from Vercel Cron
+  // Verify request is authorized
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     console.warn('Unauthorized cron request');

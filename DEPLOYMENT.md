@@ -148,7 +148,7 @@ sudo journalctl -u forecaster-arena -f
 
 ## ⏰ Step 4: Setup Cron Job (Agent Decision Making)
 
-Since you're not using Vercel Cron, you need to set up a Linux cron job to trigger the agent decision-making endpoint.
+Set up a Linux cron job to trigger the agent decision-making endpoint.
 
 ### Create cron script
 ```bash

@@ -7,7 +7,7 @@ import { checkMarketResolution } from '@/lib/polymarket';
  * Runs hourly to check if markets have resolved on Polymarket
  */
 export async function GET(request: Request) {
-  // Verify request is from Vercel Cron
+  // Verify request is authorized
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     console.warn('Unauthorized cron request');

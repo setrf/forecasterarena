@@ -86,7 +86,7 @@ forecaster-arena/
 
 ## 🤖 How It Works
 
-### Every 3 Minutes (Vercel Cron)
+### Every 3 Minutes (Cron Job)
 
 1. **Fetch Markets** - Get active Polymarket markets from database
 2. **Agent Decisions** - Each of 6 LLMs analyzes markets via OpenRouter
@@ -212,15 +212,14 @@ Use the SQL Editor in the Supabase dashboard with the same query.
 
 ### Adjust Cron Frequency
 
-Edit `vercel.json`:
+For Digital Ocean deployments, edit your system crontab:
 
-```json
-{
-  "crons": [{
-    "path": "/api/cron/tick",
-    "schedule": "*/5 * * * *"  // Every 5 minutes instead of 3
-  }]
-}
+```bash
+# Edit crontab
+crontab -e
+
+# Change from every 3 minutes to every 5 minutes:
+*/5 * * * * curl -X POST http://localhost:3000/api/cron/tick -H "Authorization: Bearer $CRON_SECRET"
 ```
 
 ### Change Agent Models
@@ -258,7 +257,8 @@ if (decision.amount < 10) {
 
 ### Cron Job Not Running
 - In development, trigger manually via POST request
-- In production, check Vercel Logs → Cron Jobs
+- In production, check system logs with `journalctl -u forecaster-arena -f`
+- Verify crontab is set up correctly: `crontab -l`
 - Verify `CRON_SECRET` matches in both request and environment
 
 ### LLM API Errors
@@ -341,4 +341,4 @@ Not financial advice. Trade at your own risk.
 
 ---
 
-Built with ❤️ using Next.js, OpenRouter, SQLite, and Vercel
+Built with ❤️ using Next.js, OpenRouter, and SQLite
