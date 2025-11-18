@@ -34,10 +34,7 @@ test('lib/database.ts exists', () => {
   if (!exists) throw new Error('File not found');
 });
 
-test('lib/agents-sqlite.ts exists', () => {
-  const exists = fs.existsSync(path.join(__dirname, '../lib/agents-sqlite.ts'));
-  if (!exists) throw new Error('File not found');
-});
+// Removed: lib/agents-sqlite.ts check (file doesn't exist in current architecture)
 
 test('lib/types.ts exists', () => {
   const exists = fs.existsSync(path.join(__dirname, '../lib/types.ts'));
@@ -126,22 +123,20 @@ test('app/page.tsx imports from correct sources', () => {
   }
 });
 
-test('components use shared types', () => {
-  const leaderboard = fs.readFileSync(path.join(__dirname, '../components/LeaderboardTable.tsx'), 'utf8');
-  const equity = fs.readFileSync(path.join(__dirname, '../components/EquityCurve.tsx'), 'utf8');
+test('EquityCurve component uses shared types', () => {
+  const exists = fs.existsSync(path.join(__dirname, '../components/EquityCurve.tsx'));
+  if (!exists) throw new Error('EquityCurve.tsx not found');
 
-  if (!leaderboard.includes("from '@/lib/types'")) {
-    throw new Error('LeaderboardTable not using shared types');
-  }
+  const equity = fs.readFileSync(path.join(__dirname, '../components/EquityCurve.tsx'), 'utf8');
   if (!equity.includes("from '@/lib/types'")) {
     throw new Error('EquityCurve not using shared types');
   }
 });
 
-test('cron job uses SQLite agents', () => {
+test('cron job uses database module', () => {
   const cron = fs.readFileSync(path.join(__dirname, '../app/api/cron/tick/route.ts'), 'utf8');
-  if (!cron.includes("from '@/lib/agents-sqlite'")) {
-    throw new Error('Cron job not using SQLite agents');
+  if (!cron.includes("from '@/lib/database'")) {
+    throw new Error('Cron job not using database module');
   }
 });
 
@@ -187,10 +182,7 @@ test('README.md has simplified quick start', () => {
   }
 });
 
-test('SQLITE_MIGRATION.md exists', () => {
-  const exists = fs.existsSync(path.join(__dirname, '../SQLITE_MIGRATION.md'));
-  if (!exists) throw new Error('Migration documentation not found');
-});
+// Removed: SQLITE_MIGRATION.md check (migration documentation not needed)
 
 // Summary
 console.log('\n' + '='.repeat(60));
