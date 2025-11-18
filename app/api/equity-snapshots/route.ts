@@ -87,7 +87,8 @@ export async function GET(request: NextRequest) {
     // Fill in missing agent data with last known balance or initial balance
     const lastKnownBalances: Record<string, number> = {};
     agents.forEach(agent => {
-      lastKnownBalances[agent.id] = 1000; // Initial balance
+      // Use actual agent balance instead of hardcoded value
+      lastKnownBalances[agent.id] = agent.balance;
     });
 
     const filledData = chartData.map((point: any) => {

@@ -74,17 +74,3 @@ export type Bet = {
   placed_at: string;                               // When bet was placed (ISO 8601 timestamp)
   resolved_at: string | null;                      // When bet was resolved/sold (ISO 8601 timestamp)
 };
-
-/**
- * Equity Snapshot Type
- *
- * Represents a point-in-time snapshot of an agent's performance.
- * Used to build equity curve charts showing performance over time.
- */
-export type EquitySnapshot = {
-  id: string;                                      // Unique identifier
-  agent_id: string;                                // Which agent this snapshot belongs to
-  balance: number;                                 // Agent's balance at this point in time
-  total_pl: number;                                // Agent's total P/L at this point in time
-  timestamp: string;                               // When this snapshot was taken (ISO 8601 timestamp)
-};

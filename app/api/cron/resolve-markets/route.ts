@@ -18,8 +18,7 @@ export async function GET(request: Request) {
 
   try {
     // Get all closed markets (not yet resolved)
-    const allMarkets = queries.getAllMarkets() as any[];
-    const closedMarkets = allMarkets.filter(m => m.status === 'closed');
+    const closedMarkets = queries.getClosedMarkets() as any[];
     console.log(`Found ${closedMarkets.length} closed markets to check`);
 
     if (closedMarkets.length === 0) {

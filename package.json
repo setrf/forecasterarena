@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node scripts/test-all.js",
+    "test:functions": "node scripts/test-functions.js",
+    "test:all": "npm run test:functions && npm run test",
     "verify-db": "node scripts/verify-sqlite.js",
     "test-openrouter": "node scripts/test-openrouter.js",
     "test-polymarket": "node scripts/test-polymarket.js",

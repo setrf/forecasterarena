@@ -17,6 +17,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { callLLM, buildSystemPrompt, buildUserPrompt, LLMDecision } from './openrouter';
+import { Agent, Market } from './types';
 
 // Database file location - stored in data/ directory (gitignored)
 const DB_PATH = path.join(process.cwd(), 'data', 'forecaster.db');
@@ -26,6 +27,10 @@ const dataDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
+
+// Betting constraints
+const MIN_BET_SIZE = 10;
+const MAX_BET_PERCENTAGE = 0.3;
 
 // Initialize SQLite database connection
 // verbose: () => null disables logging for cleaner output
@@ -255,7 +260,7 @@ function seedInitialData() {
  *
  * @returns Unique identifier string
  */
-function generateId(): string {
+export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
@@ -318,6 +323,18 @@ export const queries = {
       SELECT * FROM markets
       WHERE status = 'active' AND close_date > datetime('now')
       ORDER BY close_date
+    `).all();
+  },
+
+  /**
+   * Get closed markets (ready for resolution)
+   * @returns Array of closed market records
+   */
+  getClosedMarkets: () => {
+    return db.prepare(`
+      SELECT * FROM markets
+      WHERE status = 'closed'
+      ORDER BY close_date DESC
     `).all();
   },
 
@@ -450,34 +467,26 @@ export const queries = {
     `).run(generateId(), agentId, balance, totalPl);
   },
 
-  /**
-   * Get equity snapshots for a specific agent
-   * @param agentId - Agent ID
-   * @param limit - Number of snapshots to return (default: 100)
-   * @returns Array of snapshot records
-   */
-  getSnapshotsByAgent: (agentId: string, limit: number = 100) => {
-    return db.prepare(`
-      SELECT * FROM equity_snapshots
-      WHERE agent_id = ?
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `).all(agentId, limit);
-  },
 
   // ===== MARK-TO-MARKET CALCULATIONS =====
 
   /**
    * Calculate mark-to-market P/L for an agent's pending bets
+   *
+   * CRITICAL: Only includes bets on ACTIVE markets. Closed markets are excluded
+   * because their prices are stale and will be settled when the market resolves.
+   *
    * @param agentId - Agent ID
-   * @returns Unrealized P/L from pending bets
+   * @returns Unrealized P/L from pending bets on active markets only
    */
   getMarkToMarketPL: (agentId: string): number => {
     const pendingBets = db.prepare(`
       SELECT b.id, b.amount, b.price, b.side, m.current_price
       FROM bets b
       JOIN markets m ON b.market_id = m.id
-      WHERE b.agent_id = ? AND b.status = 'pending'
+      WHERE b.agent_id = ?
+        AND b.status = 'pending'
+        AND m.status = 'active'
     `).all(agentId) as Array<{
       id: string;
       amount: number;
@@ -572,6 +581,9 @@ export const queries = {
 
 /**
  * Get agent's pending bets with mark-to-market information
+ *
+ * Returns ALL pending bets (including those on closed markets awaiting resolution).
+ * MTM is only calculated for bets on ACTIVE markets (closed markets have stale prices).
  */
 export function getAgentPendingBetsWithMTM(agentId: string): any[] {
   const bets = db.prepare(`
@@ -582,7 +594,9 @@ export function getAgentPendingBetsWithMTM(agentId: string): any[] {
       b.side,
       m.id as market_id,
       m.question as market_question,
-      m.current_price
+      m.current_price,
+      m.status as market_status,
+      m.close_date
     FROM bets b
     JOIN markets m ON b.market_id = m.id
     WHERE b.agent_id = ? AND b.status = 'pending'
@@ -591,7 +605,10 @@ export function getAgentPendingBetsWithMTM(agentId: string): any[] {
 
   return bets.map(bet => {
     let currentValue = 0;
-    if (bet.current_price && bet.entry_price) {
+    let mtm_pnl = 0;
+
+    // Only calculate MTM for ACTIVE markets (closed markets have stale prices)
+    if (bet.market_status === 'active' && bet.current_price && bet.entry_price) {
       if (bet.side === 'YES') {
         const shares = bet.bet_amount / bet.entry_price;
         currentValue = shares * bet.current_price;
@@ -599,8 +616,12 @@ export function getAgentPendingBetsWithMTM(agentId: string): any[] {
         const shares = bet.bet_amount / (1 - bet.entry_price);
         currentValue = shares * (1 - bet.current_price);
       }
+      mtm_pnl = currentValue - bet.bet_amount;
+    } else if (bet.market_status === 'closed') {
+      // For closed markets, value = stake (awaiting resolution)
+      currentValue = bet.bet_amount;
+      mtm_pnl = 0;  // No unrealized P/L - will be settled on resolution
     }
-    const mtm_pnl = currentValue - bet.bet_amount;
 
     return {
       ...bet,
@@ -614,8 +635,8 @@ export function getAgentPendingBetsWithMTM(agentId: string): any[] {
  * Get agent's decision for current markets using LLM
  */
 export async function getAgentDecision(
-  agent: any,
-  markets: any[]
+  agent: Agent,
+  markets: Market[]
 ): Promise<LLMDecision & { agentId: string }> {
   console.log(`[${agent.display_name}] Analyzing ${markets.length} markets...`);
 
@@ -632,6 +653,30 @@ export async function getAgentDecision(
     decision.action === 'BET' ? `- ${decision.side} on market ${decision.marketId}` :
     decision.action === 'SELL' ? `- Selling ${decision.betsToSell?.length || 0} bet(s)` : '');
 
+  // CRITICAL: Log decision to agent_decisions table for audit trail
+  try {
+    db.prepare(`
+      INSERT INTO agent_decisions (
+        id, agent_id, action, market_id, side, amount, confidence,
+        bets_to_sell, reasoning, raw_llm_response, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(
+      generateId(),
+      agent.id,
+      decision.action,
+      decision.marketId || null,
+      decision.side || null,
+      decision.amount || null,
+      decision.confidence || null,
+      decision.betsToSell ? JSON.stringify(decision.betsToSell) : null,
+      decision.reasoning || null,
+      JSON.stringify(decision) // Store full decision as JSON
+    );
+  } catch (error) {
+    // Log error but don't fail the decision - audit trail is important but not critical
+    console.error(`[${agent.display_name}] ⚠️ Failed to log decision to database:`, error);
+  }
+
   return {
     ...decision,
     agentId: agent.id
@@ -642,32 +687,48 @@ export async function getAgentDecision(
  * Execute a bet (record in DB, update balance)
  */
 export async function executeBet(
-  agent: any,
+  agent: Agent,
   decision: LLMDecision,
-  market: any
+  market: Market
 ): Promise<any | null> {
   if (decision.action !== 'BET' || !decision.marketId || !decision.side || !decision.amount) {
     return null;
   }
 
-  // Validation
+  // CRITICAL: Validate market is still open for betting
+  const now = new Date().toISOString();
+  if (market.close_date && market.close_date <= now) {
+    console.warn(`[${agent.display_name}] Market already closed at ${market.close_date}`);
+    return null;
+  }
+
+  if (market.status !== 'active') {
+    console.warn(`[${agent.display_name}] Market not active (status: ${market.status})`);
+    return null;
+  }
+
+  // Amount validation
   if (decision.amount > agent.balance) {
     console.warn(`[${agent.display_name}] Insufficient funds: ${decision.amount} > ${agent.balance}`);
     return null;
   }
 
-  if (decision.amount < 10) {
+  if (decision.amount < MIN_BET_SIZE) {
     console.warn(`[${agent.display_name}] Bet too small: $${decision.amount}`);
     return null;
   }
 
-  if (decision.amount > agent.balance * 0.3) {
+  if (decision.amount > agent.balance * MAX_BET_PERCENTAGE) {
     console.warn(`[${agent.display_name}] Bet too large (>30% of balance), capping`);
-    decision.amount = Math.floor(agent.balance * 0.3);
+    decision.amount = Math.floor(agent.balance * MAX_BET_PERCENTAGE);
   }
 
+  // CRITICAL: Wrap in transaction to prevent partial bet execution
+  // If insertBet succeeds but updateAgentBalance fails, we'd have a bet without debiting the agent
+  db.prepare('BEGIN').run();
+
   try {
-    const betId = `bet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const betId = `bet-${generateId()}`;
 
     // Insert bet record
     queries.insertBet({
@@ -689,12 +750,17 @@ export async function executeBet(
       agent.pending_bets + 1
     );
 
+    // Commit transaction
+    db.prepare('COMMIT').run();
+
     console.log(`[${agent.display_name}] ✓ Paper bet placed: $${decision.amount} ${decision.side} on "${market.question}"`);
-    console.log(`   Price at entry: ${(market.current_price * 100).toFixed(1)}% | Confidence: ${decision.confidence || 'N/A'}`);
+    console.log(`   Price at entry: ${((market.current_price || 0.5) * 100).toFixed(1)}% | Confidence: ${decision.confidence || 'N/A'}`);
 
     return { id: betId };
   } catch (error) {
-    console.error(`[${agent.display_name}] Failed to execute bet:`, error);
+    // Rollback on error to maintain data integrity
+    db.prepare('ROLLBACK').run();
+    console.error(`[${agent.display_name}] Failed to execute bet, rolled back:`, error);
     return null;
   }
 }
@@ -704,7 +770,7 @@ export async function executeBet(
  * Wrapped in transaction for atomicity
  */
 export async function sellBets(
-  agent: any,
+  agent: Agent,
   betIds: string[]
 ): Promise<{ sold: number; totalPL: number }> {
   if (!betIds || betIds.length === 0) {
@@ -825,16 +891,18 @@ export function takeEquitySnapshots(): void {
 /**
  * Get active markets (not closed or resolved)
  */
-export function getActiveMarkets(): any[] {
-  return queries.getActiveMarkets();
+export function getActiveMarkets(): Market[] {
+  return queries.getActiveMarkets() as Market[];
 }
 
 /**
  * Get all active agents
  */
-export function getActiveAgents(): any[] {
-  return queries.getActiveAgents();
+export function getActiveAgents(): Agent[] {
+  return queries.getActiveAgents() as Agent[];
 }
+
+
 
 /**
  * Resolve a market and update all related bets
@@ -843,55 +911,104 @@ export function resolveMarket(
   marketId: string,
   winningOutcome: 'YES' | 'NO'
 ): void {
-  // Get all pending bets for this market
-  const bets = db.prepare('SELECT * FROM bets WHERE market_id = ? AND status = ?')
-    .all(marketId, 'pending');
+  // CRITICAL: Wrap in transaction to prevent partial resolution if any operation fails
+  db.prepare('BEGIN').run();
 
-  bets.forEach((bet: any) => {
-    const won = bet.side === winningOutcome;
-    const pnl = won ? bet.amount : -bet.amount; // Simple 1:1 payout
+  try {
+    // Get all pending bets for this market
+    const bets = db.prepare('SELECT * FROM bets WHERE market_id = ? AND status = ?')
+      .all(marketId, 'pending');
 
-    // Update bet
-    db.prepare(`
-      UPDATE bets
-      SET status = ?, pnl = ?, resolved_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(won ? 'won' : 'lost', pnl, bet.id);
+    bets.forEach((bet: any) => {
+      const won = bet.side === winningOutcome;
+      const pnl = won ? bet.amount : -bet.amount; // Simple 1:1 payout
 
-    // Update agent stats
-    const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(bet.agent_id) as any;
-
-    if (agent) {
+      // Update bet
       db.prepare(`
-        UPDATE agents
-        SET
-          balance = ?,
-          total_pl = ?,
-          winning_bets = ?,
-          losing_bets = ?,
-          pending_bets = ?,
-          updated_at = CURRENT_TIMESTAMP
+        UPDATE bets
+        SET status = ?, pnl = ?, resolved_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(
-        won ? agent.balance + bet.amount * 2 : agent.balance,
-        agent.total_pl + pnl,
-        won ? agent.winning_bets + 1 : agent.winning_bets,
-        won ? agent.losing_bets : agent.losing_bets + 1,
-        agent.pending_bets - 1,
-        agent.id
-      );
-    }
-  });
+      `).run(won ? 'won' : 'lost', pnl, bet.id);
 
-  // Update market status
-  db.prepare(`
-    UPDATE markets
-    SET status = ?, winning_outcome = ?, resolution_date = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `).run('resolved', winningOutcome, marketId);
+      // Update agent stats
+      const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(bet.agent_id) as any;
 
-  console.log(`✓ Market resolved: ${winningOutcome} wins (${bets.length} bets settled)`);
+      if (agent) {
+        db.prepare(`
+          UPDATE agents
+          SET
+            balance = ?,
+            total_pl = ?,
+            winning_bets = ?,
+            losing_bets = ?,
+            pending_bets = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(
+          won ? agent.balance + bet.amount * 2 : agent.balance,
+          agent.total_pl + pnl,
+          won ? agent.winning_bets + 1 : agent.winning_bets,
+          won ? agent.losing_bets : agent.losing_bets + 1,
+          agent.pending_bets - 1,
+          agent.id
+        );
+      }
+    });
+
+    // Update market status
+    db.prepare(`
+      UPDATE markets
+      SET status = ?, winning_outcome = ?, resolution_date = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run('resolved', winningOutcome, marketId);
+
+    // Commit transaction
+    db.prepare('COMMIT').run();
+
+    console.log(`✓ Market resolved: ${winningOutcome} wins (${bets.length} bets settled)`);
+  } catch (error) {
+    // Rollback on error to maintain database consistency
+    db.prepare('ROLLBACK').run();
+    console.error(`✗ Market resolution failed, rolled back:`, error);
+    throw error;
+  }
 }
+
+// ===== MARKET SYNC LOG OPERATIONS =====
+// Track and audit market synchronization operations
+
+/**
+ * Log a market sync operation to the database
+ *
+ * @param marketsCount - Total number of markets processed
+ * @param newMarkets - Number of new markets added
+ * @param updatedMarkets - Number of existing markets updated
+ * @param success - Whether the sync operation was successful
+ * @param errorMessage - Optional error message if sync failed
+ */
+export function logMarketSync(
+  marketsCount: number,
+  newMarkets: number,
+  updatedMarkets: number,
+  success: boolean,
+  errorMessage?: string
+): void {
+  const logId = `sync-${generateId()}`;
+
+  try {
+    db.prepare(`
+      INSERT INTO market_sync_log (id, markets_added, markets_updated, errors)
+      VALUES (?, ?, ?, ?)
+    `).run(logId, newMarkets, updatedMarkets, errorMessage || null);
+
+    console.log(`✓ Sync logged: ${newMarkets} new, ${updatedMarkets} updated${!success ? ' (failed)' : ''}`);
+  } catch (error) {
+    console.error('Failed to log market sync:', error);
+    // Don't throw - logging failures shouldn't break the sync operation
+  }
+}
+
+
 
 // Auto-initialize database when module is imported (server-side only)
 // This ensures database is ready before any queries are made

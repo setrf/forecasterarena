@@ -1,6 +1,8 @@
 # 🎯 Forecaster Arena
 
-AI models competing in prediction markets. Watch GPT-4, Claude, Gemini, and others battle it out on Polymarket.
+AI models competing in prediction markets. Watch GPT-4, Claude, Gemini, and others battle it out on real Polymarket markets.
+
+**Live market data from Polymarket** • **Automated trading decisions** • **Paper trading (no real money)** • **Real-time performance tracking**
 
 ## 🚀 Quick Start
 
@@ -30,7 +32,17 @@ CRON_SECRET=generate-a-random-string-here
 - Sign up and get API key
 - Get $5 free credit to start
 
-### 3. Run Development Server
+### 3. Sync Markets from Polymarket
+
+Fetch all active markets from Polymarket's public API:
+
+```bash
+npm run sync-markets
+```
+
+This will populate your database with real prediction markets.
+
+### 4. Run Development Server
 
 ```bash
 npm run dev
@@ -42,9 +54,8 @@ Open [http://localhost:3000](http://localhost:3000) 🎉
 - Season 1 (active)
 - 6 AI agents (GPT-4, Claude, Gemini, Llama, Mistral, DeepSeek)
 - Each agent starts with $1,000
-- 1 sample prediction market
 
-### 4. Test Agent Decision Making
+### 5. Test Agent Decision Making
 
 ```bash
 # Test the cron job that makes agents analyze markets and place bets
@@ -57,39 +68,73 @@ curl -X POST http://localhost:3000/api/cron/tick \
 ```
 forecaster-arena/
 ├── app/
-│   ├── page.tsx              # Homepage
-│   ├── layout.tsx            # Root layout
-│   ├── globals.css           # Global styles
+│   ├── page.tsx               # Homepage with leaderboard
+│   ├── markets/page.tsx       # Market browsing page
+│   ├── about/page.tsx         # About page
+│   ├── models/[id]/page.tsx   # Individual model detail pages
+│   ├── layout.tsx             # Root layout
 │   └── api/
-│       └── cron/tick/        # Main cron job
+│       ├── cron/
+│       │   ├── tick/                     # Agent decisions (every 3 min)
+│       │   ├── update-market-status/     # Auto-close markets (every 5 min)
+│       │   └── resolve-markets/          # Settle resolved markets (hourly)
+│       ├── sync-markets/                 # Fetch markets from Polymarket
+│       └── equity-snapshots/             # Historical performance data
 ├── components/
-│   ├── LeaderboardTable.tsx  # Rankings table
-│   ├── EquityCurve.tsx       # Performance chart
-│   ├── StatCard.tsx          # Stat display
-│   ├── RecentActivity.tsx    # Trade feed
-│   └── AutoRefresh.tsx       # Auto-refresh component
+│   ├── EquityCurve.tsx        # Performance chart (Recharts)
+│   ├── AutoRefresh.tsx        # Auto-refresh component
+│   └── NextDecisionCountdown.tsx  # Countdown timer
 ├── lib/
-│   ├── database.ts           # SQLite database layer
-│   ├── agents-sqlite.ts      # Agent decision logic
-│   ├── openrouter.ts         # LLM client (unified API)
-│   └── types.ts              # TypeScript types
+│   ├── database.ts            # SQLite database layer (902 lines)
+│   ├── polymarket.ts          # Polymarket API integration (331 lines)
+│   ├── openrouter.ts          # LLM client (unified API)
+│   └── types.ts               # TypeScript types
 ├── data/
-│   └── forecaster.db         # SQLite database (auto-generated)
+│   └── forecaster.db          # SQLite database (auto-generated)
 └── scripts/
-    ├── test-openrouter.js    # Test OpenRouter connection
-    ├── test-agent-logic.js   # Test agent decision making
-    └── verify-sqlite.js      # Verify database setup
+    ├── test-all.js            # Comprehensive system tests (19 tests)
+    ├── test-functions.js      # Function test suite (44 tests)
+    ├── test-polymarket.js     # Polymarket API tests
+    ├── test-openrouter.js     # OpenRouter connection test
+    ├── sync-markets.js        # Sync markets from Polymarket
+    └── verify-sqlite.js       # Verify database setup
 ```
 
 ## 🤖 How It Works
 
-### Every 3 Minutes (Cron Job)
+### Automated Market Lifecycle
 
-1. **Fetch Markets** - Get active Polymarket markets from database
-2. **Agent Decisions** - Each of 6 LLMs analyzes markets via OpenRouter
-3. **Execute Bets** - Valid decisions are recorded in database
-4. **Update Rankings** - Leaderboard refreshes automatically
-5. **Take Snapshots** - Equity curves updated for charts
+The system runs **three automated cron jobs** to manage the complete market lifecycle:
+
+#### 1. Market Sync (Manual/Scheduled)
+- Fetches **ALL active markets** from Polymarket's Gamma API
+- Uses pagination to get 100+ markets (not limited to 50)
+- Updates prices and market status
+- Command: `npm run sync-markets`
+
+#### 2. Agent Decisions (Every 3 Minutes)
+1. **Fetch Active Markets** - Get markets with `status='active'` and future close dates
+2. **Agent Analysis** - Each of 6 LLMs analyzes markets via OpenRouter
+3. **Decision Types**:
+   - **BET** - Place a new bet on a market
+   - **SELL** - Sell existing bets to realize P/L
+   - **HOLD** - Wait for better opportunities
+4. **Execute Actions** - Valid decisions recorded in database
+5. **Update MTM** - Mark-to-market P/L calculated for active markets only
+6. **Take Snapshots** - Equity curves updated for performance charts
+
+#### 3. Auto-Close Markets (Every 5 Minutes)
+- Automatically closes markets when `close_date` passes
+- Updates status from `'active'` to `'closed'`
+- **Critical for accounting**: Prevents new bets on expired markets
+- Ensures MTM calculations exclude stale prices
+
+#### 4. Market Resolution (Every Hour)
+- Checks Polymarket API for resolved markets
+- Settles all pending bets automatically:
+  - Winners: Get 2× stake returned to balance
+  - Losers: Stake already deducted (no return)
+- Updates market status to `'resolved'`
 
 ### The 6 AI Models
 
@@ -106,20 +151,112 @@ All with **one API key** and **one API format**!
 
 ## 🗄️ Database
 
-The app uses **SQLite** - no setup required!
+The app uses **SQLite** with **better-sqlite3** - no setup required!
 
-- Database auto-creates at `data/forecaster.db`
+### Database Features
+- Auto-creates at `data/forecaster.db` on first run
 - Automatic seeding with Season 1 and 6 agents
-- Works perfectly for both development and production
-- Reset anytime: `rm data/forecaster.db && npm run build`
-- Backups are simple file copies (see DEPLOYMENT.md)
+- Foreign key constraints enabled
+- 11 performance indexes for fast queries
+- Reset anytime: `rm data/forecaster.db && npm run dev`
+
+### Database Schema (7 Tables)
+
+1. **seasons** - Competition seasons (90-day periods)
+2. **agents** - AI model agents with balances and stats
+3. **markets** - Prediction markets from Polymarket
+4. **bets** - Individual bet records (pending/won/lost/sold)
+5. **equity_snapshots** - Historical performance tracking for charts
+6. **market_sync_log** - Audit log for market sync operations
+7. **agent_decisions** - Complete LLM decision history for analysis
+
+### Mark-to-Market (MTM) Accounting
+
+Portfolio values are calculated with **accounting accuracy**:
+
+```
+Agent Portfolio Value = Cash Balance
+                      + Sum(MTM of active market bets)
+                      + Sum(Stakes of closed market bets awaiting resolution)
+```
+
+**Critical accuracy features:**
+- MTM only calculated for **active markets** (fresh prices)
+- Closed markets excluded from MTM (stale prices)
+- Bets on closed markets show value = stake (awaiting resolution)
+- Cannot bet on expired/closed markets (validation prevents it)
 
 **Verify database:**
 ```bash
-node scripts/verify-sqlite.js
+npm run verify-db
+```
+
+## 📊 Polymarket Integration
+
+### Paper Trading System
+
+**This is PAPER TRADING ONLY** - no real money involved. The system:
+- ✅ Fetches real market data from Polymarket's public Gamma API
+- ✅ Makes paper trading decisions using real prices
+- ✅ Tracks performance as if trading on real markets
+- ❌ **Does NOT** place actual on-chain orders
+- ❌ **Does NOT** spend real money
+
+See [POLYMARKET_PAPER_TRADING.md](./POLYMARKET_PAPER_TRADING.md) for complete documentation.
+
+### Sync Markets from Polymarket
+
+Fetch ALL active markets (with automatic pagination):
+
+```bash
+npm run sync-markets
+```
+
+This will:
+- Loop through ALL pages of Polymarket markets (100 per page)
+- Add new markets to your database
+- Update prices for existing markets
+- Show progress as it fetches
+
+**API Route:**
+```bash
+curl -X POST http://localhost:3000/api/sync-markets \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+**Set up automatic sync** (every 6 hours):
+```bash
+crontab -e
+
+# Add this line:
+0 */6 * * * curl -X POST http://localhost:3000/api/sync-markets -H "Authorization: Bearer $CRON_SECRET"
 ```
 
 ## 🚢 Deploy to Production
+
+### Required Cron Jobs
+
+Set up all THREE cron jobs for the complete lifecycle:
+
+```bash
+crontab -e
+```
+
+Add these lines:
+
+```bash
+# Agent decisions - every 3 minutes
+*/3 * * * * curl -X POST http://localhost:3000/api/cron/tick -H "Authorization: Bearer $CRON_SECRET"
+
+# Auto-close expired markets - every 5 minutes (CRITICAL for MTM accuracy)
+*/5 * * * * curl -X POST http://localhost:3000/api/cron/update-market-status -H "Authorization: Bearer $CRON_SECRET"
+
+# Check market resolutions - every hour
+0 * * * * curl -X POST http://localhost:3000/api/cron/resolve-markets -H "Authorization: Bearer $CRON_SECRET"
+
+# Sync markets from Polymarket - every 6 hours (optional)
+0 */6 * * * curl -X POST http://localhost:3000/api/sync-markets -H "Authorization: Bearer $CRON_SECRET"
+```
 
 ### Self-Hosting on DigitalOcean
 
@@ -137,7 +274,7 @@ cat DEPLOYMENT.md
 **What you'll set up:**
 - ✅ Next.js app running with systemd
 - ✅ Nginx reverse proxy with SSL
-- ✅ Linux cron job for agent decisions (every 3 minutes)
+- ✅ Linux cron jobs (3-4 automated tasks)
 - ✅ Automatic database backups
 - ✅ Process monitoring and logging
 
@@ -158,33 +295,56 @@ cat DEPLOYMENT.md
 - Domain: **~$1/month**
 - **Total: ~$35-45/month**
 
-## 📊 Adding Markets
+## 🧪 Testing
 
-Insert markets directly into the database:
+### Comprehensive Test Suite
+
+Run all **63 automated tests**:
 
 ```bash
-sqlite3 data/forecaster.db
+# Full test suite (both structure and function tests)
+npm run test:all
+
+# Function tests only (44 tests)
+npm run test:functions
+
+# Structure tests only (19 tests)
+npm test
 ```
 
-```sql
-INSERT INTO markets (id, question, category, close_date, status, current_price)
-VALUES (
-    'market-' || lower(hex(randomblob(8))),
-    'Will Trump win 2024 election?',
-    'politics',
-    '2024-11-05 23:59:59',
-    'active',
-    0.52
-);
-```
+**Test coverage includes:**
+- ✅ Database schema (all 7 tables)
+- ✅ Foreign key constraints
+- ✅ Performance indexes
+- ✅ Query functionality (16+ database queries)
+- ✅ Data integrity
+- ✅ MTM calculations
+- ✅ Prompt building logic
+- ✅ Market lifecycle
+- ✅ Bet validation
+- ✅ Resolution flow
 
-**Coming soon**: Automatic Polymarket API integration to fetch live markets!
+### Individual Test Scripts
+
+```bash
+# Test Polymarket API integration
+npm run test-polymarket
+
+# Test OpenRouter connection
+npm run test-openrouter
+
+# Test pagination implementation
+node scripts/test-fetch-all.js
+
+# Verify database setup
+npm run verify-db
+```
 
 ## 🔧 Configuration
 
 ### Adjust Cron Frequency
 
-For Digital Ocean deployments, edit your system crontab:
+For DigitalOcean deployments, edit your system crontab:
 
 ```bash
 # Edit crontab
@@ -196,17 +356,23 @@ crontab -e
 
 ### Change Agent Models
 
-Edit the database seed data in `lib/database.ts`:
+**For a new database** (recommended):
+1. Edit seed data in `lib/database.ts` (lines 217-224)
+2. Delete existing database: `rm data/forecaster.db`
+3. Restart app: `npm run dev`
 
-```typescript
-// See full list: https://openrouter.ai/models
-{ model_id: 'openai/gpt-4-turbo', display_name: 'GPT-4 Turbo' },
-{ model_id: 'x-ai/grok-beta', display_name: 'Grok Beta' },
+**For existing database** (advanced):
+```sql
+sqlite3 data/forecaster.db
+UPDATE agents SET model_id = 'openai/gpt-4-turbo', display_name = 'GPT-4 Turbo'
+WHERE model_id = 'openai/gpt-4';
 ```
+
+See full model list: https://openrouter.ai/models
 
 ### Adjust Betting Limits
 
-Edit `lib/agents-sqlite.ts`:
+Edit `lib/database.ts` (lines 682-697):
 
 ```typescript
 // Maximum bet size (% of balance)
@@ -224,78 +390,89 @@ if (decision.amount < 10) {
 
 ### Database Issues
 - Delete `data/forecaster.db` and restart the app to reset
-- Run `node scripts/verify-sqlite.js` to verify database setup
+- Run `npm run verify-db` to verify database setup
 - Check file permissions on the `data/` directory
 
-### Cron Job Not Running
+### Cron Jobs Not Running
 - In development, trigger manually via POST request
 - In production, check system logs with `journalctl -u forecaster-arena -f`
 - Verify crontab is set up correctly: `crontab -l`
 - Verify `CRON_SECRET` matches in both request and environment
+- **Check ALL THREE cron jobs are set up** (tick, update-market-status, resolve-markets)
 
 ### LLM API Errors
 - Check OpenRouter dashboard for quota
 - Verify API key is correct in `.env.local`
 - Check model IDs are valid: https://openrouter.ai/models
-- Test connection: `node scripts/test-openrouter.js`
+- Test connection: `npm run test-openrouter`
 
-### No Decisions Being Made
-- Check cron logs for errors
-- Verify markets exist: `node scripts/verify-sqlite.js`
-- Check agent balances in database
-- Test agent logic: `node scripts/test-agent-logic.js`
+### No Markets Available
+- Run `npm run sync-markets` to fetch markets from Polymarket
+- Check market sync logs: `SELECT * FROM market_sync_log ORDER BY synced_at DESC LIMIT 5;`
+- Verify Polymarket API is accessible
 
-## 🧪 Testing
+### Markets Not Closing
+- Verify update-market-status cron is running (every 5 min)
+- Check logs for this cron job
+- Manually trigger: `curl -X POST http://localhost:3000/api/cron/update-market-status -H "Authorization: Bearer $CRON_SECRET"`
 
-```bash
-# Test OpenRouter API connection
-export OPENROUTER_API_KEY=sk-or-v1-your-key
-node scripts/test-openrouter.js
+### Bets Not Resolving
+- Verify resolve-markets cron is running (hourly)
+- Check closed markets in database: `SELECT * FROM markets WHERE status='closed'`
+- Check Polymarket for resolution status
+- Manually trigger: `curl -X POST http://localhost:3000/api/cron/resolve-markets -H "Authorization: Bearer $CRON_SECRET"`
 
-# Test agent decision making
-node scripts/test-agent-logic.js
+### MTM Showing Wrong Values
+- Ensure update-market-status cron is running (closes expired markets)
+- MTM only calculates for active markets (closed markets excluded)
+- Check market statuses: `SELECT status, COUNT(*) FROM markets GROUP BY status;`
 
-# Verify SQLite database
-node scripts/verify-sqlite.js
+## 📝 Features & Roadmap
 
-# Build test
-npm run build
-```
-
-## 📝 Next Steps
-
-### Phase 1: MVP ✅
-- [x] Database schema
-- [x] SQLite integration
-- [x] OpenRouter integration
-- [x] Basic homepage
-- [x] Cron job working
+### ✅ Phase 1: Core Infrastructure (COMPLETE)
+- [x] Database schema with 7 tables
+- [x] SQLite integration with auto-seeding
+- [x] OpenRouter integration (6 LLM models)
+- [x] Homepage with leaderboard
+- [x] Cron jobs (tick, auto-close, resolve)
 - [x] Deployment guide (DigitalOcean)
-- [ ] Deploy to production
+- [x] Comprehensive testing (63 tests)
 
-### Phase 2: Real Markets
-- [ ] Polymarket API integration
-- [ ] Fetch live markets automatically
-- [ ] Place real bets on Polymarket
-- [ ] Market resolution tracking
+### ✅ Phase 2: Polymarket Integration (COMPLETE)
+- [x] Polymarket Gamma API integration
+- [x] Fetch ALL active markets with pagination
+- [x] Automatic market syncing
+- [x] Market resolution tracking
+- [x] Paper trading system
+- [x] Mark-to-market accounting
 
-### Phase 3: Enhanced UI
-- [ ] Real equity curve charts (Recharts)
-- [ ] Model detail pages
+### ✅ Phase 3: Enhanced UI (COMPLETE)
+- [x] Real equity curve charts (Recharts)
+- [x] Model detail pages (/models/[id])
+- [x] Market browsing page (/markets)
+- [x] About page (/about)
+- [x] Performance charts with time ranges
+- [x] Category-based statistics
+
+### 🚧 Phase 4: Enhancements (IN PROGRESS)
+- [ ] Real-time updates via WebSockets
+- [ ] Agent reasoning logs display
+- [ ] Advanced analytics dashboard
 - [ ] Trade history with filters
-- [ ] Market browsing page
 - [ ] Mobile responsive design
-
-### Phase 4: Features
-- [ ] Real-time updates
-- [ ] Agent reasoning logs
-- [ ] Performance analytics
-- [ ] Blog/season recaps
 - [ ] Multiple seasons support
+- [ ] Season leaderboards and archives
 
 ## 🤝 Contributing
 
 This is an educational project inspired by [nof1.ai](https://nof1.ai).
+
+Pull requests welcome! Areas for contribution:
+- Additional AI models
+- UI/UX improvements
+- Performance optimizations
+- Documentation improvements
+- Test coverage expansion
 
 ## 📄 License
 
@@ -303,14 +480,29 @@ MIT
 
 ## ⚠️ Disclaimer
 
-**Educational purposes only.** This platform involves prediction markets and real money. Users are responsible for:
-- Legal compliance in their jurisdiction
-- Understanding risks of prediction markets
-- API costs and blockchain fees
-- All trading decisions
+**Educational and research purposes only.**
 
-Not financial advice. Trade at your own risk.
+This platform uses real prediction market data but **DOES NOT place real bets**. This is a **paper trading system only**.
+
+If you modify this code to place real bets:
+- You are responsible for legal compliance in your jurisdiction
+- Understand the risks of prediction markets
+- Be aware of API costs and potential blockchain fees
+- All trading decisions are your own responsibility
+
+**This is not financial advice. Trade at your own risk.**
+
+## 📚 Additional Documentation
+
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Complete production deployment guide
+- [POLYMARKET_PAPER_TRADING.md](./POLYMARKET_PAPER_TRADING.md) - Paper trading system documentation
 
 ---
 
-Built with ❤️ using Next.js, OpenRouter, and SQLite
+**Built with ❤️ using:**
+- [Next.js 14](https://nextjs.org/) - React framework
+- [OpenRouter](https://openrouter.ai/) - Unified LLM API
+- [Polymarket Gamma API](https://docs.polymarket.com/) - Prediction market data
+- [SQLite](https://www.sqlite.org/) + [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - Database
+- [Recharts](https://recharts.org/) - Performance charts
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
