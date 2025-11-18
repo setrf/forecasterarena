@@ -22,7 +22,7 @@ const RETRY_DELAYS = [2000, 4000, 8000]; // 2s, 4s, 8s exponential backoff
 /**
  * Market data from Polymarket Gamma API
  */
-export type PolymarketMarket = {
+type PolymarketMarket = {
   id: string;
   question: string;
   description?: string;
@@ -46,7 +46,7 @@ export type PolymarketMarket = {
 /**
  * Simplified market info for our database
  */
-export type SimplifiedMarket = {
+type SimplifiedMarket = {
   polymarket_id: string;
   question: string;
   description: string | null;
@@ -327,72 +327,6 @@ function parseMarketToSimplified(
 }
 
 /**
- * Fetch active markets from Polymarket Gamma API
- *
- * Uses public API (no authentication required) to get real prediction markets.
- * Agents will make paper trading decisions on these markets.
- *
- * Features:
- * - 30-second request timeout
- * - Automatic retry with exponential backoff (3 retries: 2s, 4s, 8s)
- * - Data validation to ensure API responses are well-formed
- * - Filters out invalid markets
- *
- * @param limit - Maximum number of markets to fetch (default: 100)
- * @param offset - Pagination offset (default: 0)
- * @returns Array of active markets
- */
-export async function fetchPolymarketMarkets(
-  limit: number = 100,
-  offset: number = 0
-): Promise<SimplifiedMarket[]> {
-  const url = `${GAMMA_API_HOST}/markets`;
-  const params = new URLSearchParams({
-    active: 'true',
-    closed: 'false',
-    archived: 'false',
-    limit: limit.toString(),
-    offset: offset.toString()
-  });
-
-  try {
-    // Fetch with retry logic and timeout
-    const response = await fetchWithRetry(`${url}?${params}`);
-
-    if (!response.ok) {
-      throw new Error(`Gamma API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Validate response is an array
-    if (!Array.isArray(data)) {
-      console.error('API response is not an array:', typeof data);
-      throw new Error('Invalid API response: expected array of markets');
-    }
-
-    const markets: PolymarketMarket[] = data;
-
-    // Convert to simplified format with validation
-    // Filter out any markets that fail validation
-    const simplifiedMarkets = markets
-      .map(market => parseMarketToSimplified(market, 'active'))
-      .filter((market): market is SimplifiedMarket => market !== null);
-
-    // Log if we filtered out any invalid markets
-    if (simplifiedMarkets.length < markets.length) {
-      console.warn(`Filtered out ${markets.length - simplifiedMarkets.length} invalid markets`);
-    }
-
-    return simplifiedMarkets;
-
-  } catch (error: any) {
-    console.error('Error fetching Polymarket markets:', error.message || error);
-    throw error;
-  }
-}
-
-/**
  * Fetch ALL active markets from Polymarket using pagination
  *
  * This function makes multiple API requests to fetch all available active markets.
@@ -403,8 +337,8 @@ export async function fetchPolymarketMarkets(
  * - Automatic pagination (loops until no more markets)
  * - Rate limiting (500ms delay between requests to be respectful)
  * - Progress logging (so you know it's working on large datasets)
- * - Retry logic with exponential backoff (inherited from fetchPolymarketMarkets)
- * - Data validation (inherited from fetchPolymarketMarkets)
+ * - Retry logic with exponential backoff
+ * - Data validation
  * - Graceful degradation: returns partial results if later pages fail
  *
  * @returns Array of ALL active markets from Polymarket
@@ -426,7 +360,41 @@ export async function fetchAllPolymarketMarkets(): Promise<SimplifiedMarket[]> {
   while (true) {
     try {
       // Fetch a batch of markets (includes retry logic and validation)
-      const batch = await fetchPolymarketMarkets(limit, offset);
+      const url = `${GAMMA_API_HOST}/markets`;
+      const params = new URLSearchParams({
+        active: 'true',
+        closed: 'false',
+        archived: 'false',
+        limit: limit.toString(),
+        offset: offset.toString()
+      });
+
+      const response = await fetchWithRetry(`${url}?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Gamma API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Validate response is an array
+      if (!Array.isArray(data)) {
+        console.error('API response is not an array:', typeof data);
+        throw new Error('Invalid API response: expected array of markets');
+      }
+
+      const markets: PolymarketMarket[] = data;
+
+      // Convert to simplified format with validation
+      // Filter out any markets that fail validation
+      const batch = markets
+        .map(market => parseMarketToSimplified(market, 'active'))
+        .filter((market): market is SimplifiedMarket => market !== null);
+
+      // Log if we filtered out any invalid markets
+      if (batch.length < markets.length) {
+        console.warn(`Filtered out ${markets.length - batch.length} invalid markets`);
+      }
 
       // Reset error counter on success
       consecutiveErrors = 0;
@@ -491,101 +459,6 @@ export async function fetchAllPolymarketMarkets(): Promise<SimplifiedMarket[]> {
   }
 
   return allMarkets;
-}
-
-/**
- * Fetch a single market by ID to check its current status
- *
- * Useful for updating market prices and checking resolution status.
- *
- * Features:
- * - 30-second request timeout
- * - Automatic retry with exponential backoff (3 retries: 2s, 4s, 8s)
- * - Data validation to ensure API response is well-formed
- * - Graceful handling of 404 (market not found)
- *
- * @param marketId - Polymarket market ID
- * @returns Market data or null if not found or invalid
- */
-export async function fetchMarketById(marketId: string): Promise<SimplifiedMarket | null> {
-  const url = `${GAMMA_API_HOST}/markets/${marketId}`;
-
-  try {
-    // Fetch with retry logic and timeout
-    const response = await fetchWithRetry(url);
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.log(`Market ${marketId} not found (404)`);
-        return null;
-      }
-      throw new Error(`Gamma API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Validate response is an object (not array)
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      console.error(`Invalid API response for market ${marketId}:`, typeof data);
-      return null;
-    }
-
-    const market: PolymarketMarket = data;
-
-    // Validate market data
-    if (!validateMarketData(market)) {
-      console.warn(`Invalid market data for market ${marketId}`);
-      return null;
-    }
-
-    const yesToken = market.tokens.find(t => t.outcome === 'Yes');
-    const noToken = market.tokens.find(t => t.outcome === 'No');
-
-    // Parse price safely
-    let currentPrice = 0.5;
-    if (yesToken) {
-      const parsedPrice = parseFloat(yesToken.price);
-      if (!isNaN(parsedPrice)) {
-        currentPrice = parsedPrice;
-      } else {
-        console.warn(`Invalid price for market ${marketId}, defaulting to 0.5`);
-      }
-    } else {
-      console.warn(`Market ${marketId} missing Yes token, defaulting price to 0.5`);
-    }
-
-    // Determine status
-    let status: 'active' | 'closed' | 'resolved' = 'active';
-    if (market.resolved || yesToken?.winner !== undefined || noToken?.winner !== undefined) {
-      status = 'resolved';
-    } else if (market.closed || !market.active) {
-      status = 'closed';
-    }
-
-    // Parse volume safely
-    let volume: number | null = null;
-    if (market.volume) {
-      const parsedVolume = parseFloat(market.volume);
-      if (!isNaN(parsedVolume)) {
-        volume = parsedVolume;
-      }
-    }
-
-    return {
-      polymarket_id: market.id,
-      question: market.question,
-      description: market.description || null,
-      category: market.category || null,
-      close_date: market.end_date_iso,
-      current_price: currentPrice,
-      volume,
-      status
-    };
-
-  } catch (error: any) {
-    console.error(`Error fetching market ${marketId}:`, error.message || error);
-    return null;
-  }
 }
 
 /**

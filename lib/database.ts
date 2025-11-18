@@ -255,7 +255,7 @@ function seedInitialData() {
  *
  * @returns Unique identifier string
  */
-function generateId(): string {
+export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
@@ -462,20 +462,6 @@ export const queries = {
     `).run(generateId(), agentId, balance, totalPl);
   },
 
-  /**
-   * Get equity snapshots for a specific agent
-   * @param agentId - Agent ID
-   * @param limit - Number of snapshots to return (default: 100)
-   * @returns Array of snapshot records
-   */
-  getSnapshotsByAgent: (agentId: string, limit: number = 100) => {
-    return db.prepare(`
-      SELECT * FROM equity_snapshots
-      WHERE agent_id = ?
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `).all(agentId, limit);
-  },
 
   // ===== MARK-TO-MARKET CALCULATIONS =====
 
@@ -737,7 +723,7 @@ export async function executeBet(
   db.prepare('BEGIN').run();
 
   try {
-    const betId = `bet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const betId = `bet-${generateId()}`;
 
     // Insert bet record
     queries.insertBet({
@@ -911,84 +897,7 @@ export function getActiveAgents(): any[] {
   return queries.getActiveAgents();
 }
 
-/**
- * Update market price and timestamp
- * CRITICAL: This function is essential for accurate mark-to-market calculations
- * Should be called whenever market prices are synced from Polymarket
- *
- * @param marketId - The market ID to update
- * @param price - The new price (0-1)
- * @param volume - Optional: The new volume
- */
-export function updateMarketPrice(
-  marketId: string,
-  price: number,
-  volume?: number
-): void {
-  try {
-    if (volume !== undefined) {
-      db.prepare(`
-        UPDATE markets
-        SET current_price = ?, volume = ?, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(price, volume, marketId);
-    } else {
-      db.prepare(`
-        UPDATE markets
-        SET current_price = ?, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(price, marketId);
-    }
-  } catch (error) {
-    console.error(`✗ Failed to update market price for ${marketId}:`, error);
-    throw error;
-  }
-}
 
-/**
- * Update multiple market prices in a transaction (for bulk syncing)
- * More efficient than calling updateMarketPrice() multiple times
- *
- * @param updates - Array of {marketId, price, volume?}
- */
-export function updateMarketPrices(
-  updates: Array<{ marketId: string; price: number; volume?: number }>
-): void {
-  if (!updates || updates.length === 0) {
-    return;
-  }
-
-  db.prepare('BEGIN').run();
-
-  try {
-    const updateWithVolume = db.prepare(`
-      UPDATE markets
-      SET current_price = ?, volume = ?, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    const updateWithoutVolume = db.prepare(`
-      UPDATE markets
-      SET current_price = ?, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    for (const update of updates) {
-      if (update.volume !== undefined) {
-        updateWithVolume.run(update.price, update.volume, update.marketId);
-      } else {
-        updateWithoutVolume.run(update.price, update.marketId);
-      }
-    }
-
-    db.prepare('COMMIT').run();
-    console.log(`✓ Updated prices for ${updates.length} markets`);
-  } catch (error) {
-    db.prepare('ROLLBACK').run();
-    console.error(`✗ Failed to update market prices, rolled back:`, error);
-    throw error;
-  }
-}
 
 /**
  * Resolve a market and update all related bets
@@ -1079,7 +988,7 @@ export function logMarketSync(
   success: boolean,
   errorMessage?: string
 ): void {
-  const logId = `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const logId = `sync-${generateId()}`;
 
   try {
     db.prepare(`
@@ -1094,56 +1003,7 @@ export function logMarketSync(
   }
 }
 
-/**
- * Get recent market sync logs
- *
- * @param limit - Number of logs to retrieve (default: 10)
- * @returns Array of sync log records, most recent first
- */
-export function getRecentSyncLogs(limit: number = 10): any[] {
-  return db.prepare(`
-    SELECT * FROM market_sync_log
-    ORDER BY synced_at DESC
-    LIMIT ?
-  `).all(limit);
-}
 
-/**
- * Get market sync statistics for a specified time period
- *
- * @param days - Number of days to look back (default: 7)
- * @returns Statistics object with sync counts and totals
- */
-export function getSyncStats(days: number = 7): {
-  totalSyncs: number;
-  successfulSyncs: number;
-  failedSyncs: number;
-  totalMarketsAdded: number;
-  totalMarketsUpdated: number;
-} {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
-  const cutoff = cutoffDate.toISOString();
-
-  const stats = db.prepare(`
-    SELECT
-      COUNT(*) as totalSyncs,
-      SUM(CASE WHEN errors IS NULL THEN 1 ELSE 0 END) as successfulSyncs,
-      SUM(CASE WHEN errors IS NOT NULL THEN 1 ELSE 0 END) as failedSyncs,
-      SUM(markets_added) as totalMarketsAdded,
-      SUM(markets_updated) as totalMarketsUpdated
-    FROM market_sync_log
-    WHERE synced_at >= ?
-  `).get(cutoff) as any;
-
-  return {
-    totalSyncs: stats.totalSyncs || 0,
-    successfulSyncs: stats.successfulSyncs || 0,
-    failedSyncs: stats.failedSyncs || 0,
-    totalMarketsAdded: stats.totalMarketsAdded || 0,
-    totalMarketsUpdated: stats.totalMarketsUpdated || 0
-  };
-}
 
 // Auto-initialize database when module is imported (server-side only)
 // This ensures database is ready before any queries are made

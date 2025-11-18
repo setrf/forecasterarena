@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db, { queries, logMarketSync } from '@/lib/database';
+import db, { queries, logMarketSync, generateId } from '@/lib/database';
 import { fetchAllPolymarketMarkets } from '@/lib/polymarket';
 
 export const dynamic = 'force-dynamic';
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         updatedMarkets++;
       } else {
         // Insert new market
-        const marketId = `market-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const marketId = `market-${generateId()}`;
         db.prepare(`
           INSERT INTO markets (
             id, polymarket_id, question, description, category,

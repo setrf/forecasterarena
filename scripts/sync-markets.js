@@ -22,6 +22,7 @@ async function syncMarkets() {
 
     const { fetchAllPolymarketMarkets } = polymarketModule;
     const db = databaseModule.default;
+    const { generateId } = databaseModule;
 
     // Fetch ALL markets from Polymarket using pagination
     // This will automatically loop through all pages of results
@@ -61,7 +62,7 @@ async function syncMarkets() {
         updatedMarkets++;
       } else {
         // Insert new market
-        const marketId = `market-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const marketId = `market-${generateId()}`;
         db.prepare(`
           INSERT INTO markets (
             id, polymarket_id, question, description, category,
