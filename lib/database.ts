@@ -16,6 +16,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { callLLM, buildSystemPrompt, buildUserPrompt, LLMDecision } from './openrouter';
 
 // Database file location - stored in data/ directory (gitignored)
 const DB_PATH = path.join(process.cwd(), 'data', 'forecaster.db');
@@ -98,6 +99,7 @@ export function initializeDatabase() {
       resolution_date TEXT,                             -- When market resolves
       status TEXT NOT NULL DEFAULT 'active',            -- active | closed | resolved | cancelled
       current_price REAL,                               -- Current YES price (0-1)
+      price_updated_at TEXT,                            -- When price was last updated
       winning_outcome TEXT,                             -- 'YES' or 'NO' after resolution
       volume REAL,                                      -- Total trading volume
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -116,7 +118,7 @@ export function initializeDatabase() {
       confidence REAL,                                  -- AI confidence score (0-1)
       reasoning TEXT,                                   -- AI reasoning for the bet
       raw_response TEXT,                                -- Full LLM response (for debugging)
-      status TEXT NOT NULL DEFAULT 'pending',           -- pending | won | lost | cancelled | refunded
+      status TEXT NOT NULL DEFAULT 'pending',           -- pending | won | lost | sold | cancelled | refunded
       pnl REAL,                                         -- Profit/loss after resolution
       polymarket_order_id TEXT,                         -- Polymarket order ID (if placed on-chain)
       placed_at TEXT DEFAULT CURRENT_TIMESTAMP,         -- When bet was placed
@@ -137,6 +139,33 @@ export function initializeDatabase() {
       FOREIGN KEY (agent_id) REFERENCES agents(id)
     );
 
+    -- ===== MARKET SYNC LOG TABLE =====
+    -- Audit log for market price sync operations
+    CREATE TABLE IF NOT EXISTS market_sync_log (
+      id TEXT PRIMARY KEY,                              -- Unique log ID
+      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,         -- When sync occurred
+      markets_added INTEGER NOT NULL DEFAULT 0,         -- Number of new markets added
+      markets_updated INTEGER NOT NULL DEFAULT 0,       -- Number of markets updated
+      errors TEXT                                       -- Any errors encountered
+    );
+
+    -- ===== AGENT DECISIONS TABLE =====
+    -- Log of all AI decision-making for analysis
+    CREATE TABLE IF NOT EXISTS agent_decisions (
+      id TEXT PRIMARY KEY,                              -- Unique decision ID
+      agent_id TEXT NOT NULL,                           -- Which agent made the decision
+      decision_timestamp TEXT DEFAULT CURRENT_TIMESTAMP,-- When decision was made
+      action TEXT NOT NULL,                             -- BET | SELL | HOLD
+      raw_llm_response TEXT,                            -- Full LLM response
+      reasoning TEXT,                                   -- AI reasoning
+      confidence REAL,                                  -- Confidence score if applicable
+      bets_to_sell TEXT,                                -- JSON array of bet IDs to sell
+      market_id TEXT,                                   -- Market ID if BET action
+      side TEXT,                                        -- YES or NO if BET action
+      amount REAL,                                      -- Bet amount if BET action
+      FOREIGN KEY (agent_id) REFERENCES agents(id)
+    );
+
     -- ===== PERFORMANCE INDEXES =====
     -- Optimize common query patterns
     CREATE INDEX IF NOT EXISTS idx_agents_season ON agents(season_id);
@@ -144,7 +173,12 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_bets_agent ON bets(agent_id, placed_at DESC); -- For bet history
     CREATE INDEX IF NOT EXISTS idx_bets_market ON bets(market_id);
     CREATE INDEX IF NOT EXISTS idx_bets_status ON bets(status);                  -- For pending bets
+    CREATE INDEX IF NOT EXISTS idx_bets_resolved_at ON bets(resolved_at DESC) WHERE resolved_at IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_snapshots_agent_time ON equity_snapshots(agent_id, timestamp DESC); -- For charts
+    CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON equity_snapshots(timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_markets_status_updated ON markets(status, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_markets_price_updated ON markets(price_updated_at DESC) WHERE price_updated_at IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_decisions_agent_time ON agent_decisions(agent_id, decision_timestamp DESC);
   `);
 
   // Check if we need to seed initial data
@@ -369,9 +403,18 @@ export const queries = {
   /**
    * Get all bets for a specific agent
    * @param agentId - Agent ID
+   * @param limit - Optional limit on number of results
    * @returns Array of bet records
    */
-  getBetsByAgent: (agentId: string) => {
+  getBetsByAgent: (agentId: string, limit?: number) => {
+    if (limit) {
+      return db.prepare(`
+        SELECT * FROM bets
+        WHERE agent_id = ?
+        ORDER BY placed_at DESC
+        LIMIT ?
+      `).all(agentId, limit);
+    }
     return db.prepare(`
       SELECT * FROM bets
       WHERE agent_id = ?
@@ -422,6 +465,84 @@ export const queries = {
     `).all(agentId, limit);
   },
 
+  // ===== MARK-TO-MARKET CALCULATIONS =====
+
+  /**
+   * Calculate mark-to-market P/L for an agent's pending bets
+   * @param agentId - Agent ID
+   * @returns Unrealized P/L from pending bets
+   */
+  getMarkToMarketPL: (agentId: string): number => {
+    const pendingBets = db.prepare(`
+      SELECT b.id, b.amount, b.price, b.side, m.current_price
+      FROM bets b
+      JOIN markets m ON b.market_id = m.id
+      WHERE b.agent_id = ? AND b.status = 'pending'
+    `).all(agentId) as Array<{
+      id: string;
+      amount: number;
+      price: number;
+      side: string;
+      current_price: number;
+    }>;
+
+    let totalUnrealizedPL = 0;
+
+    for (const bet of pendingBets) {
+      if (!bet.current_price) continue; // Skip if no current price
+
+      let currentValue = 0;
+
+      if (bet.side === 'YES') {
+        // YES bet: shares = amount / entry_price, value = shares * current_price
+        const shares = bet.amount / bet.price;
+        currentValue = shares * bet.current_price;
+      } else {
+        // NO bet: shares = amount / (1 - entry_price), value = shares * (1 - current_price)
+        const shares = bet.amount / (1 - bet.price);
+        currentValue = shares * (1 - bet.current_price);
+      }
+
+      const unrealizedPL = currentValue - bet.amount;
+      totalUnrealizedPL += unrealizedPL;
+    }
+
+    return totalUnrealizedPL;
+  },
+
+  /**
+   * Get agent with mark-to-market P/L included
+   * @param agentId - Agent ID
+   * @returns Agent with mtm_pl field added
+   */
+  getAgentWithMTM: (agentId: string) => {
+    const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(agentId) as any;
+    if (!agent) return null;
+
+    const mtmPL = queries.getMarkToMarketPL(agentId);
+    return {
+      ...agent,
+      mtm_pl: mtmPL,
+      total_pl_with_mtm: agent.total_pl + mtmPL
+    };
+  },
+
+  /**
+   * Get all active agents with mark-to-market P/L
+   * @returns Array of agents with mtm_pl field
+   */
+  getActiveAgentsWithMTM: () => {
+    const agents = db.prepare('SELECT * FROM agents WHERE status = \'active\'').all() as any[];
+    return agents.map(agent => {
+      const mtmPL = queries.getMarkToMarketPL(agent.id);
+      return {
+        ...agent,
+        mtm_pl: mtmPL,
+        total_pl_with_mtm: agent.total_pl + mtmPL
+      };
+    });
+  },
+
   // ===== STATISTICS QUERIES =====
 
   /**
@@ -445,6 +566,332 @@ export const queries = {
     };
   }
 };
+
+// ===== AGENT OPERATIONS =====
+// Advanced agent operations including LLM decisions, bet execution, and market resolution
+
+/**
+ * Get agent's pending bets with mark-to-market information
+ */
+export function getAgentPendingBetsWithMTM(agentId: string): any[] {
+  const bets = db.prepare(`
+    SELECT
+      b.id as bet_id,
+      b.amount as bet_amount,
+      b.price as entry_price,
+      b.side,
+      m.id as market_id,
+      m.question as market_question,
+      m.current_price
+    FROM bets b
+    JOIN markets m ON b.market_id = m.id
+    WHERE b.agent_id = ? AND b.status = 'pending'
+    ORDER BY b.placed_at DESC
+  `).all(agentId) as any[];
+
+  return bets.map(bet => {
+    let currentValue = 0;
+    if (bet.current_price && bet.entry_price) {
+      if (bet.side === 'YES') {
+        const shares = bet.bet_amount / bet.entry_price;
+        currentValue = shares * bet.current_price;
+      } else {
+        const shares = bet.bet_amount / (1 - bet.entry_price);
+        currentValue = shares * (1 - bet.current_price);
+      }
+    }
+    const mtm_pnl = currentValue - bet.bet_amount;
+
+    return {
+      ...bet,
+      current_value: currentValue,
+      mtm_pnl
+    };
+  });
+}
+
+/**
+ * Get agent's decision for current markets using LLM
+ */
+export async function getAgentDecision(
+  agent: any,
+  markets: any[]
+): Promise<LLMDecision & { agentId: string }> {
+  console.log(`[${agent.display_name}] Analyzing ${markets.length} markets...`);
+
+  // Get agent's pending bets with MTM info
+  const pendingBets = getAgentPendingBetsWithMTM(agent.id);
+  console.log(`[${agent.display_name}] Has ${pendingBets.length} pending bets`);
+
+  const systemPrompt = buildSystemPrompt(agent.display_name);
+  const userPrompt = buildUserPrompt(agent.balance, agent.total_bets, markets, pendingBets);
+
+  const decision = await callLLM(agent.model_id, systemPrompt, userPrompt);
+
+  console.log(`[${agent.display_name}] Decision: ${decision.action}`,
+    decision.action === 'BET' ? `- ${decision.side} on market ${decision.marketId}` :
+    decision.action === 'SELL' ? `- Selling ${decision.betsToSell?.length || 0} bet(s)` : '');
+
+  return {
+    ...decision,
+    agentId: agent.id
+  };
+}
+
+/**
+ * Execute a bet (record in DB, update balance)
+ */
+export async function executeBet(
+  agent: any,
+  decision: LLMDecision,
+  market: any
+): Promise<any | null> {
+  if (decision.action !== 'BET' || !decision.marketId || !decision.side || !decision.amount) {
+    return null;
+  }
+
+  // Validation
+  if (decision.amount > agent.balance) {
+    console.warn(`[${agent.display_name}] Insufficient funds: ${decision.amount} > ${agent.balance}`);
+    return null;
+  }
+
+  if (decision.amount < 10) {
+    console.warn(`[${agent.display_name}] Bet too small: $${decision.amount}`);
+    return null;
+  }
+
+  if (decision.amount > agent.balance * 0.3) {
+    console.warn(`[${agent.display_name}] Bet too large (>30% of balance), capping`);
+    decision.amount = Math.floor(agent.balance * 0.3);
+  }
+
+  try {
+    const betId = `bet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Insert bet record
+    queries.insertBet({
+      id: betId,
+      agent_id: agent.id,
+      market_id: market.id,
+      side: decision.side,
+      amount: decision.amount,
+      price: market.current_price || 0.5,
+      confidence: decision.confidence,
+      reasoning: decision.reasoning
+    });
+
+    // Update agent balance and stats
+    queries.updateAgentBalance(
+      agent.id,
+      agent.balance - decision.amount,
+      agent.total_bets + 1,
+      agent.pending_bets + 1
+    );
+
+    console.log(`[${agent.display_name}] ✓ Paper bet placed: $${decision.amount} ${decision.side} on "${market.question}"`);
+    console.log(`   Price at entry: ${(market.current_price * 100).toFixed(1)}% | Confidence: ${decision.confidence || 'N/A'}`);
+
+    return { id: betId };
+  } catch (error) {
+    console.error(`[${agent.display_name}] Failed to execute bet:`, error);
+    return null;
+  }
+}
+
+/**
+ * Sell bets (realize MTM P/L and return cash to balance)
+ * Wrapped in transaction for atomicity
+ */
+export async function sellBets(
+  agent: any,
+  betIds: string[]
+): Promise<{ sold: number; totalPL: number }> {
+  if (!betIds || betIds.length === 0) {
+    return { sold: 0, totalPL: 0 };
+  }
+
+  let soldCount = 0;
+  let totalPL = 0;
+
+  // Start transaction
+  db.prepare('BEGIN').run();
+
+  try {
+    for (const betId of betIds) {
+      // Get bet with current market price
+      const bet = db.prepare(`
+        SELECT b.*, m.current_price
+        FROM bets b
+        JOIN markets m ON b.market_id = m.id
+        WHERE b.id = ? AND b.agent_id = ? AND b.status = 'pending'
+      `).get(betId, agent.id) as any;
+
+      if (!bet) {
+        console.warn(`[${agent.display_name}] Bet ${betId} not found or already closed`);
+        continue;
+      }
+
+      // Calculate current value using MTM
+      let currentValue = 0;
+      if (bet.current_price && bet.price) {
+        if (bet.side === 'YES') {
+          const shares = bet.amount / bet.price;
+          currentValue = shares * bet.current_price;
+        } else {
+          const shares = bet.amount / (1 - bet.price);
+          currentValue = shares * (1 - bet.current_price);
+        }
+      }
+
+      const pnl = currentValue - bet.amount;
+
+      // Update bet status to "sold"
+      db.prepare(`
+        UPDATE bets
+        SET status = 'sold', pnl = ?, resolved_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(pnl, betId);
+
+      // Return current value to agent's balance and update stats
+      const newBalance = agent.balance + currentValue;
+      const newTotalPL = agent.total_pl + pnl;
+
+      // Determine if this was a winning or losing bet for stats
+      const winCount = pnl > 0 ? agent.winning_bets + 1 : agent.winning_bets;
+      const loseCount = pnl < 0 ? agent.losing_bets + 1 : agent.losing_bets;
+
+      db.prepare(`
+        UPDATE agents
+        SET
+          balance = ?,
+          total_pl = ?,
+          winning_bets = ?,
+          losing_bets = ?,
+          pending_bets = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(
+        newBalance,
+        newTotalPL,
+        winCount,
+        loseCount,
+        agent.pending_bets - 1,
+        agent.id
+      );
+
+      // Update agent object for next iteration
+      agent.balance = newBalance;
+      agent.total_pl = newTotalPL;
+      agent.winning_bets = winCount;
+      agent.losing_bets = loseCount;
+      agent.pending_bets = agent.pending_bets - 1;
+
+      soldCount++;
+      totalPL += pnl;
+
+      console.log(`[${agent.display_name}] ✓ Sold bet: ${bet.side} on market, P/L: $${pnl.toFixed(2)}`);
+    }
+
+    // Commit transaction
+    db.prepare('COMMIT').run();
+
+    if (soldCount > 0) {
+      console.log(`[${agent.display_name}] ✓ Sold ${soldCount} bet(s), Total P/L: $${totalPL.toFixed(2)}`);
+    }
+
+    return { sold: soldCount, totalPL };
+  } catch (error) {
+    // Rollback on error
+    db.prepare('ROLLBACK').run();
+    console.error(`[${agent.display_name}] Transaction failed, rolled back:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Take equity snapshot for all agents
+ */
+export function takeEquitySnapshots(): void {
+  const agents = queries.getActiveAgents();
+
+  agents.forEach((agent: any) => {
+    queries.insertSnapshot(agent.id, agent.balance, agent.total_pl);
+  });
+
+  console.log(`✓ Equity snapshots saved for ${agents.length} agents`);
+}
+
+/**
+ * Get active markets (not closed or resolved)
+ */
+export function getActiveMarkets(): any[] {
+  return queries.getActiveMarkets();
+}
+
+/**
+ * Get all active agents
+ */
+export function getActiveAgents(): any[] {
+  return queries.getActiveAgents();
+}
+
+/**
+ * Resolve a market and update all related bets
+ */
+export function resolveMarket(
+  marketId: string,
+  winningOutcome: 'YES' | 'NO'
+): void {
+  // Get all pending bets for this market
+  const bets = db.prepare('SELECT * FROM bets WHERE market_id = ? AND status = ?')
+    .all(marketId, 'pending');
+
+  bets.forEach((bet: any) => {
+    const won = bet.side === winningOutcome;
+    const pnl = won ? bet.amount : -bet.amount; // Simple 1:1 payout
+
+    // Update bet
+    db.prepare(`
+      UPDATE bets
+      SET status = ?, pnl = ?, resolved_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(won ? 'won' : 'lost', pnl, bet.id);
+
+    // Update agent stats
+    const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(bet.agent_id) as any;
+
+    if (agent) {
+      db.prepare(`
+        UPDATE agents
+        SET
+          balance = ?,
+          total_pl = ?,
+          winning_bets = ?,
+          losing_bets = ?,
+          pending_bets = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(
+        won ? agent.balance + bet.amount * 2 : agent.balance,
+        agent.total_pl + pnl,
+        won ? agent.winning_bets + 1 : agent.winning_bets,
+        won ? agent.losing_bets : agent.losing_bets + 1,
+        agent.pending_bets - 1,
+        agent.id
+      );
+    }
+  });
+
+  // Update market status
+  db.prepare(`
+    UPDATE markets
+    SET status = ?, winning_outcome = ?, resolution_date = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run('resolved', winningOutcome, marketId);
+
+  console.log(`✓ Market resolved: ${winningOutcome} wins (${bets.length} bets settled)`);
+}
 
 // Auto-initialize database when module is imported (server-side only)
 // This ensures database is ready before any queries are made

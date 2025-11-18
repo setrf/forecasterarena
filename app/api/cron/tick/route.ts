@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, takeEquitySnapshots } from '@/lib/agents-sqlite';
+import db, { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, sellBets, takeEquitySnapshots } from '@/lib/database';
 
 /**
  * Main cron job - runs every 3 minutes
- * Vercel Cron: https://vercel.com/docs/cron-jobs
+ * Triggered by Linux cron job or manual POST request
  */
 export async function GET(request: Request) {
-  // Verify request is from Vercel Cron
+  // Verify request is authorized
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     console.warn('Unauthorized cron request');
@@ -42,15 +42,45 @@ export async function GET(request: Request) {
       });
     }
 
-    // 3. For each agent, get decision and execute bet
+    // 3. For each agent, get decision and execute action
     const results = [];
     for (const agent of agents) {
       try {
         // Get decision from LLM
         const decision = await getAgentDecision(agent, markets);
 
+        // Log the decision
+        const decisionId = `decision-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        db.prepare(`
+          INSERT INTO agent_decisions (
+            id, agent_id, action, reasoning, confidence,
+            bets_to_sell, market_id, side, amount
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          decisionId,
+          agent.id,
+          decision.action,
+          decision.reasoning || null,
+          decision.confidence || null,
+          decision.betsToSell ? JSON.stringify(decision.betsToSell) : null,
+          decision.marketId || null,
+          decision.side || null,
+          decision.amount || null
+        );
+
+        // Execute sell action if decided to sell bets
+        if (decision.action === 'SELL' && decision.betsToSell && decision.betsToSell.length > 0) {
+          const sellResult = await sellBets(agent, decision.betsToSell);
+          results.push({
+            agent: agent.display_name,
+            action: 'SELL',
+            betsSold: sellResult.sold,
+            totalPL: sellResult.totalPL,
+            reasoning: decision.reasoning
+          });
+        }
         // Execute bet if decided to bet
-        if (decision.action === 'BET' && decision.marketId) {
+        else if (decision.action === 'BET' && decision.marketId) {
           const market = markets.find(m => m.id === decision.marketId);
           if (market) {
             const bet = await executeBet(agent, decision, market);
@@ -70,7 +100,9 @@ export async function GET(request: Request) {
               error: 'Market not found'
             });
           }
-        } else {
+        }
+        // Hold - no action
+        else {
           results.push({
             agent: agent.display_name,
             action: 'HOLD',

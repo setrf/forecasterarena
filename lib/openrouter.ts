@@ -34,7 +34,8 @@ if (!OPENROUTER_API_KEY) {
  * The LLM must return JSON in this exact format.
  */
 export type LLMDecision = {
-  action: 'BET' | 'HOLD';          // Whether to place a bet or wait
+  action: 'BET' | 'SELL' | 'HOLD'; // Action to take: place bet, sell existing bets, or wait
+  betsToSell?: string[];           // Array of bet IDs to sell (required if action=SELL)
   marketId?: string;               // Which market to bet on (required if action=BET)
   side?: 'YES' | 'NO';             // Which side to bet on (required if action=BET)
   amount?: number;                 // Bet amount in dollars (required if action=BET)
@@ -154,15 +155,22 @@ export function buildSystemPrompt(agentName: string): string {
 Your goal is to maximize profit by making smart bets on prediction markets.
 
 CRITICAL RULES:
-1. Only bet when you have high confidence (>60%)
-2. Bet sizes should be proportional to confidence
-3. Consider market odds - only bet if you see value
-4. Manage risk - don't bet more than 20% of balance on one market
-5. Return ONLY valid JSON, no markdown or extra text
+1. Review your existing bets first - sell if market moved against you or you want to take profits
+2. Only place new bets when you have high confidence (>60%)
+3. Bet sizes should be proportional to confidence
+4. Consider market odds - only bet if you see value
+5. Manage risk - don't bet more than 20% of balance on one market
+6. Return ONLY valid JSON, no markdown or extra text
+
+ACTIONS:
+- SELL: Sell one or more existing bets to realize P/L and free up cash
+- BET: Place a new bet on a market
+- HOLD: Don't make any changes this week
 
 RESPONSE FORMAT (must be valid JSON):
 {
-  "action": "BET" or "HOLD",
+  "action": "SELL" or "BET" or "HOLD",
+  "betsToSell": ["bet-id-1", "bet-id-2"] (if SELL - array of bet IDs),
   "marketId": "uuid-of-market" (if BET),
   "side": "YES" or "NO" (if BET),
   "amount": 50-200 (if BET),
@@ -176,19 +184,36 @@ RESPONSE FORMAT (must be valid JSON):
  *
  * The user prompt provides the agent with:
  * - Current balance and betting history
+ * - Existing pending bets with MTM values
  * - List of available markets with details
  * - Guidance on what to consider
  *
  * @param balance - Agent's current available balance
  * @param totalBets - Number of bets the agent has placed
  * @param markets - Array of available market objects
+ * @param pendingBets - Array of agent's pending bets with MTM info
  * @returns User prompt string
  */
 export function buildUserPrompt(
   balance: number,
   totalBets: number,
-  markets: any[]
+  markets: any[],
+  pendingBets: any[] = []
 ): string {
+  // Format existing bets with MTM information
+  const betsList = pendingBets.length > 0
+    ? pendingBets.map((b, i) => {
+        const mtmPL = b.mtm_pnl || 0;
+        const mtmPct = b.bet_amount ? (mtmPL / b.bet_amount * 100) : 0;
+        return `${i + 1}. Bet ID: ${b.bet_id}
+   - Market: "${b.market_question}"
+   - Side: ${b.side} at ${(b.entry_price * 100).toFixed(1)}%
+   - Amount: $${b.bet_amount.toFixed(2)}
+   - Current price: ${(b.current_price * 100).toFixed(1)}%
+   - Unrealized P/L: $${mtmPL.toFixed(2)} (${mtmPct > 0 ? '+' : ''}${mtmPct.toFixed(1)}%)`;
+      }).join('\n\n')
+    : 'None';
+
   // Format markets with all relevant information
   const marketsList = markets.map((m, i) =>
     `${i + 1}. "${m.question}"
@@ -199,16 +224,19 @@ export function buildUserPrompt(
   ).join('\n\n');
 
   return `CURRENT STATE:
-Your balance: $${balance.toFixed(2)}
-Total bets placed: ${totalBets}
+Your cash balance: $${balance.toFixed(2)}
+Total bets placed (all time): ${totalBets}
+Pending bets: ${pendingBets.length}
+
+YOUR EXISTING BETS:
+${betsList}
 
 AVAILABLE MARKETS:
 ${marketsList}
 
-Analyze these markets and decide if you want to place a bet. Consider:
-- Is there value in the current odds?
-- How confident are you in your prediction?
-- How much should you risk?
+Weekly Decision Time:
+1. First, review your existing bets - sell any you want to exit (realize P/L and free up cash)
+2. Then, consider placing new bets with your available cash
 
-Return your decision as JSON (BET or HOLD).`;
+Return your decision as JSON (SELL, BET, or HOLD).`;
 }
