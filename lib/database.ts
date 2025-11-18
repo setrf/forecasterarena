@@ -322,6 +322,18 @@ export const queries = {
   },
 
   /**
+   * Get closed markets (ready for resolution)
+   * @returns Array of closed market records
+   */
+  getClosedMarkets: () => {
+    return db.prepare(`
+      SELECT * FROM markets
+      WHERE status = 'closed'
+      ORDER BY close_date DESC
+    `).all();
+  },
+
+  /**
    * Get all markets regardless of status
    * @returns Array of all market records
    */
@@ -720,6 +732,10 @@ export async function executeBet(
     decision.amount = Math.floor(agent.balance * 0.3);
   }
 
+  // CRITICAL: Wrap in transaction to prevent partial bet execution
+  // If insertBet succeeds but updateAgentBalance fails, we'd have a bet without debiting the agent
+  db.prepare('BEGIN').run();
+
   try {
     const betId = `bet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -743,12 +759,17 @@ export async function executeBet(
       agent.pending_bets + 1
     );
 
+    // Commit transaction
+    db.prepare('COMMIT').run();
+
     console.log(`[${agent.display_name}] ✓ Paper bet placed: $${decision.amount} ${decision.side} on "${market.question}"`);
     console.log(`   Price at entry: ${(market.current_price * 100).toFixed(1)}% | Confidence: ${decision.confidence || 'N/A'}`);
 
     return { id: betId };
   } catch (error) {
-    console.error(`[${agent.display_name}] Failed to execute bet:`, error);
+    // Rollback on error to maintain data integrity
+    db.prepare('ROLLBACK').run();
+    console.error(`[${agent.display_name}] Failed to execute bet, rolled back:`, error);
     return null;
   }
 }
