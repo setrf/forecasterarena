@@ -2,13 +2,11 @@
  * Shared TypeScript Type Definitions
  *
  * This module defines all data types used throughout the application.
- * These types match the database schema and are used by both SQLite
- * and Supabase implementations.
+ * These types match the SQLite database schema.
  *
  * Benefits of shared types:
  * - Type safety across the entire application
  * - Single source of truth for data structures
- * - Easy to switch between SQLite and Supabase
  * - Auto-completion in IDE
  */
 
