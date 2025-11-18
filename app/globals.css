@@ -14,11 +14,11 @@
 
 @layer components {
   .stat-card {
-    @apply border border-gray-200 rounded p-4 hover:shadow-md transition-shadow;
+    @apply border border-gray-200 rounded p-4 hover:shadow-lg hover:scale-[1.02] hover:border-accent-primary transition-all duration-200;
   }
 
   .btn-primary {
-    @apply px-4 py-2 bg-accent-primary text-gray-900 rounded hover:bg-accent-secondary transition-colors;
+    @apply px-4 py-2 bg-accent-primary text-gray-900 rounded hover:bg-accent-secondary hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 transition-all duration-200;
   }
 
   .table-auto {

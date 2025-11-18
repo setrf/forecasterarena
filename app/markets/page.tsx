@@ -16,9 +16,9 @@ export default function MarketsPage() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-8 py-12">
-          <h1 className="text-4xl font-bold mb-4">PREDICTION MARKETS</h1>
-          <p className="text-gray-600 max-w-2xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">PREDICTION MARKETS</h1>
+          <p className="text-sm sm:text-base text-gray-600 max-w-2xl">
             Browse all prediction markets from Polymarket that AI agents are analyzing and betting on.
             Real market data with paper trading.
           </p>
@@ -27,33 +27,33 @@ export default function MarketsPage() {
 
       {/* Stats */}
       <div className="border-b border-gray-200 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-8 py-8">
-          <div className="grid grid-cols-4 gap-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
             <div>
-              <div className="text-sm text-gray-600 mb-1">TOTAL MARKETS</div>
-              <div className="text-2xl font-bold">{allMarkets.length}</div>
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">TOTAL MARKETS</div>
+              <div className="text-xl sm:text-2xl font-bold">{allMarkets.length}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-600 mb-1">ACTIVE</div>
-              <div className="text-2xl font-bold text-green-600">{activeMarkets.length}</div>
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">ACTIVE</div>
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{activeMarkets.length}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-600 mb-1">CLOSED</div>
-              <div className="text-2xl font-bold text-orange-600">{closedMarkets.length}</div>
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">CLOSED</div>
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">{closedMarkets.length}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-600 mb-1">RESOLVED</div>
-              <div className="text-2xl font-bold text-gray-600">{resolvedMarkets.length}</div>
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">RESOLVED</div>
+              <div className="text-xl sm:text-2xl font-bold text-gray-600">{resolvedMarkets.length}</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
         {/* Active Markets */}
         {activeMarkets.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Active Markets</h2>
+          <div className="mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Active Markets</h2>
             <div className="space-y-4">
               {activeMarkets.map(market => (
                 <MarketCard key={market.id} market={market} />
@@ -64,8 +64,8 @@ export default function MarketsPage() {
 
         {/* Closed Markets */}
         {closedMarkets.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Closed Markets (Awaiting Resolution)</h2>
+          <div className="mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Closed Markets (Awaiting Resolution)</h2>
             <div className="space-y-4">
               {closedMarkets.map(market => (
                 <MarketCard key={market.id} market={market} />
@@ -76,8 +76,8 @@ export default function MarketsPage() {
 
         {/* Resolved Markets */}
         {resolvedMarkets.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Resolved Markets</h2>
+          <div className="mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Resolved Markets</h2>
             <div className="space-y-4">
               {resolvedMarkets.map(market => (
                 <MarketCard key={market.id} market={market} />
@@ -127,10 +127,10 @@ function MarketCard({ market }: { market: any }) {
   const bets = queries.getBetsByMarket(market.id) as Bet[];
 
   return (
-    <div className="border border-gray-200 rounded p-6 hover:border-gray-300 transition-colors">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
+    <div className="border border-gray-200 rounded p-4 sm:p-6 hover:border-accent-primary hover:shadow-lg hover:scale-[1.01] transition-all duration-200">
+      <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-4">
+        <div className="flex-1 w-full">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             <span
               className={`inline-block px-2 py-1 text-xs rounded ${
                 market.status === 'active'
@@ -148,11 +148,11 @@ function MarketCard({ market }: { market: any }) {
               </span>
             )}
           </div>
-          <h3 className="text-lg font-bold mb-2">{market.question}</h3>
+          <h3 className="text-base sm:text-lg font-bold mb-2">{market.question}</h3>
           {market.description && (
-            <p className="text-sm text-gray-600 mb-3">{market.description}</p>
+            <p className="text-xs sm:text-sm text-gray-600 mb-3">{market.description}</p>
           )}
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
             <div>
               <span className="text-gray-500">Closes:</span>{' '}
               {closeDate.toLocaleDateString('en-US', {
@@ -172,11 +172,11 @@ function MarketCard({ market }: { market: any }) {
           </div>
         </div>
 
-        <div className="ml-6 text-right">
+        <div className="sm:ml-6 text-left sm:text-right">
           {isResolved ? (
             <div>
-              <div className="text-sm text-gray-600 mb-1">RESULT</div>
-              <div className={`text-3xl font-bold ${
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">RESULT</div>
+              <div className={`text-2xl sm:text-3xl font-bold ${
                 market.winning_outcome === 'YES' ? 'text-green-600' : 'text-red-600'
               }`}>
                 {market.winning_outcome}
@@ -184,8 +184,8 @@ function MarketCard({ market }: { market: any }) {
             </div>
           ) : (
             <div>
-              <div className="text-sm text-gray-600 mb-1">YES PRICE</div>
-              <div className="text-3xl font-bold">
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">YES PRICE</div>
+              <div className="text-2xl sm:text-3xl font-bold">
                 {market.current_price ? (market.current_price * 100).toFixed(1) : '50.0'}%
               </div>
               {!isClosed && (

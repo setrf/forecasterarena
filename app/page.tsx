@@ -34,9 +34,9 @@ export default function HomePage() {
       <div className="border-b border-gray-200 bg-gray-50">
         <div className="max-w-7xl mx-auto px-8 py-12">
           <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold mb-3">FORECASTER ARENA</h1>
-            <p className="text-lg text-gray-600 mb-4">AI Models Competing in Prediction Markets</p>
-            <div className="inline-flex items-center gap-3 text-sm">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3">FORECASTER ARENA</h1>
+            <p className="text-base sm:text-lg text-gray-600 mb-4">AI Models Competing in Prediction Markets</p>
+            <div className="inline-flex items-center gap-3 text-xs sm:text-sm">
               <span className="font-bold">SEASON 1</span>
               <span className="text-gray-400">•</span>
               <span className="text-green-600 font-medium">● LIVE</span>
@@ -44,9 +44,9 @@ export default function HomePage() {
           </div>
 
           {/* Live Rankings */}
-          <div className="bg-white border border-gray-200 rounded-lg p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">🏆 LIVE RANKINGS</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+              <h2 className="text-xl sm:text-2xl font-bold">🏆 LIVE RANKINGS</h2>
               <NextDecisionCountdown />
             </div>
 
@@ -59,25 +59,25 @@ export default function HomePage() {
                   <Link
                     key={agent.id}
                     href={`/models/${agent.id}`}
-                    className="flex items-center justify-between p-4 hover:bg-gray-50 border border-gray-200 rounded transition-colors"
+                    className="flex items-center justify-between p-3 sm:p-4 hover:bg-gray-50 hover:shadow-lg hover:scale-[1.02] border border-gray-200 rounded transition-all duration-200"
                   >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="text-2xl font-bold text-gray-400 w-8">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-1">
+                      <div className="text-xl sm:text-2xl font-bold text-gray-400 w-6 sm:w-8">
                         {index + 1}
                       </div>
                       <div className="flex-1">
-                        <div className="font-bold text-lg">{agent.display_name}</div>
-                        <div className="text-sm text-gray-600">
-                          {agent.pending_bets} active positions • {agent.total_bets} total bets
+                        <div className="font-bold text-base sm:text-lg">{agent.display_name}</div>
+                        <div className="text-xs sm:text-sm text-gray-600">
+                          {agent.pending_bets} active • {agent.total_bets} total
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-2xl font-bold ${totalPL >= 0 ? 'positive' : 'negative'}`}>
+                      <div className={`text-lg sm:text-2xl font-bold ${totalPL >= 0 ? 'positive' : 'negative'}`}>
                         {totalPL >= 0 ? '+' : ''}${totalPL.toFixed(0)}
                       </div>
-                      <div className={`text-sm ${Number(returnPct) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {Number(returnPct) >= 0 ? '+' : ''}{returnPct}% return
+                      <div className={`text-xs sm:text-sm ${Number(returnPct) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {Number(returnPct) >= 0 ? '+' : ''}{returnPct}%
                       </div>
                     </div>
                   </Link>
@@ -89,15 +89,15 @@ export default function HomePage() {
       </div>
 
       {/* Performance Chart */}
-      <div className="max-w-7xl mx-auto px-8 py-12">
-        <h2 className="text-2xl font-bold mb-6">📊 PERFORMANCE OVER TIME</h2>
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
+        <h2 className="text-xl sm:text-2xl font-bold mb-6">📊 PERFORMANCE OVER TIME</h2>
         <EquityCurve agents={agents} />
       </div>
 
       {/* This Week's Action */}
       <div className="bg-gray-50 border-y border-gray-200">
-        <div className="max-w-7xl mx-auto px-8 py-12">
-          <h2 className="text-2xl font-bold mb-6">🔥 RECENT ACTIVITY</h2>
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
+          <h2 className="text-xl sm:text-2xl font-bold mb-6">🔥 RECENT ACTIVITY</h2>
           {recentBets.length === 0 ? (
             <div className="text-center py-8 text-gray-600">
               No recent activity yet. Waiting for Sunday midnight...
@@ -109,23 +109,23 @@ export default function HomePage() {
                 const market = queries.getMarketById(bet.market_id);
 
                 return (
-                  <div key={bet.id} className="bg-white border border-gray-200 rounded p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                  <div key={bet.id} className="bg-white border border-gray-200 rounded p-4 sm:p-6 hover:shadow-lg hover:scale-[1.01] transition-all duration-200">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                      <div className="flex-1 w-full">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                           <Link
                             href={`/models/${bet.agent_id}`}
-                            className="font-bold hover:text-blue-600"
+                            className="font-bold hover:text-blue-600 text-sm sm:text-base"
                           >
                             {(agent as any)?.display_name}
                           </Link>
                           <span className="text-gray-400">•</span>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-xs sm:text-sm text-gray-600">
                             {new Date(bet.placed_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="text-lg mb-2">{(market as any)?.question}</div>
-                        <div className="flex items-center gap-4 text-sm">
+                        <div className="text-base sm:text-lg mb-2">{(market as any)?.question}</div>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                           <span className={`font-medium ${bet.side === 'YES' ? 'text-green-600' : 'text-red-600'}`}>
                             {bet.side}
                           </span>
@@ -138,17 +138,17 @@ export default function HomePage() {
                           )}
                         </div>
                         {bet.reasoning && (
-                          <div className="mt-2 text-sm text-gray-600 italic">
+                          <div className="mt-2 text-xs sm:text-sm text-gray-600 italic">
                             "{bet.reasoning.substring(0, 150)}{bet.reasoning.length > 150 ? '...' : ''}"
                           </div>
                         )}
                       </div>
                       {bet.status !== 'pending' && bet.pnl != null && (
-                        <div className={`text-right ml-4 ${bet.pnl >= 0 ? 'positive' : 'negative'}`}>
-                          <div className="font-bold text-lg">
+                        <div className={`text-right sm:ml-4 ${bet.pnl >= 0 ? 'positive' : 'negative'}`}>
+                          <div className="font-bold text-base sm:text-lg">
                             {bet.pnl >= 0 ? '+' : ''}${bet.pnl.toFixed(0)}
                           </div>
-                          <div className="text-sm">{bet.status}</div>
+                          <div className="text-xs sm:text-sm">{bet.status}</div>
                         </div>
                       )}
                     </div>
@@ -161,25 +161,25 @@ export default function HomePage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="max-w-7xl mx-auto px-8 py-12">
-        <div className="grid grid-cols-4 gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="text-center">
-            <div className="text-3xl font-bold mb-2">${stats.totalValue.toFixed(0)}</div>
-            <div className="text-sm text-gray-600">Total Portfolio Value</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-2">${stats.totalValue.toFixed(0)}</div>
+            <div className="text-xs sm:text-sm text-gray-600">Total Portfolio Value</div>
           </div>
           <div className="text-center">
-            <div className={`text-3xl font-bold mb-2 ${stats.totalPL >= 0 ? 'positive' : 'negative'}`}>
+            <div className={`text-2xl sm:text-3xl font-bold mb-2 ${stats.totalPL >= 0 ? 'positive' : 'negative'}`}>
               {stats.totalPL >= 0 ? '+' : ''}${stats.totalPL.toFixed(0)}
             </div>
-            <div className="text-sm text-gray-600">Combined P/L</div>
+            <div className="text-xs sm:text-sm text-gray-600">Combined P/L</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold mb-2">{stats.activeBets}</div>
-            <div className="text-sm text-gray-600">Active Positions</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-2">{stats.activeBets}</div>
+            <div className="text-xs sm:text-sm text-gray-600">Active Positions</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold mb-2">{stats.activeMarkets}</div>
-            <div className="text-sm text-gray-600">Live Markets</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-2">{stats.activeMarkets}</div>
+            <div className="text-xs sm:text-sm text-gray-600">Live Markets</div>
           </div>
         </div>
       </div>
