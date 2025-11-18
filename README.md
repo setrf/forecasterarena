@@ -72,10 +72,7 @@ forecaster-arena/
 │   ├── database.ts           # SQLite database layer
 │   ├── agents-sqlite.ts      # Agent decision logic
 │   ├── openrouter.ts         # LLM client (unified API)
-│   ├── types.ts              # TypeScript types
-│   └── supabase.ts           # Supabase client (optional, for production)
-├── database/
-│   └── schema.sql            # PostgreSQL schema (for production)
+│   └── types.ts              # TypeScript types
 ├── data/
 │   └── forecaster.db         # SQLite database (auto-generated)
 └── scripts/
@@ -86,7 +83,7 @@ forecaster-arena/
 
 ## 🤖 How It Works
 
-### Every 3 Minutes (Vercel Cron)
+### Every 3 Minutes (Cron Job)
 
 1. **Fetch Markets** - Get active Polymarket markets from database
 2. **Agent Decisions** - Each of 6 LLMs analyzes markets via OpenRouter
@@ -109,32 +106,18 @@ All with **one API key** and **one API format**!
 
 ## 🗄️ Database
 
-### Local Development (SQLite)
-
-The app uses SQLite by default - **no setup required!**
+The app uses **SQLite** - no setup required!
 
 - Database auto-creates at `data/forecaster.db`
 - Automatic seeding with Season 1 and 6 agents
-- Perfect for testing and development
+- Works perfectly for both development and production
 - Reset anytime: `rm data/forecaster.db && npm run build`
+- Backups are simple file copies (see DEPLOYMENT.md)
 
 **Verify database:**
 ```bash
 node scripts/verify-sqlite.js
 ```
-
-### Production (Supabase - Optional)
-
-For production deployment with persistence:
-
-1. Create a project at [Supabase](https://supabase.com)
-2. Run the SQL schema from `database/schema.sql`
-3. Add Supabase credentials to `.env.local`:
-   ```env
-   SUPABASE_URL=https://xxxxx.supabase.co
-   SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-   ```
-4. Update imports to use `lib/agents.ts` instead of `lib/agents-sqlite.ts`
 
 ## 🚢 Deploy to Production
 
@@ -175,18 +158,10 @@ cat DEPLOYMENT.md
 - Domain: **~$1/month**
 - **Total: ~$35-45/month**
 
-### Production (With Supabase)
-- DigitalOcean Droplet (2GB): **$12/month**
-- Supabase Pro: **$25/month**
-- OpenRouter: **~$10-20/month**
-- Domain: **~$1/month**
-- **Total: ~$48-58/month**
-
 ## 📊 Adding Markets
 
 Insert markets directly into the database:
 
-**SQLite:**
 ```bash
 sqlite3 data/forecaster.db
 ```
@@ -203,24 +178,20 @@ VALUES (
 );
 ```
 
-**Supabase:**
-Use the SQL Editor in the Supabase dashboard with the same query.
-
 **Coming soon**: Automatic Polymarket API integration to fetch live markets!
 
 ## 🔧 Configuration
 
 ### Adjust Cron Frequency
 
-Edit `vercel.json`:
+For Digital Ocean deployments, edit your system crontab:
 
-```json
-{
-  "crons": [{
-    "path": "/api/cron/tick",
-    "schedule": "*/5 * * * *"  // Every 5 minutes instead of 3
-  }]
-}
+```bash
+# Edit crontab
+crontab -e
+
+# Change from every 3 minutes to every 5 minutes:
+*/5 * * * * curl -X POST http://localhost:3000/api/cron/tick -H "Authorization: Bearer $CRON_SECRET"
 ```
 
 ### Change Agent Models
@@ -252,13 +223,14 @@ if (decision.amount < 10) {
 ## 🐛 Troubleshooting
 
 ### Database Issues
-- **SQLite**: Delete `data/forecaster.db` and restart the app
-- **Verify**: Run `node scripts/verify-sqlite.js`
-- **Production**: Check Supabase logs and connection string
+- Delete `data/forecaster.db` and restart the app to reset
+- Run `node scripts/verify-sqlite.js` to verify database setup
+- Check file permissions on the `data/` directory
 
 ### Cron Job Not Running
 - In development, trigger manually via POST request
-- In production, check Vercel Logs → Cron Jobs
+- In production, check system logs with `journalctl -u forecaster-arena -f`
+- Verify crontab is set up correctly: `crontab -l`
 - Verify `CRON_SECRET` matches in both request and environment
 
 ### LLM API Errors
@@ -341,4 +313,4 @@ Not financial advice. Trade at your own risk.
 
 ---
 
-Built with ❤️ using Next.js, OpenRouter, SQLite, and Vercel
+Built with ❤️ using Next.js, OpenRouter, and SQLite

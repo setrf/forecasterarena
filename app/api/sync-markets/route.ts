@@ -5,6 +5,9 @@ import { fetchPolymarketMarkets } from '@/lib/polymarket';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const logId = `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  let errorDetails = null;
+
   try {
     // Verify cron secret for security
     const authHeader = request.headers.get('authorization');
@@ -20,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     let newMarkets = 0;
     let updatedMarkets = 0;
+    const now = new Date().toISOString();
 
     for (const market of markets) {
       // Check if market already exists
@@ -33,12 +37,14 @@ export async function POST(request: NextRequest) {
           UPDATE markets
           SET
             current_price = ?,
+            price_updated_at = ?,
             volume = ?,
             status = ?,
             updated_at = CURRENT_TIMESTAMP
           WHERE polymarket_id = ?
         `).run(
           market.current_price,
+          now,
           market.volume,
           market.status,
           market.polymarket_id
@@ -50,8 +56,8 @@ export async function POST(request: NextRequest) {
         db.prepare(`
           INSERT INTO markets (
             id, polymarket_id, question, description, category,
-            close_date, status, current_price, volume
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            close_date, status, current_price, price_updated_at, volume
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           marketId,
           market.polymarket_id,
@@ -61,11 +67,18 @@ export async function POST(request: NextRequest) {
           market.close_date,
           market.status,
           market.current_price,
+          now,
           market.volume
         );
         newMarkets++;
       }
     }
+
+    // Log the sync operation
+    db.prepare(`
+      INSERT INTO market_sync_log (id, markets_added, markets_updated)
+      VALUES (?, ?, ?)
+    `).run(logId, newMarkets, updatedMarkets);
 
     console.log(`✅ Market sync complete: ${newMarkets} new, ${updatedMarkets} updated`);
 
@@ -76,11 +89,23 @@ export async function POST(request: NextRequest) {
       totalMarkets: newMarkets + updatedMarkets
     });
   } catch (error) {
+    errorDetails = error instanceof Error ? error.message : 'Unknown error';
     console.error('❌ Error syncing markets:', error);
+
+    // Log the failed sync
+    try {
+      db.prepare(`
+        INSERT INTO market_sync_log (id, markets_added, markets_updated, errors)
+        VALUES (?, 0, 0, ?)
+      `).run(logId, errorDetails);
+    } catch (logError) {
+      console.error('Failed to log sync error:', logError);
+    }
+
     return NextResponse.json(
       {
         error: 'Failed to sync markets',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: errorDetails
       },
       { status: 500 }
     );

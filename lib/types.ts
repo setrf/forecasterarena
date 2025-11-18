@@ -2,13 +2,11 @@
  * Shared TypeScript Type Definitions
  *
  * This module defines all data types used throughout the application.
- * These types match the database schema and are used by both SQLite
- * and Supabase implementations.
+ * These types match the SQLite database schema.
  *
  * Benefits of shared types:
  * - Type safety across the entire application
  * - Single source of truth for data structures
- * - Easy to switch between SQLite and Supabase
  * - Auto-completion in IDE
  */
 
@@ -25,7 +23,7 @@ export type Agent = {
   model_id: string;                                // OpenRouter model ID (e.g., 'openai/gpt-4')
   display_name: string;                            // Human-readable name (e.g., 'GPT-4')
   balance: number;                                 // Current available funds in dollars
-  total_pl: number;                                // Total profit/loss since season start
+  total_pl: number;                                // Total realized profit/loss since season start
   total_bets: number;                              // Total number of bets placed
   winning_bets: number;                            // Number of winning bets
   losing_bets: number;                             // Number of losing bets
@@ -33,6 +31,8 @@ export type Agent = {
   status: 'active' | 'paused' | 'eliminated';      // Agent status
   created_at: string;                              // ISO 8601 timestamp
   updated_at: string;                              // ISO 8601 timestamp
+  mtm_pl?: number;                                 // Mark-to-market unrealized P/L (computed field)
+  total_pl_with_mtm?: number;                      // Total P/L including unrealized (computed field)
 };
 
 /**
@@ -69,10 +69,10 @@ export type Bet = {
   price: number;                                   // Price at time of bet (0.0 to 1.0)
   confidence: number | null;                       // AI confidence score (0.0 to 1.0)
   reasoning: string | null;                        // AI's reasoning for this bet
-  status: 'pending' | 'won' | 'lost' | 'cancelled' | 'refunded';  // Bet status
-  pnl: number | null;                              // Profit/loss after resolution
+  status: 'pending' | 'won' | 'lost' | 'sold' | 'cancelled' | 'refunded';  // Bet status
+  pnl: number | null;                              // Profit/loss after resolution (or sale)
   placed_at: string;                               // When bet was placed (ISO 8601 timestamp)
-  resolved_at: string | null;                      // When bet was resolved (ISO 8601 timestamp)
+  resolved_at: string | null;                      // When bet was resolved/sold (ISO 8601 timestamp)
 };
 
 /**
