@@ -20,13 +20,13 @@ async function syncMarkets() {
     const polymarketModule = await import('../lib/polymarket.ts');
     const databaseModule = await import('../lib/database.ts');
 
-    const { fetchPolymarketMarkets } = polymarketModule;
+    const { fetchAllPolymarketMarkets } = polymarketModule;
     const db = databaseModule.default;
 
-    // Fetch markets from Polymarket
-    console.log('📊 Fetching markets from Polymarket API...');
-    const markets = await fetchPolymarketMarkets(50);
-    console.log(`✅ Found ${markets.length} active markets\n`);
+    // Fetch ALL markets from Polymarket using pagination
+    // This will automatically loop through all pages of results
+    const markets = await fetchAllPolymarketMarkets();
+    console.log();
 
     if (markets.length === 0) {
       console.log('⚠️  No markets found. This might be a network issue.');

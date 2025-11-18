@@ -108,6 +108,78 @@ export async function fetchPolymarketMarkets(
 }
 
 /**
+ * Fetch ALL active markets from Polymarket using pagination
+ *
+ * This function makes multiple API requests to fetch all available active markets.
+ * The Polymarket API has a maximum of 100 markets per request, so we loop through
+ * all pages until we've retrieved everything.
+ *
+ * Features:
+ * - Automatic pagination (loops until no more markets)
+ * - Rate limiting (500ms delay between requests to be respectful)
+ * - Progress logging (so you know it's working on large datasets)
+ *
+ * @returns Array of ALL active markets from Polymarket
+ *
+ * @example
+ * const allMarkets = await fetchAllPolymarketMarkets();
+ * console.log(`Found ${allMarkets.length} total active markets`);
+ */
+export async function fetchAllPolymarketMarkets(): Promise<SimplifiedMarket[]> {
+  const allMarkets: SimplifiedMarket[] = [];
+  let offset = 0;
+  const limit = 100; // Maximum allowed by Polymarket API
+  let pageNumber = 1;
+
+  console.log('📊 Fetching ALL active markets from Polymarket (this may take a moment)...');
+
+  while (true) {
+    try {
+      // Fetch a batch of markets
+      const batch = await fetchPolymarketMarkets(limit, offset);
+
+      // No more markets to fetch
+      if (batch.length === 0) {
+        console.log(`✅ Finished! Fetched all ${allMarkets.length} active markets`);
+        break;
+      }
+
+      // Add this batch to our collection
+      allMarkets.push(...batch);
+      console.log(`   Page ${pageNumber}: Fetched ${batch.length} markets (${allMarkets.length} total so far)`);
+
+      // If we got fewer than the limit, we've reached the last page
+      if (batch.length < limit) {
+        console.log(`✅ Finished! Fetched all ${allMarkets.length} active markets`);
+        break;
+      }
+
+      // Move to next page
+      offset += limit;
+      pageNumber++;
+
+      // Rate limiting: Wait 500ms between requests to be respectful of API
+      // This prevents overwhelming Polymarket's servers
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+    } catch (error) {
+      console.error(`❌ Error fetching page ${pageNumber} (offset ${offset}):`, error);
+
+      // If we've already fetched some markets, return what we have
+      if (allMarkets.length > 0) {
+        console.log(`⚠️  Returning ${allMarkets.length} markets fetched before error`);
+        return allMarkets;
+      }
+
+      // Otherwise, re-throw the error
+      throw error;
+    }
+  }
+
+  return allMarkets;
+}
+
+/**
  * Fetch a single market by ID to check its current status
  *
  * Useful for updating market prices and checking resolution status.

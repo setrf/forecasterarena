@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db, { queries } from '@/lib/database';
-import { fetchPolymarketMarkets } from '@/lib/polymarket';
+import { fetchAllPolymarketMarkets } from '@/lib/polymarket';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,9 +17,9 @@ export async function POST(request: NextRequest) {
 
     console.log('🔄 Starting market sync from Polymarket...');
 
-    // Fetch markets from Polymarket
-    const markets = await fetchPolymarketMarkets(50);
-    console.log(`📊 Fetched ${markets.length} markets from Polymarket`);
+    // Fetch ALL markets from Polymarket using pagination
+    // This will automatically loop through all pages of results
+    const markets = await fetchAllPolymarketMarkets();
 
     let newMarkets = 0;
     let updatedMarkets = 0;
