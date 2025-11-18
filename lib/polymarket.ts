@@ -180,6 +180,66 @@ export async function fetchAllPolymarketMarkets(): Promise<SimplifiedMarket[]> {
 }
 
 /**
+ * Fetch ALL closed markets from Polymarket for resolution checking
+ *
+ * This function fetches markets that have closed but not yet resolved.
+ * Used by the resolution cron to check if closed markets have been decided.
+ *
+ * @param limit - Maximum number to fetch (default: 100)
+ * @returns Array of closed markets
+ *
+ * @example
+ * const closedMarkets = await fetchClosedPolymarketMarkets(50);
+ */
+export async function fetchClosedPolymarketMarkets(limit: number = 100): Promise<SimplifiedMarket[]> {
+  const url = `${GAMMA_API_HOST}/markets`;
+  const params = new URLSearchParams({
+    active: 'false',      // NOT active
+    closed: 'true',       // IS closed
+    archived: 'false',    // NOT archived
+    limit: limit.toString(),
+    offset: '0'
+  });
+
+  try {
+    const response = await fetch(`${url}?${params}`);
+
+    if (!response.ok) {
+      throw new Error(`Gamma API error: ${response.status} ${response.statusText}`);
+    }
+
+    const markets: PolymarketMarket[] = await response.json();
+
+    // Convert to simplified format
+    return markets.map(market => {
+      const yesToken = market.tokens.find(t => t.outcome === 'Yes');
+      const currentPrice = yesToken ? parseFloat(yesToken.price) : 0.5;
+
+      // Determine if resolved
+      let status: 'active' | 'closed' | 'resolved' = 'closed';
+      if (market.resolved || yesToken?.winner !== undefined) {
+        status = 'resolved';
+      }
+
+      return {
+        polymarket_id: market.id,
+        question: market.question,
+        description: market.description || null,
+        category: market.category || null,
+        close_date: market.end_date_iso,
+        current_price: currentPrice,
+        volume: market.volume ? parseFloat(market.volume) : null,
+        status
+      };
+    });
+
+  } catch (error) {
+    console.error('Error fetching closed Polymarket markets:', error);
+    throw error;
+  }
+}
+
+/**
  * Fetch a single market by ID to check its current status
  *
  * Useful for updating market prices and checking resolution status.

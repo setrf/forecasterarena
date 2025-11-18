@@ -469,15 +469,21 @@ export const queries = {
 
   /**
    * Calculate mark-to-market P/L for an agent's pending bets
+   *
+   * CRITICAL: Only includes bets on ACTIVE markets. Closed markets are excluded
+   * because their prices are stale and will be settled when the market resolves.
+   *
    * @param agentId - Agent ID
-   * @returns Unrealized P/L from pending bets
+   * @returns Unrealized P/L from pending bets on active markets only
    */
   getMarkToMarketPL: (agentId: string): number => {
     const pendingBets = db.prepare(`
       SELECT b.id, b.amount, b.price, b.side, m.current_price
       FROM bets b
       JOIN markets m ON b.market_id = m.id
-      WHERE b.agent_id = ? AND b.status = 'pending'
+      WHERE b.agent_id = ?
+        AND b.status = 'pending'
+        AND m.status = 'active'
     `).all(agentId) as Array<{
       id: string;
       amount: number;
@@ -572,6 +578,9 @@ export const queries = {
 
 /**
  * Get agent's pending bets with mark-to-market information
+ *
+ * Returns ALL pending bets (including those on closed markets awaiting resolution).
+ * MTM is only calculated for bets on ACTIVE markets (closed markets have stale prices).
  */
 export function getAgentPendingBetsWithMTM(agentId: string): any[] {
   const bets = db.prepare(`
@@ -582,7 +591,9 @@ export function getAgentPendingBetsWithMTM(agentId: string): any[] {
       b.side,
       m.id as market_id,
       m.question as market_question,
-      m.current_price
+      m.current_price,
+      m.status as market_status,
+      m.close_date
     FROM bets b
     JOIN markets m ON b.market_id = m.id
     WHERE b.agent_id = ? AND b.status = 'pending'
@@ -591,7 +602,10 @@ export function getAgentPendingBetsWithMTM(agentId: string): any[] {
 
   return bets.map(bet => {
     let currentValue = 0;
-    if (bet.current_price && bet.entry_price) {
+    let mtm_pnl = 0;
+
+    // Only calculate MTM for ACTIVE markets (closed markets have stale prices)
+    if (bet.market_status === 'active' && bet.current_price && bet.entry_price) {
       if (bet.side === 'YES') {
         const shares = bet.bet_amount / bet.entry_price;
         currentValue = shares * bet.current_price;
@@ -599,8 +613,12 @@ export function getAgentPendingBetsWithMTM(agentId: string): any[] {
         const shares = bet.bet_amount / (1 - bet.entry_price);
         currentValue = shares * (1 - bet.current_price);
       }
+      mtm_pnl = currentValue - bet.bet_amount;
+    } else if (bet.market_status === 'closed') {
+      // For closed markets, value = stake (awaiting resolution)
+      currentValue = bet.bet_amount;
+      mtm_pnl = 0;  // No unrealized P/L - will be settled on resolution
     }
-    const mtm_pnl = currentValue - bet.bet_amount;
 
     return {
       ...bet,
@@ -650,7 +668,19 @@ export async function executeBet(
     return null;
   }
 
-  // Validation
+  // CRITICAL: Validate market is still open for betting
+  const now = new Date().toISOString();
+  if (market.close_date && market.close_date <= now) {
+    console.warn(`[${agent.display_name}] Market already closed at ${market.close_date}`);
+    return null;
+  }
+
+  if (market.status !== 'active') {
+    console.warn(`[${agent.display_name}] Market not active (status: ${market.status})`);
+    return null;
+  }
+
+  // Amount validation
   if (decision.amount > agent.balance) {
     console.warn(`[${agent.display_name}] Insufficient funds: ${decision.amount} > ${agent.balance}`);
     return null;
