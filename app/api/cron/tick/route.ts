@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db, { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, sellBets, takeEquitySnapshots } from '@/lib/database';
+import db, { getActiveAgents, getActiveMarkets, getAgentDecision, executeBet, sellBets, takeEquitySnapshots, generateId } from '@/lib/database';
 
 /**
  * Main cron job - runs every 3 minutes
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
         const decision = await getAgentDecision(agent, markets);
 
         // Log the decision
-        const decisionId = `decision-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const decisionId = `decision-${generateId()}`;
         db.prepare(`
           INSERT INTO agent_decisions (
             id, agent_id, action, reasoning, confidence,

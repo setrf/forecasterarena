@@ -27,7 +27,7 @@ export default function RootLayout({
               <h1 className="text-xl font-bold">FORECASTER ARENA</h1>
               <nav className="flex gap-6 text-sm">
                 <a href="/" className="hover:text-accent-primary">LIVE</a>
-                <a href="/leaderboard" className="hover:text-accent-primary">LEADERBOARD</a>
+                <a href="/" className="hover:text-accent-primary">LEADERBOARD</a>
                 <a href="/markets" className="hover:text-accent-primary">MARKETS</a>
                 <a href="/about" className="hover:text-accent-primary">ABOUT</a>
               </nav>
