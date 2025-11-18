@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db, { queries } from '@/lib/database';
+import db, { queries, logMarketSync } from '@/lib/database';
 import { fetchAllPolymarketMarkets } from '@/lib/polymarket';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  const logId = `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  let newMarkets = 0;
+  let updatedMarkets = 0;
   let errorDetails = null;
 
   try {
@@ -21,8 +22,6 @@ export async function POST(request: NextRequest) {
     // This will automatically loop through all pages of results
     const markets = await fetchAllPolymarketMarkets();
 
-    let newMarkets = 0;
-    let updatedMarkets = 0;
     const now = new Date().toISOString();
 
     for (const market of markets) {
@@ -74,11 +73,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log the sync operation
-    db.prepare(`
-      INSERT INTO market_sync_log (id, markets_added, markets_updated)
-      VALUES (?, ?, ?)
-    `).run(logId, newMarkets, updatedMarkets);
+    // Log the successful sync operation
+    logMarketSync(markets.length, newMarkets, updatedMarkets, true);
 
     console.log(`✅ Market sync complete: ${newMarkets} new, ${updatedMarkets} updated`);
 
@@ -93,14 +89,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ Error syncing markets:', error);
 
     // Log the failed sync
-    try {
-      db.prepare(`
-        INSERT INTO market_sync_log (id, markets_added, markets_updated, errors)
-        VALUES (?, 0, 0, ?)
-      `).run(logId, errorDetails);
-    } catch (logError) {
-      console.error('Failed to log sync error:', logError);
-    }
+    logMarketSync(0, newMarkets, updatedMarkets, false, errorDetails);
 
     return NextResponse.json(
       {

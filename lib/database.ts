@@ -650,6 +650,30 @@ export async function getAgentDecision(
     decision.action === 'BET' ? `- ${decision.side} on market ${decision.marketId}` :
     decision.action === 'SELL' ? `- Selling ${decision.betsToSell?.length || 0} bet(s)` : '');
 
+  // CRITICAL: Log decision to agent_decisions table for audit trail
+  try {
+    db.prepare(`
+      INSERT INTO agent_decisions (
+        id, agent_id, action, market_id, side, amount, confidence,
+        bets_to_sell, reasoning, raw_llm_response, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(
+      generateId(),
+      agent.id,
+      decision.action,
+      decision.marketId || null,
+      decision.side || null,
+      decision.amount || null,
+      decision.confidence || null,
+      decision.betsToSell ? JSON.stringify(decision.betsToSell) : null,
+      decision.reasoning || null,
+      JSON.stringify(decision) // Store full decision as JSON
+    );
+  } catch (error) {
+    // Log error but don't fail the decision - audit trail is important but not critical
+    console.error(`[${agent.display_name}] ⚠️ Failed to log decision to database:`, error);
+  }
+
   return {
     ...decision,
     agentId: agent.id
@@ -867,60 +891,237 @@ export function getActiveAgents(): any[] {
 }
 
 /**
+ * Update market price and timestamp
+ * CRITICAL: This function is essential for accurate mark-to-market calculations
+ * Should be called whenever market prices are synced from Polymarket
+ *
+ * @param marketId - The market ID to update
+ * @param price - The new price (0-1)
+ * @param volume - Optional: The new volume
+ */
+export function updateMarketPrice(
+  marketId: string,
+  price: number,
+  volume?: number
+): void {
+  try {
+    if (volume !== undefined) {
+      db.prepare(`
+        UPDATE markets
+        SET current_price = ?, volume = ?, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(price, volume, marketId);
+    } else {
+      db.prepare(`
+        UPDATE markets
+        SET current_price = ?, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(price, marketId);
+    }
+  } catch (error) {
+    console.error(`✗ Failed to update market price for ${marketId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Update multiple market prices in a transaction (for bulk syncing)
+ * More efficient than calling updateMarketPrice() multiple times
+ *
+ * @param updates - Array of {marketId, price, volume?}
+ */
+export function updateMarketPrices(
+  updates: Array<{ marketId: string; price: number; volume?: number }>
+): void {
+  if (!updates || updates.length === 0) {
+    return;
+  }
+
+  db.prepare('BEGIN').run();
+
+  try {
+    const updateWithVolume = db.prepare(`
+      UPDATE markets
+      SET current_price = ?, volume = ?, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+
+    const updateWithoutVolume = db.prepare(`
+      UPDATE markets
+      SET current_price = ?, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+
+    for (const update of updates) {
+      if (update.volume !== undefined) {
+        updateWithVolume.run(update.price, update.volume, update.marketId);
+      } else {
+        updateWithoutVolume.run(update.price, update.marketId);
+      }
+    }
+
+    db.prepare('COMMIT').run();
+    console.log(`✓ Updated prices for ${updates.length} markets`);
+  } catch (error) {
+    db.prepare('ROLLBACK').run();
+    console.error(`✗ Failed to update market prices, rolled back:`, error);
+    throw error;
+  }
+}
+
+/**
  * Resolve a market and update all related bets
  */
 export function resolveMarket(
   marketId: string,
   winningOutcome: 'YES' | 'NO'
 ): void {
-  // Get all pending bets for this market
-  const bets = db.prepare('SELECT * FROM bets WHERE market_id = ? AND status = ?')
-    .all(marketId, 'pending');
+  // CRITICAL: Wrap in transaction to prevent partial resolution if any operation fails
+  db.prepare('BEGIN').run();
 
-  bets.forEach((bet: any) => {
-    const won = bet.side === winningOutcome;
-    const pnl = won ? bet.amount : -bet.amount; // Simple 1:1 payout
+  try {
+    // Get all pending bets for this market
+    const bets = db.prepare('SELECT * FROM bets WHERE market_id = ? AND status = ?')
+      .all(marketId, 'pending');
 
-    // Update bet
-    db.prepare(`
-      UPDATE bets
-      SET status = ?, pnl = ?, resolved_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(won ? 'won' : 'lost', pnl, bet.id);
+    bets.forEach((bet: any) => {
+      const won = bet.side === winningOutcome;
+      const pnl = won ? bet.amount : -bet.amount; // Simple 1:1 payout
 
-    // Update agent stats
-    const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(bet.agent_id) as any;
-
-    if (agent) {
+      // Update bet
       db.prepare(`
-        UPDATE agents
-        SET
-          balance = ?,
-          total_pl = ?,
-          winning_bets = ?,
-          losing_bets = ?,
-          pending_bets = ?,
-          updated_at = CURRENT_TIMESTAMP
+        UPDATE bets
+        SET status = ?, pnl = ?, resolved_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(
-        won ? agent.balance + bet.amount * 2 : agent.balance,
-        agent.total_pl + pnl,
-        won ? agent.winning_bets + 1 : agent.winning_bets,
-        won ? agent.losing_bets : agent.losing_bets + 1,
-        agent.pending_bets - 1,
-        agent.id
-      );
-    }
-  });
+      `).run(won ? 'won' : 'lost', pnl, bet.id);
 
-  // Update market status
-  db.prepare(`
-    UPDATE markets
-    SET status = ?, winning_outcome = ?, resolution_date = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `).run('resolved', winningOutcome, marketId);
+      // Update agent stats
+      const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(bet.agent_id) as any;
 
-  console.log(`✓ Market resolved: ${winningOutcome} wins (${bets.length} bets settled)`);
+      if (agent) {
+        db.prepare(`
+          UPDATE agents
+          SET
+            balance = ?,
+            total_pl = ?,
+            winning_bets = ?,
+            losing_bets = ?,
+            pending_bets = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(
+          won ? agent.balance + bet.amount * 2 : agent.balance,
+          agent.total_pl + pnl,
+          won ? agent.winning_bets + 1 : agent.winning_bets,
+          won ? agent.losing_bets : agent.losing_bets + 1,
+          agent.pending_bets - 1,
+          agent.id
+        );
+      }
+    });
+
+    // Update market status
+    db.prepare(`
+      UPDATE markets
+      SET status = ?, winning_outcome = ?, resolution_date = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run('resolved', winningOutcome, marketId);
+
+    // Commit transaction
+    db.prepare('COMMIT').run();
+
+    console.log(`✓ Market resolved: ${winningOutcome} wins (${bets.length} bets settled)`);
+  } catch (error) {
+    // Rollback on error to maintain database consistency
+    db.prepare('ROLLBACK').run();
+    console.error(`✗ Market resolution failed, rolled back:`, error);
+    throw error;
+  }
+}
+
+// ===== MARKET SYNC LOG OPERATIONS =====
+// Track and audit market synchronization operations
+
+/**
+ * Log a market sync operation to the database
+ *
+ * @param marketsCount - Total number of markets processed
+ * @param newMarkets - Number of new markets added
+ * @param updatedMarkets - Number of existing markets updated
+ * @param success - Whether the sync operation was successful
+ * @param errorMessage - Optional error message if sync failed
+ */
+export function logMarketSync(
+  marketsCount: number,
+  newMarkets: number,
+  updatedMarkets: number,
+  success: boolean,
+  errorMessage?: string
+): void {
+  const logId = `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  try {
+    db.prepare(`
+      INSERT INTO market_sync_log (id, markets_added, markets_updated, errors)
+      VALUES (?, ?, ?, ?)
+    `).run(logId, newMarkets, updatedMarkets, errorMessage || null);
+
+    console.log(`✓ Sync logged: ${newMarkets} new, ${updatedMarkets} updated${!success ? ' (failed)' : ''}`);
+  } catch (error) {
+    console.error('Failed to log market sync:', error);
+    // Don't throw - logging failures shouldn't break the sync operation
+  }
+}
+
+/**
+ * Get recent market sync logs
+ *
+ * @param limit - Number of logs to retrieve (default: 10)
+ * @returns Array of sync log records, most recent first
+ */
+export function getRecentSyncLogs(limit: number = 10): any[] {
+  return db.prepare(`
+    SELECT * FROM market_sync_log
+    ORDER BY synced_at DESC
+    LIMIT ?
+  `).all(limit);
+}
+
+/**
+ * Get market sync statistics for a specified time period
+ *
+ * @param days - Number of days to look back (default: 7)
+ * @returns Statistics object with sync counts and totals
+ */
+export function getSyncStats(days: number = 7): {
+  totalSyncs: number;
+  successfulSyncs: number;
+  failedSyncs: number;
+  totalMarketsAdded: number;
+  totalMarketsUpdated: number;
+} {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  const cutoff = cutoffDate.toISOString();
+
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) as totalSyncs,
+      SUM(CASE WHEN errors IS NULL THEN 1 ELSE 0 END) as successfulSyncs,
+      SUM(CASE WHEN errors IS NOT NULL THEN 1 ELSE 0 END) as failedSyncs,
+      SUM(markets_added) as totalMarketsAdded,
+      SUM(markets_updated) as totalMarketsUpdated
+    FROM market_sync_log
+    WHERE synced_at >= ?
+  `).get(cutoff) as any;
+
+  return {
+    totalSyncs: stats.totalSyncs || 0,
+    successfulSyncs: stats.successfulSyncs || 0,
+    failedSyncs: stats.failedSyncs || 0,
+    totalMarketsAdded: stats.totalMarketsAdded || 0,
+    totalMarketsUpdated: stats.totalMarketsUpdated || 0
+  };
 }
 
 // Auto-initialize database when module is imported (server-side only)

@@ -41,6 +41,8 @@ export type LLMDecision = {
   amount?: number;                 // Bet amount in dollars (required if action=BET)
   confidence?: number;             // Confidence level 0-1 (required if action=BET)
   reasoning: string;               // Explanation of the decision (always required)
+  tokensUsed?: number;             // Total tokens used for this API call
+  estimatedCost?: number;          // Estimated cost in dollars for this API call
 };
 
 /**
@@ -66,73 +68,257 @@ export async function callLLM(
   systemPrompt: string,
   userPrompt: string
 ): Promise<LLMDecision> {
-  try {
-    // Make request to OpenRouter API
-    const response = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        // Optional: helps with rate limiting and analytics
-        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-        'X-Title': 'Forecaster Arena',
-      },
-      body: JSON.stringify({
-        model: modelId,                                    // Which model to use
-        messages: [
-          {
-            role: 'system',                                // System prompt defines behavior
-            content: systemPrompt
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [2000, 4000, 8000]; // 2s, 4s, 8s in milliseconds
+  const RATE_LIMIT_RETRY_DELAYS = [5000, 10000, 20000]; // Longer delays for rate limits
+  const REQUEST_TIMEOUT = 60000; // 60 seconds
+
+  // Helper function to sleep for a given duration
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Helper function to determine if error is retryable
+  const isRetryableError = (statusCode?: number, isNetworkError: boolean = false): boolean => {
+    if (isNetworkError) return true;
+    if (!statusCode) return false;
+    if (statusCode === 429) return true; // Rate limit
+    if (statusCode >= 500) return true; // Server errors
+    return false;
+  };
+
+  // Helper function to create a fetch with timeout
+  const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  };
+
+  // Main retry loop
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[OpenRouter] Attempt ${attempt + 1}/${MAX_RETRIES + 1} for model ${modelId}`);
+
+      // Make request to OpenRouter API with timeout
+      const response = await fetchWithTimeout(
+        OPENROUTER_URL,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            // Optional: helps with rate limiting and analytics
+            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+            'X-Title': 'Forecaster Arena',
           },
-          {
-            role: 'user',                                  // User prompt has the task
-            content: userPrompt
-          }
-        ],
-        response_format: { type: 'json_object' },          // Force JSON response
-        temperature: 0.7,                                  // Balanced creativity/consistency
-        max_tokens: 500,                                   // Limit response length
-      })
-    });
+          body: JSON.stringify({
+            model: modelId,                                    // Which model to use
+            messages: [
+              {
+                role: 'system',                                // System prompt defines behavior
+                content: systemPrompt
+              },
+              {
+                role: 'user',                                  // User prompt has the task
+                content: userPrompt
+              }
+            ],
+            response_format: { type: 'json_object' },          // Force JSON response
+            temperature: 0.7,                                  // Balanced creativity/consistency
+            max_tokens: 500,                                   // Limit response length
+          })
+        },
+        REQUEST_TIMEOUT
+      );
 
-    // Check for HTTP errors
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
-    }
+      // Check for HTTP errors
+      if (!response.ok) {
+        const errorText = await response.text();
+        const statusCode = response.status;
 
-    const data = await response.json();
+        console.error(
+          `[OpenRouter] HTTP ${statusCode} error (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`,
+          errorText
+        );
 
-    // Parse the JSON response from the LLM
-    const content = data.choices[0].message.content;
-    const decision = JSON.parse(content) as LLMDecision;
+        // Check if we should retry
+        const shouldRetry = isRetryableError(statusCode);
+        if (shouldRetry && attempt < MAX_RETRIES) {
+          // Use longer delays for rate limits
+          const delay = statusCode === 429
+            ? RATE_LIMIT_RETRY_DELAYS[attempt]
+            : RETRY_DELAYS[attempt];
 
-    // Validate decision has required fields
-    if (!decision.action || !decision.reasoning) {
-      throw new Error('Invalid decision format from LLM');
-    }
+          console.log(`[OpenRouter] Retrying in ${delay / 1000}s...`);
+          await sleep(delay);
+          continue; // Retry
+        }
 
-    // Validate BET decisions have all required parameters
-    if (decision.action === 'BET') {
-      if (!decision.marketId || !decision.side || !decision.amount || decision.confidence === undefined) {
-        console.warn('Invalid BET decision, defaulting to HOLD:', decision);
+        // Don't retry 4xx errors (except 429)
+        throw new Error(`OpenRouter API error: ${statusCode} - ${errorText}`);
+      }
+
+      const data = await response.json();
+
+      // Safe response parsing - check all nested properties exist
+      if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+        throw new Error('Invalid API response: missing choices array');
+      }
+
+      if (!data.choices[0].message) {
+        throw new Error('Invalid API response: missing message object');
+      }
+
+      if (!data.choices[0].message.content) {
+        throw new Error('Invalid API response: missing content');
+      }
+
+      // Parse the JSON response from the LLM
+      const content = data.choices[0].message.content;
+      const decision = JSON.parse(content) as LLMDecision;
+
+      // Extract token usage and calculate cost
+      if (data.usage && data.usage.total_tokens) {
+        decision.tokensUsed = data.usage.total_tokens;
+        // Estimate cost at $0.03 per 1K tokens (average across models)
+        decision.estimatedCost = (data.usage.total_tokens / 1000) * 0.03;
+      }
+
+      // Validate decision has required fields
+      if (!decision.action || !decision.reasoning) {
+        throw new Error('Invalid decision format from LLM');
+      }
+
+      // Validate action type is one of the allowed values
+      if (decision.action !== 'BET' && decision.action !== 'SELL' && decision.action !== 'HOLD') {
+        console.warn(`[OpenRouter] Invalid action type "${decision.action}", defaulting to HOLD`);
         return {
           action: 'HOLD',
-          reasoning: 'Invalid BET parameters, skipping'
+          reasoning: `Invalid action type "${decision.action}", skipping`,
+          tokensUsed: decision.tokensUsed,
+          estimatedCost: decision.estimatedCost
+        };
+      }
+
+      // Validate SELL decisions have required parameters
+      if (decision.action === 'SELL') {
+        if (!decision.betsToSell || !Array.isArray(decision.betsToSell) || decision.betsToSell.length === 0) {
+          console.warn('[OpenRouter] Invalid SELL decision: missing or empty betsToSell array, defaulting to HOLD:', decision);
+          return {
+            action: 'HOLD',
+            reasoning: 'Invalid SELL parameters: no bets to sell specified',
+            tokensUsed: decision.tokensUsed,
+            estimatedCost: decision.estimatedCost
+          };
+        }
+      }
+
+      // Validate BET decisions have all required parameters with proper values
+      if (decision.action === 'BET') {
+        // Check all required fields exist
+        if (!decision.marketId || !decision.side || !decision.amount || decision.confidence === undefined) {
+          console.warn('[OpenRouter] Invalid BET decision: missing required fields, defaulting to HOLD:', decision);
+          return {
+            action: 'HOLD',
+            reasoning: 'Invalid BET parameters: missing required fields',
+            tokensUsed: decision.tokensUsed,
+            estimatedCost: decision.estimatedCost
+          };
+        }
+
+        // Validate marketId is non-empty string
+        if (typeof decision.marketId !== 'string' || decision.marketId.trim() === '') {
+          console.warn('[OpenRouter] Invalid BET decision: marketId must be non-empty string, defaulting to HOLD:', decision);
+          return {
+            action: 'HOLD',
+            reasoning: 'Invalid BET parameters: marketId must be non-empty string',
+            tokensUsed: decision.tokensUsed,
+            estimatedCost: decision.estimatedCost
+          };
+        }
+
+        // Validate side is exactly 'YES' or 'NO'
+        if (decision.side !== 'YES' && decision.side !== 'NO') {
+          console.warn(`[OpenRouter] Invalid BET decision: side must be "YES" or "NO", got "${decision.side}", defaulting to HOLD:`, decision);
+          return {
+            action: 'HOLD',
+            reasoning: `Invalid BET parameters: side must be "YES" or "NO", got "${decision.side}"`,
+            tokensUsed: decision.tokensUsed,
+            estimatedCost: decision.estimatedCost
+          };
+        }
+
+        // Validate amount is positive number
+        if (typeof decision.amount !== 'number' || decision.amount <= 0 || !isFinite(decision.amount)) {
+          console.warn(`[OpenRouter] Invalid BET decision: amount must be positive number, got ${decision.amount}, defaulting to HOLD:`, decision);
+          return {
+            action: 'HOLD',
+            reasoning: `Invalid BET parameters: amount must be positive number, got ${decision.amount}`,
+            tokensUsed: decision.tokensUsed,
+            estimatedCost: decision.estimatedCost
+          };
+        }
+
+        // Validate confidence is between 0.0 and 1.0
+        if (typeof decision.confidence !== 'number' || decision.confidence < 0.0 || decision.confidence > 1.0 || !isFinite(decision.confidence)) {
+          console.warn(`[OpenRouter] Invalid BET decision: confidence must be between 0.0 and 1.0, got ${decision.confidence}, defaulting to HOLD:`, decision);
+          return {
+            action: 'HOLD',
+            reasoning: `Invalid BET parameters: confidence must be between 0.0 and 1.0, got ${decision.confidence}`,
+            tokensUsed: decision.tokensUsed,
+            estimatedCost: decision.estimatedCost
+          };
+        }
+      }
+
+      console.log(`[OpenRouter] Successfully received decision from ${modelId}`);
+      return decision;
+
+    } catch (error) {
+      const isNetworkError = error instanceof TypeError || (error as any).name === 'AbortError';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      console.error(
+        `[OpenRouter] Error on attempt ${attempt + 1}/${MAX_RETRIES + 1} for model ${modelId}:`,
+        errorMessage
+      );
+
+      // Check if we should retry network errors
+      if (isNetworkError && attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAYS[attempt];
+        console.log(`[OpenRouter] Network error, retrying in ${delay / 1000}s...`);
+        await sleep(delay);
+        continue; // Retry
+      }
+
+      // If this was the last attempt or a non-retryable error, return fallback
+      if (attempt === MAX_RETRIES || !isRetryableError(undefined, isNetworkError)) {
+        console.error(`[OpenRouter] All retries exhausted or non-retryable error for ${modelId}`);
+        // Fallback: Return HOLD decision on any error
+        // This prevents the agent from crashing the cron job
+        return {
+          action: 'HOLD',
+          reasoning: `Error calling LLM: ${errorMessage}`
         };
       }
     }
-
-    return decision;
-  } catch (error) {
-    console.error(`Error calling LLM ${modelId}:`, error);
-    // Fallback: Return HOLD decision on any error
-    // This prevents the agent from crashing the cron job
-    return {
-      action: 'HOLD',
-      reasoning: `Error calling LLM: ${error instanceof Error ? error.message : 'Unknown error'}`
-    };
   }
+
+  // This should never be reached, but TypeScript requires it
+  console.error(`[OpenRouter] Unexpected: exhausted all retries for ${modelId}`);
+  return {
+    action: 'HOLD',
+    reasoning: 'Error: All retry attempts failed'
+  };
 }
 
 /**
