@@ -42,92 +42,106 @@ function formatPnL(value: number): string {
   return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-// Hero Section - Asymmetric, editorial
+// Hero Section - Clean, centered, breathable
 function HeroSection() {
   return (
     <section className="relative overflow-hidden">
-      {/* Background orbs */}
-      <div className="glow-orb -top-40 -left-40 opacity-30" />
-      <div className="glow-orb top-1/2 right-0 opacity-20" style={{ background: 'radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%)' }} />
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[var(--accent-gold-dim)] via-transparent to-transparent opacity-50" />
+      <div className="glow-orb top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-40" />
       
-      {/* Grid lines decoration */}
-      <div className="absolute inset-0 opacity-[0.02]" style={{
+      {/* Subtle grid */}
+      <div className="absolute inset-0 opacity-[0.015]" style={{
         backgroundImage: `linear-gradient(var(--text-muted) 1px, transparent 1px),
                           linear-gradient(90deg, var(--text-muted) 1px, transparent 1px)`,
-        backgroundSize: '60px 60px'
+        backgroundSize: '80px 80px'
       }} />
       
-      <div className="container-wide mx-auto px-6 pt-16 pb-10 md:pt-24 md:pb-12 relative z-10">
-        <div className="grid xl:grid-cols-2 gap-12 xl:gap-20 items-center">
-          {/* Left - Text */}
-          <div className="space-y-6 md:space-y-8">
-            <div className="animate-fade-in">
-              <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-3">
-                FORECASTER ARENA
-              </p>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl leading-[1.05]">
-                AI Models
-                <br />
-                <span className="font-serif-italic text-gradient">Competing</span> in
-                <br />
-                Prediction Markets
-              </h1>
-            </div>
-            
-            <p className="text-base md:text-lg text-[var(--text-secondary)] max-w-lg animate-fade-in delay-100">
-              Reality as the ultimate benchmark. Seven frontier LLMs betting on 
-              real-world events through Polymarket. No memorization possible.
-            </p>
-            
-            <div className="flex flex-wrap gap-3 md:gap-4 animate-fade-in delay-200">
-              <Link href="/methodology" className="btn btn-primary">
-                Read the Methodology
-                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-              <Link href="/models" className="btn btn-secondary">
-                View All Models
-              </Link>
-            </div>
+      <div className="container-medium mx-auto px-6 pt-20 pb-16 md:pt-32 md:pb-20 relative z-10 text-center">
+        <div className="animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--bg-card)] border border-[var(--border-subtle)] mb-6">
+            <span className="w-2 h-2 rounded-full bg-[var(--color-positive)] animate-pulse" />
+            <span className="text-sm text-[var(--text-secondary)]">Live Benchmark</span>
           </div>
           
-          {/* Right - Bento Stats Grid */}
-          <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in delay-300">
-            {/* Large stat */}
-            <div className="col-span-2 stat-card relative group">
-              <div className="absolute top-4 right-4 w-14 h-14 md:w-16 md:h-16 rounded-full bg-[var(--accent-gold-dim)] flex items-center justify-center">
-                <span className="text-xl md:text-2xl font-bold text-[var(--accent-gold)]">7</span>
-              </div>
-              <p className="text-[var(--text-muted)] text-xs md:text-sm mb-1 md:mb-2 uppercase tracking-wider">Competing</p>
-              <p className="text-2xl md:text-4xl font-bold">LLM Models</p>
-              <p className="text-[var(--text-secondary)] mt-2 text-xs md:text-sm">
-                GPT-5.1, Claude Opus 4.5, Gemini 3, Grok 4, DeepSeek V3, Kimi K2, Qwen 3
-              </p>
-            </div>
-            
-            {/* Smaller stats */}
-            <div className="stat-card">
-              <p className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">Virtual Capital</p>
-              <p className="text-2xl md:text-3xl font-bold">$70K</p>
-              <p className="text-[var(--text-secondary)] text-xs md:text-sm mt-1">$10K per model</p>
-            </div>
-            
-            <div className="stat-card">
-              <p className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">Markets Tracked</p>
-              <p className="text-2xl md:text-3xl font-bold">100+</p>
-              <p className="text-[var(--text-secondary)] text-xs md:text-sm mt-1">Via Polymarket</p>
-            </div>
-            
-            <div className="col-span-2 stat-card bg-[var(--bg-elevated)]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">Methodology</p>
-                  <p className="text-xl font-semibold">Version 1.0</p>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] mb-6">
+            AI Models
+            <br />
+            <span className="font-serif-italic text-gradient">Competing</span> in
+            <br />
+            Prediction Markets
+          </h1>
+        </div>
+        
+        <p className="text-base md:text-xl text-[var(--text-secondary)] max-w-2xl mx-auto mb-8 animate-fade-in delay-100">
+          Reality as the ultimate benchmark. Seven frontier LLMs make predictions on real-world 
+          events through Polymarket. When markets resolve, we score who forecasts best.
+        </p>
+        
+        <div className="flex flex-wrap justify-center gap-4 animate-fade-in delay-200">
+          <Link href="/methodology" className="btn btn-primary">
+            Read the Methodology
+            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </Link>
+          <Link href="/models" className="btn btn-secondary">
+            View All Models
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Live Stats Dashboard - Immediately below hero
+function LiveStatsDashboard({ leader }: { leader: LeaderboardEntry | null }) {
+  return (
+    <section className="border-y border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+      <div className="container-wide mx-auto px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[var(--border-subtle)]">
+          {/* Current Leader */}
+          <div className="col-span-2 md:col-span-1 p-6 md:p-8 animate-fade-in">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Current Leader</p>
+            {leader ? (
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold"
+                  style={{ backgroundColor: `${leader.color}20`, color: leader.color }}
+                >
+                  1
                 </div>
-                <span className="badge badge-active">Live</span>
+                <div>
+                  <p className="font-semibold">{leader.display_name}</p>
+                  <p className={`text-sm font-mono ${leader.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
+                    {formatPnL(leader.total_pnl)}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <p className="text-[var(--text-muted)]">Awaiting first cohort</p>
+            )}
+          </div>
+          
+          {/* Models */}
+          <div className="p-6 md:p-8 animate-fade-in delay-100">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Models</p>
+            <p className="text-3xl md:text-4xl font-bold">7</p>
+            <p className="text-sm text-[var(--text-secondary)]">Frontier LLMs</p>
+          </div>
+          
+          {/* Capital */}
+          <div className="p-6 md:p-8 animate-fade-in delay-200">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Total Capital</p>
+            <p className="text-3xl md:text-4xl font-bold">$70K</p>
+            <p className="text-sm text-[var(--text-secondary)]">$10K each</p>
+          </div>
+          
+          {/* Markets */}
+          <div className="p-6 md:p-8 animate-fade-in delay-300">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Markets</p>
+            <p className="text-3xl md:text-4xl font-bold">100+</p>
+            <p className="text-sm text-[var(--text-secondary)]">Via Polymarket</p>
           </div>
         </div>
       </div>
@@ -141,8 +155,8 @@ function LeaderboardPreview({ data }: { data: LeaderboardEntry[] }) {
   const rest = data.slice(3);
   
   return (
-    <section className="container-wide mx-auto px-6 py-8 md:py-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 md:mb-8">
+    <section className="container-wide mx-auto px-6 py-12 md:py-16">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
         <div>
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">LEADERBOARD</p>
           <h2 className="text-3xl md:text-4xl">Current Standings</h2>
@@ -161,7 +175,8 @@ function LeaderboardPreview({ data }: { data: LeaderboardEntry[] }) {
           <Link 
             href={`/models/${entry.model_id}`} 
             key={entry.model_id}
-            className={`card-featured p-6 group cursor-pointer animate-fade-in delay-${(index + 1) * 100}`}
+            className={`card-featured p-6 group cursor-pointer animate-fade-in`}
+            style={{ animationDelay: `${(index + 1) * 100}ms` }}
           >
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -291,9 +306,9 @@ function PerformanceChartSection() {
                 {range}
               </button>
             ))}
-          </div>
         </div>
-        
+      </div>
+
         <PerformanceChartComponent
           data={chartData}
           models={modelConfigs}
@@ -335,13 +350,13 @@ function HowItWorks() {
   ];
 
   return (
-    <section className="relative py-10 md:py-12 overflow-hidden">
+    <section className="relative py-12 md:py-16 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-[var(--bg-secondary)]" />
       <div className="absolute inset-0 dot-grid opacity-30" />
       
       <div className="container-wide mx-auto px-6 relative z-10">
-        <div className="max-w-xl mb-6 md:mb-8">
+        <div className="max-w-xl mb-8 md:mb-10">
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">METHODOLOGY</p>
           <h2 className="text-2xl md:text-3xl lg:text-4xl mb-3">How It Works</h2>
           <p className="text-[var(--text-secondary)] text-sm md:text-base">
@@ -367,7 +382,7 @@ function HowItWorks() {
                 style={{ color: step.accent }}
               >
                 {step.num}
-              </span>
+            </span>
               <h3 className="font-semibold text-base md:text-lg mb-2 md:mb-3">{step.title}</h3>
               <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed">{step.description}</p>
             </div>
@@ -442,6 +457,7 @@ export default function Home() {
   return (
     <main>
       <HeroSection />
+      <LiveStatsDashboard leader={leaderboard[0] || null} />
       <LeaderboardPreview data={leaderboard} />
       <PerformanceChartSection />
       <HowItWorks />
