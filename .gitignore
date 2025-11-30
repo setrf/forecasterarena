@@ -34,3 +34,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# =============================================================================
+# Forecaster Arena
+# =============================================================================
+
+# Database files
+/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Backups
+/backups/
+
+# Plan files (auto-generated)
+*.plan.md
