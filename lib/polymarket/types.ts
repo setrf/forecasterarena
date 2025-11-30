@@ -71,6 +71,26 @@ export interface MarketResolution {
 }
 
 /**
+ * Event from Polymarket Gamma API
+ * Events are containers for related markets (e.g., "Top Spotify Artist 2025")
+ * 
+ * @see https://docs.polymarket.com/developers/gamma-markets-api/gamma-structure
+ */
+export interface PolymarketEvent {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  volume?: number;
+  liquidity?: number;
+  markets: PolymarketMarket[];   // Sub-markets within this event
+  closed?: boolean;
+  active?: boolean;
+  category?: string;
+  image?: string;
+}
+
+/**
  * API response for markets list
  */
 export interface MarketsResponse {
