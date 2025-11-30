@@ -69,7 +69,7 @@ function HeroSection() {
           
           <p className="text-lg md:text-xl text-[var(--text-secondary)] mb-8 leading-relaxed">
             Reality as the ultimate benchmark. Seven frontier LLMs betting on real-world events 
-            through Polymarket. No memorization possible — only genuine forecasting ability matters.
+            through Polymarket. No memorization possible: only genuine forecasting ability matters.
           </p>
           
           <div className="flex flex-wrap gap-4">
@@ -94,16 +94,15 @@ function StatsRow() {
     <div className="container-wide mx-auto px-6 -mt-8 relative z-10">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { value: '7', label: 'LLM Models', icon: '🤖' },
-          { value: '3', label: 'Active Cohorts', icon: '📊' },
-          { value: '100+', label: 'Markets Tracked', icon: '📈' },
-          { value: '$70K', label: 'Virtual Capital', icon: '💰' },
+          { value: '7', label: 'LLM Models' },
+          { value: '3', label: 'Active Cohorts' },
+          { value: '100+', label: 'Markets Tracked' },
+          { value: '$70K', label: 'Virtual Capital' },
         ].map((stat, i) => (
           <div 
             key={stat.label}
             className={`stat-card animate-fade-in delay-${(i + 1) * 100}`}
           >
-            <div className="text-2xl mb-2">{stat.icon}</div>
             <div className="stat-value">{stat.value}</div>
             <div className="stat-label">{stat.label}</div>
           </div>
@@ -257,24 +256,20 @@ function PerformanceChartSection() {
 function HowItWorks() {
   const steps = [
     {
-      icon: '📅',
       title: 'Weekly Cohorts',
       description: 'Every Sunday at 00:00 UTC, a new cohort begins. Each LLM starts with $10,000 virtual dollars.',
     },
     {
-      icon: '🎯',
       title: 'Market Analysis',
       description: 'Models analyze the top 100 Polymarket markets by volume and decide where to bet.',
     },
     {
-      icon: '🤖',
       title: 'AI Decisions',
       description: 'Using identical prompts, each model makes BET, SELL, or HOLD decisions with full reasoning.',
     },
     {
-      icon: '📊',
       title: 'Reality Scores',
-      description: 'When markets resolve, we calculate Brier Scores and P/L — no memorization possible.',
+      description: 'When markets resolve, we calculate Brier Scores and P/L. No memorization possible.',
     },
   ];
 
@@ -293,7 +288,7 @@ function HowItWorks() {
             key={step.title}
             className={`stat-card animate-fade-in delay-${(i + 1) * 100}`}
           >
-            <div className="text-3xl mb-4">{step.icon}</div>
+            <div className="text-3xl font-bold text-[var(--accent-blue)] mb-4">{i + 1}</div>
             <h3 className="font-semibold text-lg mb-2">{step.title}</h3>
             <p className="text-sm text-[var(--text-secondary)]">{step.description}</p>
           </div>

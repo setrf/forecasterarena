@@ -53,7 +53,7 @@ export function getDb(): Database.Database {
     return db;
   }
 
-  console.log('🗄️  Connecting to database:', DB_PATH);
+  console.log('[DB] Connecting to database:', DB_PATH);
   
   // Create database connection
   db = new Database(DB_PATH);
@@ -67,7 +67,7 @@ export function getDb(): Database.Database {
   // Initialize schema if needed
   initializeSchema(db);
   
-  console.log('✅ Database connection established');
+  console.log('[DB] Database connection established');
   
   return db;
 }
@@ -81,7 +81,7 @@ export function getDb(): Database.Database {
  * @param database - Database connection
  */
 function initializeSchema(database: Database.Database): void {
-  console.log('📊 Initializing database schema...');
+  console.log('[DB] Initializing database schema...');
   
   // Create all tables and indexes
   database.exec(SCHEMA_SQL);
@@ -92,7 +92,7 @@ function initializeSchema(database: Database.Database): void {
   // Seed models
   database.exec(SEED_MODELS_SQL);
   
-  console.log('✅ Database schema initialized');
+  console.log('[DB] Database schema initialized');
 }
 
 /**
@@ -104,7 +104,7 @@ export function closeDb(): void {
   if (db) {
     db.close();
     db = null;
-    console.log('🗄️  Database connection closed');
+    console.log('[DB] Database connection closed');
   }
 }
 
@@ -135,7 +135,7 @@ export function createBackup(): string {
   const database = getDb();
   database.backup(backupPath);
   
-  console.log(`✅ Backup created: ${backupPath}`);
+  console.log(`[DB] Backup created: ${backupPath}`);
   
   return backupPath;
 }
@@ -202,4 +202,3 @@ export function logSystemEvent(
 
 // Export default database getter
 export default getDb;
-

@@ -28,7 +28,7 @@ export default function AboutPage() {
           <p className="text-[var(--text-secondary)] leading-relaxed">
             Forecaster Arena uses <strong>reality as the ultimate test</strong>. By having AI models 
             make predictions about future events through Polymarket, we measure capabilities that 
-            cannot be memorized—because the answers don&apos;t exist yet.
+            cannot be memorized, because the answers don&apos;t exist yet.
           </p>
         </section>
 
@@ -37,8 +37,7 @@ export default function AboutPage() {
           <h2 className="text-2xl font-semibold mb-4">Philosophy</h2>
           <div className="space-y-4">
             <div className="glass-card p-6">
-              <h3 className="font-semibold text-lg mb-2 flex items-center gap-3">
-                <span className="text-2xl">🔬</span>
+              <h3 className="font-semibold text-lg mb-2">
                 Rigorous Methodology
               </h3>
               <p className="text-[var(--text-secondary)]">
@@ -48,8 +47,7 @@ export default function AboutPage() {
             </div>
             
             <div className="glass-card p-6">
-              <h3 className="font-semibold text-lg mb-2 flex items-center gap-3">
-                <span className="text-2xl">⚖️</span>
+              <h3 className="font-semibold text-lg mb-2">
                 Fair Comparison
               </h3>
               <p className="text-[var(--text-secondary)]">
@@ -59,8 +57,7 @@ export default function AboutPage() {
             </div>
             
             <div className="glass-card p-6">
-              <h3 className="font-semibold text-lg mb-2 flex items-center gap-3">
-                <span className="text-2xl">🌐</span>
+              <h3 className="font-semibold text-lg mb-2">
                 Complete Transparency
               </h3>
               <p className="text-[var(--text-secondary)]">
@@ -78,14 +75,14 @@ export default function AboutPage() {
             <div className="stat-card">
               <h3 className="font-semibold mb-2">Brier Score</h3>
               <p className="text-sm text-[var(--text-secondary)]">
-                Measures calibration—how well confidence matches accuracy.
+                Measures calibration: how well confidence matches accuracy.
                 Lower is better (0 = perfect, 1 = worst).
               </p>
             </div>
             <div className="stat-card">
               <h3 className="font-semibold mb-2">Portfolio Returns</h3>
               <p className="text-sm text-[var(--text-secondary)]">
-                Practical measure of forecasting value—can the model 
+                Practical measure of forecasting value: can the model 
                 translate predictions into profitable decisions?
               </p>
             </div>
@@ -108,10 +105,10 @@ export default function AboutPage() {
 
         {/* Disclaimer */}
         <section className="glass-card p-6 border-l-4 border-[var(--accent-amber)]">
-          <h2 className="text-xl font-semibold mb-3">⚠️ Important Disclaimer</h2>
+          <h2 className="text-xl font-semibold mb-3">Important Disclaimer</h2>
           <p className="text-[var(--text-secondary)] leading-relaxed mb-4">
             Forecaster Arena is an <strong>educational and research project</strong>. All trading 
-            is simulated (paper trading)—no real money is ever at risk.
+            is simulated (paper trading). No real money is ever at risk.
           </p>
           <p className="text-[var(--text-secondary)] leading-relaxed">
             This is <strong>not financial advice</strong>. The benchmark is designed to evaluate 
@@ -146,7 +143,7 @@ export default function AboutPage() {
 
         {/* Contact */}
         <section>
-          <h2 className="text-2xl font-semibold mb-4">Contact & Contribute</h2>
+          <h2 className="text-2xl font-semibold mb-4">Contact and Contribute</h2>
           <p className="text-[var(--text-secondary)] leading-relaxed mb-6">
             Forecaster Arena is open source. We welcome contributions, suggestions, and feedback.
           </p>
@@ -166,4 +163,3 @@ export default function AboutPage() {
     </div>
   );
 }
-

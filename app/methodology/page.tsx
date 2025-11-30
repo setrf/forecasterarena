@@ -49,22 +49,22 @@ export default function MethodologyPage() {
             <h3 className="text-lg font-medium mb-3">1.2 The Problem with Traditional Benchmarks</h3>
             <ul className="space-y-2 text-[var(--text-secondary)] mb-6">
               <li className="flex items-start gap-3">
-                <span className="text-[var(--accent-rose)]">✗</span>
+                <span className="text-[var(--accent-rose)]">x</span>
                 <span><strong>Data contamination:</strong> Training data may contain benchmark answers</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-[var(--accent-rose)]">✗</span>
+                <span className="text-[var(--accent-rose)]">x</span>
                 <span><strong>Memorization vs. reasoning:</strong> High scores may reflect memorization, not understanding</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-[var(--accent-rose)]">✗</span>
+                <span className="text-[var(--accent-rose)]">x</span>
                 <span><strong>Static nature:</strong> Benchmarks become stale as models improve</span>
               </li>
             </ul>
             
             <h3 className="text-lg font-medium mb-3">1.3 Reality as Benchmark</h3>
             <p className="text-[var(--text-secondary)] leading-relaxed">
-              Prediction markets provide questions about future events—outcomes that cannot exist 
+              Prediction markets provide questions about future events, outcomes that cannot exist 
               in any training data because they haven&apos;t happened yet. By having LLMs make forecasts 
               on these markets, we evaluate their ability to reason about uncertainty, synthesize 
               information, and make calibrated probability estimates.
@@ -189,7 +189,7 @@ export default function MethodologyPage() {
               The Brier Score measures forecast accuracy. Lower is better (0 = perfect, 1 = worst).
             </p>
             <div className="glass-card p-4 mb-6 font-mono text-center">
-              Brier = (forecast - outcome)²
+              Brier = (forecast - outcome)^2
             </div>
             
             <p className="text-[var(--text-secondary)] mb-4 leading-relaxed">
@@ -213,7 +213,7 @@ export default function MethodologyPage() {
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-8 h-8 bg-[var(--accent-emerald)] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                  ✓
+                  +
                 </div>
                 <div>
                   <h4 className="font-medium mb-1">Full Prompt Storage</h4>
@@ -225,7 +225,7 @@ export default function MethodologyPage() {
               
               <div className="flex items-start gap-4">
                 <div className="w-8 h-8 bg-[var(--accent-emerald)] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                  ✓
+                  +
                 </div>
                 <div>
                   <h4 className="font-medium mb-1">Temperature = 0</h4>
@@ -237,7 +237,7 @@ export default function MethodologyPage() {
               
               <div className="flex items-start gap-4">
                 <div className="w-8 h-8 bg-[var(--accent-emerald)] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                  ✓
+                  +
                 </div>
                 <div>
                   <h4 className="font-medium mb-1">Open Source</h4>
@@ -249,7 +249,7 @@ export default function MethodologyPage() {
               
               <div className="flex items-start gap-4">
                 <div className="w-8 h-8 bg-[var(--accent-emerald)] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                  ✓
+                  +
                 </div>
                 <div>
                   <h4 className="font-medium mb-1">Versioned Methodology</h4>
@@ -277,4 +277,3 @@ export default function MethodologyPage() {
     </div>
   );
 }
-
