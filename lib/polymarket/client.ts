@@ -9,7 +9,7 @@
  */
 
 import { POLYMARKET_GAMMA_API_HOST, TOP_MARKETS_COUNT } from '../constants';
-import type { PolymarketMarket, SimplifiedMarket, MarketResolution } from './types';
+import type { PolymarketMarket, PolymarketEvent, SimplifiedMarket, MarketResolution } from './types';
 
 /**
  * Fetch markets from Polymarket Gamma API
@@ -173,11 +173,111 @@ export function checkResolution(market: PolymarketMarket): MarketResolution {
 }
 
 /**
+ * Fetch events from Polymarket Gamma API
+ * Events contain groups of related markets (e.g., "Top Spotify Artist 2025" contains all artist sub-markets)
+ * 
+ * @see https://docs.polymarket.com/developers/gamma-markets-api/fetch-markets-guide
+ */
+export async function fetchEvents(
+  limit: number = 100,
+  offset: number = 0
+): Promise<PolymarketEvent[]> {
+  const url = new URL(`${POLYMARKET_GAMMA_API_HOST}/events`);
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('offset', String(offset));
+  url.searchParams.set('order', 'volume');
+  url.searchParams.set('ascending', 'false');
+  url.searchParams.set('closed', 'false');
+  
+  console.log(`Fetching events from Polymarket: ${url}`);
+  
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Fetch event by slug
+ * Slug can be extracted from Polymarket URL: polymarket.com/event/{slug}
+ */
+export async function fetchEventBySlug(slug: string): Promise<PolymarketEvent | null> {
+  const url = `${POLYMARKET_GAMMA_API_HOST}/events/slug/${slug}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+  });
+  
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * Fetch all markets from events (recommended approach per docs)
+ * This extracts individual markets from events for better coverage
+ */
+export async function fetchMarketsFromEvents(limit: number = 100): Promise<PolymarketMarket[]> {
+  const events = await fetchEvents(limit);
+  const allMarkets: PolymarketMarket[] = [];
+  
+  for (const event of events) {
+    if (event.markets && Array.isArray(event.markets)) {
+      for (const market of event.markets) {
+        // Only include active, non-closed markets
+        if (market.active !== false && !market.closed) {
+          allMarkets.push(market);
+        }
+      }
+    }
+  }
+  
+  console.log(`Extracted ${allMarkets.length} markets from ${events.length} events`);
+  return allMarkets;
+}
+
+/**
  * Fetch and simplify top markets by volume
+ * Uses both direct markets endpoint and events endpoint for better coverage
  */
 export async function fetchTopMarkets(limit: number = TOP_MARKETS_COUNT): Promise<SimplifiedMarket[]> {
-  const markets = await fetchMarkets(limit);
-  return markets.map(simplifyMarket);
+  // Fetch from both sources for maximum coverage
+  const [directMarkets, eventMarkets] = await Promise.all([
+    fetchMarkets(limit),
+    fetchMarketsFromEvents(Math.ceil(limit / 5)) // Events contain multiple markets each
+  ]);
+  
+  // Combine and deduplicate by polymarket_id
+  const seen = new Set<string>();
+  const allMarkets: PolymarketMarket[] = [];
+  
+  for (const market of [...directMarkets, ...eventMarkets]) {
+    const id = market.id || market.conditionId || '';
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      allMarkets.push(market);
+    }
+  }
+  
+  // Sort by volume and take top N
+  allMarkets.sort((a, b) => {
+    const volA = parseFloat(String(a.volume || a.volumeNum || 0));
+    const volB = parseFloat(String(b.volume || b.volumeNum || 0));
+    return volB - volA;
+  });
+  
+  return allMarkets.slice(0, limit).map(simplifyMarket);
 }
 
 /**
