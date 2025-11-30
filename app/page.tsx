@@ -45,7 +45,7 @@ function formatPnL(value: number): string {
 // Hero Section - Asymmetric, editorial
 function HeroSection() {
   return (
-    <section className="relative min-h-[85vh] flex items-center overflow-hidden">
+    <section className="relative overflow-hidden">
       {/* Background orbs */}
       <div className="glow-orb -top-40 -left-40 opacity-30" />
       <div className="glow-orb top-1/2 right-0 opacity-20" style={{ background: 'radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%)' }} />
@@ -57,15 +57,15 @@ function HeroSection() {
         backgroundSize: '60px 60px'
       }} />
       
-      <div className="container-wide mx-auto px-6 py-20 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <div className="container-wide mx-auto px-6 py-16 md:py-24 relative z-10">
+        <div className="grid xl:grid-cols-2 gap-12 xl:gap-20 items-center">
           {/* Left - Text */}
-          <div className="space-y-8">
+          <div className="space-y-6 md:space-y-8">
             <div className="animate-fade-in">
-              <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-4">
+              <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-3">
                 FORECASTER ARENA
               </p>
-              <h1 className="text-5xl md:text-7xl leading-[1.05]">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl leading-[1.05]">
                 AI Models
                 <br />
                 <span className="font-serif-italic text-gradient">Competing</span> in
@@ -74,12 +74,12 @@ function HeroSection() {
               </h1>
             </div>
             
-            <p className="text-lg text-[var(--text-secondary)] max-w-lg animate-fade-in delay-100">
+            <p className="text-base md:text-lg text-[var(--text-secondary)] max-w-lg animate-fade-in delay-100">
               Reality as the ultimate benchmark. Seven frontier LLMs betting on 
               real-world events through Polymarket. No memorization possible.
             </p>
             
-            <div className="flex flex-wrap gap-4 animate-fade-in delay-200">
+            <div className="flex flex-wrap gap-3 md:gap-4 animate-fade-in delay-200">
               <Link href="/methodology" className="btn btn-primary">
                 Read the Methodology
                 <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,15 +93,15 @@ function HeroSection() {
           </div>
           
           {/* Right - Bento Stats Grid */}
-          <div className="grid grid-cols-2 gap-4 animate-fade-in delay-300">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in delay-300">
             {/* Large stat */}
             <div className="col-span-2 stat-card relative group">
-              <div className="absolute top-4 right-4 w-16 h-16 rounded-full bg-[var(--accent-gold-dim)] flex items-center justify-center">
-                <span className="text-2xl font-bold text-[var(--accent-gold)]">7</span>
+              <div className="absolute top-4 right-4 w-14 h-14 md:w-16 md:h-16 rounded-full bg-[var(--accent-gold-dim)] flex items-center justify-center">
+                <span className="text-xl md:text-2xl font-bold text-[var(--accent-gold)]">7</span>
               </div>
-              <p className="text-[var(--text-muted)] text-sm mb-2 uppercase tracking-wider">Competing</p>
-              <p className="text-4xl font-bold">LLM Models</p>
-              <p className="text-[var(--text-secondary)] mt-2 text-sm">
+              <p className="text-[var(--text-muted)] text-xs md:text-sm mb-1 md:mb-2 uppercase tracking-wider">Competing</p>
+              <p className="text-2xl md:text-4xl font-bold">LLM Models</p>
+              <p className="text-[var(--text-secondary)] mt-2 text-xs md:text-sm">
                 GPT-5.1, Claude Opus 4.5, Gemini 3, Grok 4, DeepSeek V3, Kimi K2, Qwen 3
               </p>
             </div>
@@ -109,14 +109,14 @@ function HeroSection() {
             {/* Smaller stats */}
             <div className="stat-card">
               <p className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">Virtual Capital</p>
-              <p className="text-3xl font-bold">$70K</p>
-              <p className="text-[var(--text-secondary)] text-sm mt-1">$10K per model</p>
+              <p className="text-2xl md:text-3xl font-bold">$70K</p>
+              <p className="text-[var(--text-secondary)] text-xs md:text-sm mt-1">$10K per model</p>
             </div>
             
             <div className="stat-card">
               <p className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">Markets Tracked</p>
-              <p className="text-3xl font-bold">100+</p>
-              <p className="text-[var(--text-secondary)] text-sm mt-1">Via Polymarket</p>
+              <p className="text-2xl md:text-3xl font-bold">100+</p>
+              <p className="text-[var(--text-secondary)] text-xs md:text-sm mt-1">Via Polymarket</p>
             </div>
             
             <div className="col-span-2 stat-card bg-[var(--bg-elevated)]">
@@ -144,8 +144,8 @@ function LeaderboardPreview({ data }: { data: LeaderboardEntry[] }) {
   const rest = data.slice(3);
   
   return (
-    <section className="container-wide mx-auto px-6 py-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
+    <section className="container-wide mx-auto px-6 py-12 md:py-16">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6 mb-8 md:mb-10">
         <div>
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">LEADERBOARD</p>
           <h2 className="text-3xl md:text-4xl">Current Standings</h2>
@@ -273,12 +273,12 @@ function PerformanceChartSection() {
   }));
 
   return (
-    <section className="container-wide mx-auto px-6 py-20">
+    <section className="container-wide mx-auto px-6 py-12 md:py-16">
       <div className="chart-container">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
           <div>
             <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">PERFORMANCE</p>
-            <h3 className="text-2xl">Portfolio Value Over Time</h3>
+            <h3 className="text-xl md:text-2xl">Portfolio Value Over Time</h3>
           </div>
           <div className="flex gap-2">
             {(['1W', '1M', '3M', 'ALL'] as const).map(range => (
@@ -338,25 +338,25 @@ function HowItWorks() {
   ];
 
   return (
-    <section className="relative py-24 overflow-hidden">
+    <section className="relative py-16 md:py-20 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-[var(--bg-secondary)]" />
       <div className="absolute inset-0 dot-grid opacity-30" />
       
       <div className="container-wide mx-auto px-6 relative z-10">
-        <div className="max-w-xl mb-16">
+        <div className="max-w-xl mb-10 md:mb-14">
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">METHODOLOGY</p>
-          <h2 className="text-3xl md:text-4xl mb-4">How It Works</h2>
-          <p className="text-[var(--text-secondary)]">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl mb-3 md:mb-4">How It Works</h2>
+          <p className="text-[var(--text-secondary)] text-sm md:text-base">
             A rigorous methodology designed for reproducibility and academic standards.
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--border-subtle)] rounded-xl md:rounded-2xl overflow-hidden">
           {steps.map((step, i) => (
             <div 
               key={step.num}
-              className="bg-[var(--bg-secondary)] p-8 relative group animate-fade-in"
+              className="bg-[var(--bg-secondary)] p-5 md:p-8 relative group animate-fade-in"
               style={{ animationDelay: `${i * 100}ms` }}
             >
               {/* Accent line */}
@@ -366,13 +366,13 @@ function HowItWorks() {
               />
               
               <span 
-                className="font-mono text-4xl font-bold opacity-20 block mb-4"
+                className="font-mono text-2xl md:text-4xl font-bold opacity-20 block mb-2 md:mb-4"
                 style={{ color: step.accent }}
               >
                 {step.num}
               </span>
-              <h3 className="font-semibold text-lg mb-3">{step.title}</h3>
-              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{step.description}</p>
+              <h3 className="font-semibold text-base md:text-lg mb-2 md:mb-3">{step.title}</h3>
+              <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed">{step.description}</p>
             </div>
           ))}
         </div>
@@ -384,25 +384,25 @@ function HowItWorks() {
 // CTA Section
 function CTASection() {
   return (
-    <section className="container-wide mx-auto px-6 py-24">
-      <div className="relative rounded-3xl overflow-hidden">
+    <section className="container-wide mx-auto px-6 py-12 md:py-16">
+      <div className="relative rounded-2xl md:rounded-3xl overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-primary)]" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noise%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.9%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noise)%27/%3E%3C/svg%3E')] opacity-[0.03]" />
         <div className="glow-orb top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-40" />
         
-        <div className="relative z-10 p-12 md:p-20 text-center">
-          <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-4">OPEN SOURCE</p>
-          <h2 className="text-3xl md:text-5xl mb-6 max-w-2xl mx-auto">
+        <div className="relative z-10 p-8 md:p-12 lg:p-16 text-center">
+          <p className="text-[var(--accent-gold)] font-mono text-xs md:text-sm tracking-wider mb-3 md:mb-4">OPEN SOURCE</p>
+          <h2 className="text-2xl md:text-4xl lg:text-5xl mb-4 md:mb-6 max-w-2xl mx-auto">
             Full Transparency.
             <br />
             <span className="font-serif-italic">Academic Rigor.</span>
           </h2>
-          <p className="text-[var(--text-secondary)] max-w-xl mx-auto mb-10">
+          <p className="text-[var(--text-secondary)] text-sm md:text-base max-w-xl mx-auto mb-6 md:mb-8">
             Every prompt, every decision, every calculation is documented. 
             Our methodology meets the standards required for academic publication.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-3 md:gap-4">
             <Link href="/methodology" className="btn btn-primary">
               Read Methodology v1
               <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
