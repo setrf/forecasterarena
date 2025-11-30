@@ -1071,3 +1071,4 @@ export function getLogsBySeverity(severity: 'info' | 'warning' | 'error', limit:
   `).all(severity, limit) as SystemLog[];
 }
 
+

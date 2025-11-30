@@ -148,11 +148,28 @@ h3 {
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(212, 168, 83, 0.06), transparent 40%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
 }
 
 .card:hover {
   border-color: var(--border-medium);
   transform: translateY(-2px);
+  box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.4);
+}
+
+.card:hover::after {
+  opacity: 1;
 }
 
 /* Glass card - refined */
@@ -176,6 +193,7 @@ h3 {
   border-radius: 16px;
   position: relative;
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-featured::before {
@@ -186,6 +204,12 @@ h3 {
   right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+}
+
+.card-featured:hover {
+  border-color: var(--accent-gold);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 50px -12px rgba(212, 168, 83, 0.15);
 }
 
 /* Stat card - bento style */
@@ -387,6 +411,14 @@ h3 {
 }
 
 .nav-link:hover::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.nav-link-active {
+  color: var(--text-primary);
+}
+
+.nav-link-active::after {
   transform: translateX(-50%) scaleX(1);
 }
 

@@ -113,15 +113,35 @@ export default function PerformanceChart({
   if (!data.length) {
     return (
       <div 
-        className="flex items-center justify-center text-[var(--text-muted)] border border-dashed border-[var(--border-subtle)] rounded-lg"
+        className="flex items-center justify-center rounded-lg relative overflow-hidden"
         style={{ height }}
       >
-        <div className="text-center">
-          <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-          </svg>
-          <p>No performance data yet</p>
-          <p className="text-sm mt-1">Chart will appear after the first cohort runs</p>
+        {/* Decorative background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-primary)]" />
+        <div className="absolute inset-0 dot-grid opacity-30" />
+        
+        {/* Animated placeholder lines */}
+        <div className="absolute inset-0 flex items-end px-8 pb-16 opacity-10">
+          {[...Array(7)].map((_, i) => (
+            <div 
+              key={i}
+              className="flex-1 mx-1 bg-gradient-to-t from-[var(--accent-gold)] to-transparent rounded-t animate-pulse"
+              style={{ 
+                height: `${30 + Math.random() * 40}%`,
+                animationDelay: `${i * 150}ms`
+              }}
+            />
+          ))}
+        </div>
+        
+        <div className="relative text-center z-10">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center justify-center">
+            <svg className="w-8 h-8 text-[var(--accent-gold)] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </svg>
+          </div>
+          <p className="text-lg font-medium text-[var(--text-secondary)]">Awaiting First Cohort</p>
+          <p className="text-sm text-[var(--text-muted)] mt-1">Performance chart will appear once models begin trading</p>
         </div>
       </div>
     );
@@ -180,4 +200,5 @@ export default function PerformanceChart({
     </ResponsiveContainer>
   );
 }
+
 
