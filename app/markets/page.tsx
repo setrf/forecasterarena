@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 
 interface Market {
   id: string;
@@ -57,8 +58,8 @@ export default function MarketsPage() {
         setHasMore(data.has_more);
         if (data.categories) setCategories(data.categories);
       }
-    } catch (error) {
-      console.error('Error fetching markets:', error);
+    } catch {
+      console.log('Error fetching markets');
     } finally {
       setLoading(false);
     }
@@ -66,6 +67,7 @@ export default function MarketsPage() {
 
   useEffect(() => {
     fetchMarkets(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, category, sort]);
 
   // Debounced search
@@ -76,6 +78,7 @@ export default function MarketsPage() {
       }
     }, 300);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   function formatVolume(volume: number | null): string {
@@ -99,181 +102,230 @@ export default function MarketsPage() {
     if (days < 0) return 'Closed';
     if (days === 0) return 'Today';
     if (days === 1) return 'Tomorrow';
-    if (days < 7) return `${days} days`;
-    if (days < 30) return `${Math.ceil(days / 7)} weeks`;
+    if (days < 7) return `${days}d`;
+    if (days < 30) return `${Math.ceil(days / 7)}w`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  function getStatusColor(status: string): string {
-    switch (status) {
-      case 'active': return 'badge-active';
-      case 'resolved': return 'badge-completed';
-      case 'closed': return 'badge-pending';
-      default: return '';
-    }
-  }
+  // Count stats
+  const activeCount = markets.filter(m => m.status === 'active').length;
+  const withPositions = markets.filter(m => m.positions_count > 0).length;
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Prediction Markets</h1>
-        <p className="text-[var(--text-secondary)] max-w-2xl">
-          Browse markets tracked by Forecaster Arena. These are synced from Polymarket
-          and available for LLM agents to bet on.
-        </p>
-      </div>
+    <div className="min-h-screen">
+      {/* Hero */}
+      <section className="relative border-b border-[var(--border-subtle)]">
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--bg-primary)]" />
+        <div className="container-wide mx-auto px-6 py-16 relative z-10">
+          <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">POLYMARKET DATA</p>
+          <h1 className="text-4xl md:text-5xl mb-4">
+            Prediction <span className="font-serif-italic">Markets</span>
+          </h1>
+          <p className="text-[var(--text-secondary)] max-w-xl text-lg">
+            Browse markets synced from Polymarket. LLM agents analyze these markets
+            and make betting decisions.
+          </p>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="stat-card">
-          <div className="stat-value">{total}</div>
-          <div className="stat-label">Total Markets</div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+            <div className="stat-card">
+              <p className="text-3xl font-bold">{total}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">Total Markets</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-3xl font-bold text-[var(--color-positive)]">{activeCount}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">Active</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-3xl font-bold text-[var(--accent-blue)]">{withPositions}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">With Positions</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-3xl font-bold">{categories.length}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">Categories</p>
+            </div>
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">{markets.filter(m => m.status === 'active').length}</div>
-          <div className="stat-label">Active</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{markets.filter(m => m.positions_count > 0).length}</div>
-          <div className="stat-label">With Positions</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{categories.length}</div>
-          <div className="stat-label">Categories</div>
-        </div>
-      </div>
+      </section>
 
       {/* Filters */}
-      <div className="glass-card p-4 mb-6">
-        <div className="flex flex-wrap gap-4">
-          {/* Search */}
-          <div className="flex-1 min-w-[200px]">
-            <input
-              type="text"
-              placeholder="Search markets..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-4 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none text-sm"
-            />
+      <section className="sticky top-16 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/80 backdrop-blur-xl">
+        <div className="container-wide mx-auto px-6 py-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search */}
+            <div className="flex-1 min-w-[240px] max-w-md relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search markets..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:border-[var(--accent-gold)] focus:outline-none transition-colors"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* Status */}
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as StatusOption)}
+                className="px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none cursor-pointer"
+              >
+                <option value="active">Active</option>
+                <option value="closed">Closed</option>
+                <option value="resolved">Resolved</option>
+                <option value="all">All Status</option>
+              </select>
+              
+              {/* Category */}
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none cursor-pointer"
+              >
+                <option value="">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              
+              {/* Sort */}
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortOption)}
+                className="px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none cursor-pointer"
+              >
+                <option value="volume">Volume</option>
+                <option value="close_date">Close Date</option>
+                <option value="created">Recent</option>
+              </select>
+            </div>
           </div>
-          
-          {/* Status */}
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as StatusOption)}
-            className="px-4 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none"
-          >
-            <option value="active">Active</option>
-            <option value="closed">Closed</option>
-            <option value="resolved">Resolved</option>
-            <option value="all">All Status</option>
-          </select>
-          
-          {/* Category */}
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="px-4 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none"
-          >
-            <option value="">All Categories</option>
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          
-          {/* Sort */}
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortOption)}
-            className="px-4 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none"
-          >
-            <option value="volume">Sort by Volume</option>
-            <option value="close_date">Sort by Close Date</option>
-            <option value="created">Sort by Recently Added</option>
-          </select>
         </div>
-      </div>
+      </section>
 
       {/* Markets Grid */}
-      {loading && markets.length === 0 ? (
-        <div className="text-center py-20 text-[var(--text-muted)]">
-          Loading markets...
-        </div>
-      ) : markets.length === 0 ? (
-        <div className="text-center py-20 text-[var(--text-muted)]">
-          <p className="text-lg mb-2">No markets found</p>
-          <p className="text-sm">Try adjusting your filters or sync markets first</p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {markets.map((market) => (
-              <a
-                key={market.id}
-                href={`/markets/${market.id}`}
-                className="glass-card p-5 hover:border-[var(--border-medium)] transition-all group"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <span className={`badge ${getStatusColor(market.status)}`}>
-                    {market.status}
-                  </span>
-                  {market.positions_count > 0 && (
-                    <span className="text-xs text-[var(--accent-blue)]">
-                      {market.positions_count} agent{market.positions_count > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Question */}
-                <h3 className="font-medium mb-3 line-clamp-2 group-hover:text-gradient transition-all">
-                  {market.question}
-                </h3>
-                
-                {/* Price bar */}
-                <div className="mb-3">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-[var(--accent-emerald)]">YES {formatPrice(market.current_price)}</span>
-                    <span className="text-[var(--accent-rose)]">NO {formatPrice(market.current_price ? 1 - market.current_price : null)}</span>
-                  </div>
-                  <div className="h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-[var(--accent-emerald)] to-[var(--accent-blue)]"
-                      style={{ width: `${(market.current_price || 0.5) * 100}%` }}
-                    />
-                  </div>
-                </div>
-                
-                {/* Footer */}
-                <div className="flex items-center justify-between text-sm text-[var(--text-muted)]">
-                  <span>{market.category || 'General'}</span>
-                  <span>{formatVolume(market.volume)}</span>
-                  <span>Closes {formatCloseDate(market.close_date)}</span>
-                </div>
-              </a>
-            ))}
+      <section className="container-wide mx-auto px-6 py-10">
+        {loading && markets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-8 h-8 border-2 border-[var(--accent-gold)] border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-[var(--text-muted)]">Loading markets...</p>
           </div>
-          
-          {/* Load more */}
-          {hasMore && (
-            <div className="mt-8 text-center">
-              <button
-                onClick={() => fetchMarkets(false)}
-                disabled={loading}
-                className="btn btn-secondary"
-              >
-                {loading ? 'Loading...' : 'Load More'}
-              </button>
+        ) : markets.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--bg-tertiary)] flex items-center justify-center">
+              <svg className="w-8 h-8 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
-          )}
-          
-          <div className="mt-4 text-center text-sm text-[var(--text-muted)]">
-            Showing {markets.length} of {total} markets
+            <p className="text-xl font-medium mb-2">No markets found</p>
+            <p className="text-[var(--text-muted)]">Try adjusting your filters or sync markets first</p>
           </div>
-        </>
-      )}
+        ) : (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {markets.map((market, i) => {
+                const yesPrice = market.current_price ?? 0.5;
+                const noPrice = 1 - yesPrice;
+                
+                return (
+                  <Link
+                    key={market.id}
+                    href={`/markets/${market.id}`}
+                    className="card p-5 group animate-fade-in"
+                    style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        {market.status === 'active' && (
+                          <span className="w-2 h-2 rounded-full bg-[var(--color-positive)]" />
+                        )}
+                        <span className="text-xs font-mono text-[var(--text-muted)] uppercase">
+                          {market.status}
+                        </span>
+                      </div>
+                      {market.positions_count > 0 && (
+                        <span className="text-xs px-2 py-1 rounded bg-[var(--accent-gold-dim)] text-[var(--accent-gold)]">
+                          {market.positions_count} position{market.positions_count > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Question */}
+                    <h3 className="font-medium leading-snug mb-5 line-clamp-2 min-h-[2.75rem] group-hover:text-[var(--accent-gold)] transition-colors">
+                      {market.question}
+                    </h3>
+                    
+                    {/* Price Visualization */}
+                    <div className="space-y-3 mb-5">
+                      {/* YES */}
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-mono w-8 text-[var(--color-positive)]">YES</span>
+                        <div className="flex-1 h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full bg-gradient-to-r from-[var(--color-positive)] to-[#00ff9d]"
+                            style={{ width: `${yesPrice * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-mono w-12 text-right">{formatPrice(yesPrice)}</span>
+                      </div>
+                      {/* NO */}
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-mono w-8 text-[var(--color-negative)]">NO</span>
+                        <div className="flex-1 h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full bg-gradient-to-r from-[var(--color-negative)] to-[#ff8a8a]"
+                            style={{ width: `${noPrice * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-mono w-12 text-right">{formatPrice(noPrice)}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-4 border-t border-[var(--border-subtle)] text-xs text-[var(--text-muted)]">
+                      <span className="px-2 py-1 rounded bg-[var(--bg-tertiary)]">
+                        {market.category || 'General'}
+                      </span>
+                      <span className="font-mono">{formatVolume(market.volume)}</span>
+                      <span>
+                        {formatCloseDate(market.close_date)}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            
+            {/* Load more */}
+            {hasMore && (
+              <div className="mt-10 text-center">
+                <button
+                  onClick={() => fetchMarkets(false)}
+                  disabled={loading}
+                  className="btn btn-secondary"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Loading...
+                    </span>
+                  ) : (
+                    'Load More Markets'
+                  )}
+                </button>
+              </div>
+            )}
+            
+            <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
+              Showing {markets.length} of {total} markets
+            </p>
+          </>
+        )}
+      </section>
     </div>
   );
 }
-
