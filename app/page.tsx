@@ -57,7 +57,7 @@ function HeroSection() {
         backgroundSize: '60px 60px'
       }} />
       
-      <div className="container-wide mx-auto px-6 py-16 md:py-24 relative z-10">
+      <div className="container-wide mx-auto px-6 pt-16 pb-10 md:pt-24 md:pb-12 relative z-10">
         <div className="grid xl:grid-cols-2 gap-12 xl:gap-20 items-center">
           {/* Left - Text */}
           <div className="space-y-6 md:space-y-8">
@@ -131,9 +131,6 @@ function HeroSection() {
           </div>
         </div>
       </div>
-      
-      {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
     </section>
   );
 }
@@ -144,8 +141,8 @@ function LeaderboardPreview({ data }: { data: LeaderboardEntry[] }) {
   const rest = data.slice(3);
   
   return (
-    <section className="container-wide mx-auto px-6 py-12 md:py-16">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6 mb-8 md:mb-10">
+    <section className="container-wide mx-auto px-6 py-8 md:py-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 md:mb-8">
         <div>
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">LEADERBOARD</p>
           <h2 className="text-3xl md:text-4xl">Current Standings</h2>
@@ -273,9 +270,9 @@ function PerformanceChartSection() {
   }));
 
   return (
-    <section className="container-wide mx-auto px-6 py-12 md:py-16">
+    <section className="container-wide mx-auto px-6 py-8 md:py-10">
       <div className="chart-container">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">PERFORMANCE</p>
             <h3 className="text-xl md:text-2xl">Portfolio Value Over Time</h3>
@@ -338,15 +335,15 @@ function HowItWorks() {
   ];
 
   return (
-    <section className="relative py-16 md:py-20 overflow-hidden">
+    <section className="relative py-10 md:py-12 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-[var(--bg-secondary)]" />
       <div className="absolute inset-0 dot-grid opacity-30" />
       
       <div className="container-wide mx-auto px-6 relative z-10">
-        <div className="max-w-xl mb-10 md:mb-14">
+        <div className="max-w-xl mb-6 md:mb-8">
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">METHODOLOGY</p>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl mb-3 md:mb-4">How It Works</h2>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl mb-3">How It Works</h2>
           <p className="text-[var(--text-secondary)] text-sm md:text-base">
             A rigorous methodology designed for reproducibility and academic standards.
           </p>
@@ -384,14 +381,14 @@ function HowItWorks() {
 // CTA Section
 function CTASection() {
   return (
-    <section className="container-wide mx-auto px-6 py-12 md:py-16">
+    <section className="container-wide mx-auto px-6 py-8 md:py-10">
       <div className="relative rounded-2xl md:rounded-3xl overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-primary)]" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noise%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.9%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noise)%27/%3E%3C/svg%3E')] opacity-[0.03]" />
         <div className="glow-orb top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-40" />
         
-        <div className="relative z-10 p-8 md:p-12 lg:p-16 text-center">
+        <div className="relative z-10 p-6 md:p-10 lg:p-12 text-center">
           <p className="text-[var(--accent-gold)] font-mono text-xs md:text-sm tracking-wider mb-3 md:mb-4">OPEN SOURCE</p>
           <h2 className="text-2xl md:text-4xl lg:text-5xl mb-4 md:mb-6 max-w-2xl mx-auto">
             Full Transparency.

@@ -58,7 +58,7 @@ function Header() {
 
 function Footer() {
   return (
-    <footer className="relative border-t border-[var(--border-subtle)] mt-20">
+    <footer className="relative border-t border-[var(--border-subtle)] mt-12">
       {/* Background texture */}
       <div className="absolute inset-0 bg-[var(--bg-secondary)]" />
       <div className="absolute inset-0 dot-grid opacity-20" />
