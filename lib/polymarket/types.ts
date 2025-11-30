@@ -18,19 +18,25 @@ export interface PolymarketToken {
 
 /**
  * Market from Polymarket Gamma API
+ * 
+ * Note: API returns outcomes and prices as JSON strings
  */
 export interface PolymarketMarket {
   id: string;                    // Condition ID (market identifier)
   question: string;              // Market question
   description?: string;          // Detailed description
-  end_date_iso: string;          // When market closes for betting
-  tokens: PolymarketToken[];     // Outcome tokens (usually 2 for binary)
+  end_date_iso?: string;         // When market closes (snake_case)
+  endDateIso?: string;           // When market closes (camelCase)
+  endDate?: string;              // When market closes (alternative)
+  tokens?: PolymarketToken[];    // Outcome tokens (legacy format)
+  outcomes?: string | string[];  // Outcomes as JSON string '["Yes", "No"]' or array
+  outcomePrices?: string | string[]; // Prices as JSON string '["0.42", "0.58"]' or array
   closed: boolean;               // Whether market is closed
   archived: boolean;             // Whether market is archived
   active: boolean;               // Whether market is active for trading
   category?: string;             // Category (Politics, Crypto, etc.)
-  liquidity?: string;            // Current liquidity
-  volume?: string;               // Total trading volume
+  liquidity?: string | number;   // Current liquidity
+  volume?: string | number;      // Total trading volume
   resolving?: boolean;           // Whether market is in resolution process
   resolved?: boolean;            // Whether market is fully resolved
   conditionId?: string;          // Alternative ID field

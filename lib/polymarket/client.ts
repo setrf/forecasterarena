@@ -66,27 +66,63 @@ export async function fetchMarketById(marketId: string): Promise<PolymarketMarke
 
 /**
  * Transform Polymarket market to our simplified format
+ * 
+ * Note: Polymarket API returns outcomes and prices as JSON strings:
+ * - outcomes: '["Yes", "No"]'
+ * - outcomePrices: '["0.42", "0.58"]'
  */
 export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
-  // Handle missing tokens array
-  const tokens = market.tokens || [];
+  // Parse outcomes and prices from JSON strings (actual API format)
+  let outcomesList: string[] = [];
+  let pricesList: string[] = [];
   
-  const isBinary = tokens.length === 2 && 
-    tokens.some(t => t.outcome?.toLowerCase() === 'yes') &&
-    tokens.some(t => t.outcome?.toLowerCase() === 'no');
+  try {
+    // Handle both formats: JSON string or array
+    if (typeof market.outcomes === 'string') {
+      outcomesList = JSON.parse(market.outcomes);
+    } else if (Array.isArray(market.outcomes)) {
+      outcomesList = market.outcomes;
+    }
+    
+    if (typeof market.outcomePrices === 'string') {
+      pricesList = JSON.parse(market.outcomePrices);
+    } else if (Array.isArray(market.outcomePrices)) {
+      pricesList = market.outcomePrices;
+    }
+  } catch {
+    // Fall back to tokens array if parsing fails
+    const tokens = market.tokens || [];
+    outcomesList = tokens.map(t => t.outcome).filter(Boolean);
+    pricesList = tokens.map(t => t.price).filter(Boolean);
+  }
+  
+  const isBinary = outcomesList.length === 2 && 
+    outcomesList.some(o => o?.toLowerCase() === 'yes') &&
+    outcomesList.some(o => o?.toLowerCase() === 'no');
   
   let currentPrice: number | null = null;
   let currentPrices: string | null = null;
   
-  if (tokens.length > 0) {
+  if (outcomesList.length > 0 && pricesList.length > 0) {
     if (isBinary) {
-      const yesToken = tokens.find(t => t.outcome?.toLowerCase() === 'yes');
-      currentPrice = yesToken?.price ? parseFloat(yesToken.price) : null;
+      // Find YES price
+      const yesIndex = outcomesList.findIndex(o => o?.toLowerCase() === 'yes');
+      if (yesIndex !== -1 && pricesList[yesIndex]) {
+        currentPrice = parseFloat(pricesList[yesIndex]);
+        // Ensure price is valid (between 0 and 1)
+        if (isNaN(currentPrice) || currentPrice < 0 || currentPrice > 1) {
+          currentPrice = null;
+        }
+      }
     } else {
+      // Multi-outcome: create price map
       const prices: Record<string, number> = {};
-      for (const token of tokens) {
-        if (token.outcome && token.price) {
-          prices[token.outcome] = parseFloat(token.price);
+      for (let i = 0; i < outcomesList.length; i++) {
+        if (outcomesList[i] && pricesList[i]) {
+          const price = parseFloat(pricesList[i]);
+          if (!isNaN(price) && price >= 0 && price <= 1) {
+            prices[outcomesList[i]] = price;
+          }
         }
       }
       currentPrices = Object.keys(prices).length > 0 ? JSON.stringify(prices) : null;
@@ -97,9 +133,12 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
   if (market.resolved) status = 'resolved';
   else if (market.closed) status = 'closed';
   
-  const outcomes = !isBinary && tokens.length > 0
-    ? JSON.stringify(tokens.map(t => t.outcome).filter(Boolean))
+  const outcomes = !isBinary && outcomesList.length > 0
+    ? JSON.stringify(outcomesList)
     : null;
+  
+  // Handle different date field names from API
+  const closeDate = market.end_date_iso || market.endDateIso || market.endDate || new Date().toISOString();
   
   return {
     polymarket_id: market.id || market.conditionId || '',
@@ -108,12 +147,12 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     category: market.category || null,
     market_type: isBinary ? 'binary' : 'multi_outcome',
     outcomes,
-    close_date: market.end_date_iso || new Date().toISOString(),
+    close_date: closeDate,
     status,
     current_price: currentPrice,
     current_prices: currentPrices,
-    volume: market.volume ? parseFloat(market.volume) : null,
-    liquidity: market.liquidity ? parseFloat(market.liquidity) : null,
+    volume: market.volume ? parseFloat(String(market.volume)) : null,
+    liquidity: market.liquidity ? parseFloat(String(market.liquidity)) : null,
   };
 }
 
