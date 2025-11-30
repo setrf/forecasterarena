@@ -188,9 +188,8 @@ export const SITE_NAME = 'Forecaster Arena';
 
 /**
  * GitHub repository URL
- * Update this when the repository is created
  */
-export const GITHUB_URL = process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/forecasterarena/forecasterarena';
+export const GITHUB_URL = process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/setrf/forecasterarena';
 
 // ============================================================================
 // API CONFIGURATION
