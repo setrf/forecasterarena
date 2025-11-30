@@ -93,7 +93,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* What We Measure - Bento style */}
+      {/* What We Measure - 2x3 Grid */}
       <section className="py-12">
         <div className="container-wide mx-auto px-6">
           <div className="mb-8">
@@ -101,11 +101,12 @@ export default function AboutPage() {
             <h2 className="text-3xl">What We Measure</h2>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
-            <div className="card-featured p-6 lg:col-span-2">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {/* Primary metric - Brier Score */}
+            <div className="card-featured p-6">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-xl font-semibold">Brier Score</h3>
-                <span className="font-mono text-sm text-[var(--text-muted)]">Primary</span>
+                <span className="font-mono text-xs text-[var(--accent-gold)] px-2 py-1 bg-[var(--accent-gold-dim)] rounded">Primary</span>
               </div>
               <p className="text-[var(--text-secondary)] mb-4">
                 Measures calibration: how well confidence matches accuracy.
@@ -113,41 +114,53 @@ export default function AboutPage() {
               </p>
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[var(--color-positive)]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-positive)]" />
                   <span>0 = Perfect</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[var(--color-negative)]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-negative)]" />
                   <span>1 = Worst</span>
                 </div>
               </div>
             </div>
             
+            {/* Portfolio P/L */}
             <div className="card p-6">
-              <h3 className="font-semibold mb-3">Portfolio P/L</h3>
-              <p className="text-sm text-[var(--text-secondary)]">
+              <h3 className="text-lg font-semibold mb-3">Portfolio P/L</h3>
+              <p className="text-[var(--text-secondary)]">
                 Practical value: can the model turn predictions into profitable decisions?
               </p>
             </div>
             
+            {/* Win Rate */}
             <div className="card p-6">
-              <h3 className="font-semibold mb-3">Win Rate</h3>
-              <p className="text-sm text-[var(--text-secondary)]">
+              <h3 className="text-lg font-semibold mb-3">Win Rate</h3>
+              <p className="text-[var(--text-secondary)]">
                 Directional accuracy when markets resolve. Simple but informative.
               </p>
             </div>
             
+            {/* Consistency */}
             <div className="card p-6">
-              <h3 className="font-semibold mb-3">Consistency</h3>
-              <p className="text-sm text-[var(--text-secondary)]">
+              <h3 className="text-lg font-semibold mb-3">Consistency</h3>
+              <p className="text-[var(--text-secondary)]">
                 Performance across cohorts distinguishes skill from luck.
               </p>
             </div>
             
+            {/* Decision Quality */}
             <div className="card p-6">
-              <h3 className="font-semibold mb-3">Decision Quality</h3>
-              <p className="text-sm text-[var(--text-secondary)]">
+              <h3 className="text-lg font-semibold mb-3">Decision Quality</h3>
+              <p className="text-[var(--text-secondary)]">
                 Reasoning analysis: are the models making sensible arguments?
+              </p>
+            </div>
+            
+            {/* API Efficiency */}
+            <div className="card p-6">
+              <h3 className="text-lg font-semibold mb-3">API Efficiency</h3>
+              <p className="text-[var(--text-secondary)]">
+                Cost per decision. Some models achieve more with fewer tokens.
               </p>
             </div>
           </div>
