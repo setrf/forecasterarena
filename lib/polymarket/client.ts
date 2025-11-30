@@ -23,7 +23,8 @@ export async function fetchMarkets(
   url.searchParams.set('offset', String(offset));
   url.searchParams.set('active', 'true');
   url.searchParams.set('closed', 'false');
-  url.searchParams.set('order', 'volume');
+  // Use volumeNum for proper volume sorting (API quirk)
+  url.searchParams.set('order', 'volumeNum');
   url.searchParams.set('ascending', 'false');
   
   console.log(`Fetching markets from Polymarket: ${url}`);
