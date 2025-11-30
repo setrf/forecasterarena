@@ -171,8 +171,9 @@ export const CRON_SECRET = process.env.CRON_SECRET;
 
 /**
  * Admin dashboard password
+ * Defaults to 'admin' for development - CHANGE IN PRODUCTION
  */
-export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 
 /**
  * Site URL for API headers
