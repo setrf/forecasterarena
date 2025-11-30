@@ -100,26 +100,21 @@ function LiveStatsDashboard({ leader }: { leader: LeaderboardEntry | null }) {
     <section className="border-y border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
       <div className="container-wide mx-auto px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[var(--border-subtle)]">
-          {/* Current Leader */}
-          <div className="col-span-2 md:col-span-1 p-6 md:p-8 animate-fade-in">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Current Leader</p>
+          {/* Current Leader - P/L as the big number */}
+          <div className="p-6 md:p-8 animate-fade-in">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Leading</p>
             {leader ? (
-              <div className="flex items-center gap-3">
-                <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold"
-                  style={{ backgroundColor: `${leader.color}20`, color: leader.color }}
-                >
-                  1
-                </div>
-                <div>
-                  <p className="font-semibold">{leader.display_name}</p>
-                  <p className={`text-sm font-mono ${leader.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                    {formatPnL(leader.total_pnl)}
-                  </p>
-                </div>
-              </div>
+              <>
+                <p className={`text-3xl md:text-4xl font-bold ${leader.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
+                  {formatPnL(leader.total_pnl)}
+                </p>
+                <p className="text-sm text-[var(--text-secondary)]">{leader.display_name}</p>
+              </>
             ) : (
-              <p className="text-[var(--text-muted)]">Awaiting first cohort</p>
+              <>
+                <p className="text-3xl md:text-4xl font-bold text-[var(--text-muted)]">---</p>
+                <p className="text-sm text-[var(--text-secondary)]">Awaiting data</p>
+              </>
             )}
           </div>
           
@@ -132,9 +127,9 @@ function LiveStatsDashboard({ leader }: { leader: LeaderboardEntry | null }) {
           
           {/* Capital */}
           <div className="p-6 md:p-8 animate-fade-in delay-200">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Total Capital</p>
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Capital</p>
             <p className="text-3xl md:text-4xl font-bold">$70K</p>
-            <p className="text-sm text-[var(--text-secondary)]">$10K each</p>
+            <p className="text-sm text-[var(--text-secondary)]">$10K per model</p>
           </div>
           
           {/* Markets */}
@@ -159,7 +154,7 @@ function LeaderboardPreview({ data }: { data: LeaderboardEntry[] }) {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
         <div>
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">LEADERBOARD</p>
-          <h2 className="text-3xl md:text-4xl">Current Standings</h2>
+          <h2 className="text-2xl md:text-3xl">Current Standings</h2>
         </div>
         <Link href="/models" className="btn btn-ghost group">
           View All
@@ -290,7 +285,7 @@ function PerformanceChartSection() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">PERFORMANCE</p>
-            <h3 className="text-xl md:text-2xl">Portfolio Value Over Time</h3>
+            <h2 className="text-2xl md:text-3xl">Portfolio Value Over Time</h2>
           </div>
           <div className="flex gap-2">
             {(['1W', '1M', '3M', 'ALL'] as const).map(range => (
@@ -358,7 +353,7 @@ function HowItWorks() {
       <div className="container-wide mx-auto px-6 relative z-10">
         <div className="max-w-xl mb-8 md:mb-10">
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">METHODOLOGY</p>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl mb-3">How It Works</h2>
+          <h2 className="text-2xl md:text-3xl mb-3">How It Works</h2>
           <p className="text-[var(--text-secondary)] text-sm md:text-base">
             A rigorous methodology designed for reproducibility and academic standards.
           </p>
