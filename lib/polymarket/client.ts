@@ -68,40 +68,47 @@ export async function fetchMarketById(marketId: string): Promise<PolymarketMarke
  * Transform Polymarket market to our simplified format
  */
 export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
-  const isBinary = market.tokens.length === 2 && 
-    market.tokens.some(t => t.outcome.toLowerCase() === 'yes') &&
-    market.tokens.some(t => t.outcome.toLowerCase() === 'no');
+  // Handle missing tokens array
+  const tokens = market.tokens || [];
+  
+  const isBinary = tokens.length === 2 && 
+    tokens.some(t => t.outcome?.toLowerCase() === 'yes') &&
+    tokens.some(t => t.outcome?.toLowerCase() === 'no');
   
   let currentPrice: number | null = null;
   let currentPrices: string | null = null;
   
-  if (isBinary) {
-    const yesToken = market.tokens.find(t => t.outcome.toLowerCase() === 'yes');
-    currentPrice = yesToken ? parseFloat(yesToken.price) : null;
-  } else {
-    const prices: Record<string, number> = {};
-    for (const token of market.tokens) {
-      prices[token.outcome] = parseFloat(token.price);
+  if (tokens.length > 0) {
+    if (isBinary) {
+      const yesToken = tokens.find(t => t.outcome?.toLowerCase() === 'yes');
+      currentPrice = yesToken?.price ? parseFloat(yesToken.price) : null;
+    } else {
+      const prices: Record<string, number> = {};
+      for (const token of tokens) {
+        if (token.outcome && token.price) {
+          prices[token.outcome] = parseFloat(token.price);
+        }
+      }
+      currentPrices = Object.keys(prices).length > 0 ? JSON.stringify(prices) : null;
     }
-    currentPrices = JSON.stringify(prices);
   }
   
   let status: 'active' | 'closed' | 'resolved' = 'active';
   if (market.resolved) status = 'resolved';
   else if (market.closed) status = 'closed';
   
-  const outcomes = !isBinary 
-    ? JSON.stringify(market.tokens.map(t => t.outcome))
+  const outcomes = !isBinary && tokens.length > 0
+    ? JSON.stringify(tokens.map(t => t.outcome).filter(Boolean))
     : null;
   
   return {
     polymarket_id: market.id || market.conditionId || '',
-    question: market.question,
+    question: market.question || 'Unknown question',
     description: market.description || null,
     category: market.category || null,
     market_type: isBinary ? 'binary' : 'multi_outcome',
     outcomes,
-    close_date: market.end_date_iso,
+    close_date: market.end_date_iso || new Date().toISOString(),
     status,
     current_price: currentPrice,
     current_prices: currentPrices,
