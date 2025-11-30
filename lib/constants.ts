@@ -166,8 +166,9 @@ export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 /**
  * Cron job authentication secret
+ * Defaults to 'dev-secret' for development - CHANGE IN PRODUCTION
  */
-export const CRON_SECRET = process.env.CRON_SECRET;
+export const CRON_SECRET = process.env.CRON_SECRET || 'dev-secret';
 
 /**
  * Admin dashboard password
