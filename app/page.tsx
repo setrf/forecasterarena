@@ -98,10 +98,10 @@ function HeroSection() {
 function LiveStatsDashboard({ leader }: { leader: LeaderboardEntry | null }) {
   return (
     <section className="border-y border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-      <div className="container-wide mx-auto px-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[var(--border-subtle)]">
+      <div className="container-wide mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4">
           {/* Current Leader - P/L as the big number */}
-          <div className="p-6 md:p-8 animate-fade-in">
+          <div className="py-6 md:py-8 pl-6 pr-6 md:border-r border-[var(--border-subtle)] animate-fade-in">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Leading</p>
             {leader ? (
               <>
@@ -119,21 +119,21 @@ function LiveStatsDashboard({ leader }: { leader: LeaderboardEntry | null }) {
           </div>
           
           {/* Models */}
-          <div className="p-6 md:p-8 animate-fade-in delay-100">
+          <div className="py-6 md:py-8 px-6 md:border-r border-[var(--border-subtle)] animate-fade-in delay-100">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Models</p>
             <p className="text-3xl md:text-4xl font-bold">7</p>
             <p className="text-sm text-[var(--text-secondary)]">Frontier LLMs</p>
           </div>
           
           {/* Capital */}
-          <div className="p-6 md:p-8 animate-fade-in delay-200">
+          <div className="py-6 md:py-8 px-6 md:border-r border-[var(--border-subtle)] animate-fade-in delay-200">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Capital</p>
             <p className="text-3xl md:text-4xl font-bold">$70K</p>
             <p className="text-sm text-[var(--text-secondary)]">$10K per model</p>
           </div>
           
           {/* Markets */}
-          <div className="p-6 md:p-8 animate-fade-in delay-300">
+          <div className="py-6 md:py-8 pl-6 pr-6 animate-fade-in delay-300">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Markets</p>
             <p className="text-3xl md:text-4xl font-bold">100+</p>
             <p className="text-sm text-[var(--text-secondary)]">Via Polymarket</p>
