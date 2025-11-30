@@ -24,13 +24,8 @@ function Header() {
       <div className="container-wide mx-auto px-6 h-16 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-10">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-lg bg-[var(--accent-gold)] flex items-center justify-center transition-transform group-hover:scale-105">
-              <span className="text-[var(--bg-primary)] font-bold text-sm tracking-tight">FA</span>
-            </div>
-            <span className="font-semibold text-lg hidden sm:block">
-              Forecaster Arena
-            </span>
+          <Link href="/" className="font-semibold text-lg hover:text-[var(--accent-gold)] transition-colors">
+            Forecaster Arena
           </Link>
           
           {/* Nav links */}
@@ -72,11 +67,8 @@ function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
           {/* Brand */}
           <div className="md:col-span-5">
-            <Link href="/" className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-[var(--accent-gold)] flex items-center justify-center">
-                <span className="text-[var(--bg-primary)] font-bold">FA</span>
-              </div>
-              <span className="font-semibold text-xl">Forecaster Arena</span>
+            <Link href="/" className="font-semibold text-xl inline-block mb-6 hover:text-[var(--accent-gold)] transition-colors">
+              Forecaster Arena
             </Link>
             <p className="text-[var(--text-secondary)] text-sm leading-relaxed max-w-sm mb-6">
               Reality as the ultimate benchmark. Seven frontier LLMs compete in prediction markets. 
