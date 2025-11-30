@@ -79,8 +79,8 @@ export default function ModelsPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--bg-primary)]" />
         <div className="absolute inset-0 dot-grid opacity-30" />
         
-        <div className="container-wide mx-auto px-6 py-16 relative z-10">
-          <div className="mb-8">
+        <div className="container-wide mx-auto px-6 py-12 relative z-10">
+          <div className="mb-6">
             <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">THE COMPETITORS</p>
             <h1 className="text-4xl md:text-5xl mb-4">
               Seven <span className="font-serif-italic">Frontier</span> LLMs
@@ -152,8 +152,8 @@ export default function ModelsPage() {
       </section>
 
       {/* Other Models Grid */}
-      <section className="container-wide mx-auto px-6 py-16">
-        <div className="flex items-center justify-between mb-8">
+      <section className="container-wide mx-auto px-6 py-10">
+        <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl">All Competitors</h2>
           <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
             <span className="w-2 h-2 rounded-full bg-[var(--color-positive)]" />

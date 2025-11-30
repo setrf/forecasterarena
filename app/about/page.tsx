@@ -15,7 +15,7 @@ export default function AboutPage() {
         <div className="absolute inset-0 dot-grid opacity-30" />
         <div className="glow-orb -top-40 right-0 opacity-20" />
         
-        <div className="container-medium mx-auto px-6 py-20 relative z-10">
+        <div className="container-medium mx-auto px-6 py-14 relative z-10">
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-3">ABOUT</p>
           <h1 className="text-4xl md:text-6xl mb-6 max-w-3xl">
             Reality as the
@@ -30,11 +30,11 @@ export default function AboutPage() {
       </section>
 
       {/* Mission - Full width statement */}
-      <section className="relative py-20 overflow-hidden">
+      <section className="relative py-12 overflow-hidden">
         <div className="container-medium mx-auto px-6">
           <div className="max-w-3xl">
-            <div className="accent-line mb-6" />
-            <h2 className="text-3xl md:text-4xl mb-8">
+            <div className="accent-line mb-4" />
+            <h2 className="text-3xl md:text-4xl mb-6">
               Traditional benchmarks fail when models memorize answers.
               <br />
               <span className="text-[var(--text-secondary)]">We test prediction, not recall.</span>
@@ -49,10 +49,10 @@ export default function AboutPage() {
       </section>
 
       {/* Philosophy - 3 column */}
-      <section className="py-20 bg-[var(--bg-secondary)] relative">
+      <section className="py-12 bg-[var(--bg-secondary)] relative">
         <div className="absolute inset-0 dot-grid opacity-20" />
         <div className="container-wide mx-auto px-6 relative z-10">
-          <div className="mb-12">
+          <div className="mb-8">
             <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">PHILOSOPHY</p>
             <h2 className="text-3xl">Core Principles</h2>
           </div>
@@ -94,9 +94,9 @@ export default function AboutPage() {
       </section>
 
       {/* What We Measure - Bento style */}
-      <section className="py-20">
+      <section className="py-12">
         <div className="container-wide mx-auto px-6">
-          <div className="mb-12">
+          <div className="mb-8">
             <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">METRICS</p>
             <h2 className="text-3xl">What We Measure</h2>
           </div>
@@ -155,7 +155,7 @@ export default function AboutPage() {
       </section>
 
       {/* Disclaimer */}
-      <section className="py-16">
+      <section className="py-10">
         <div className="container-medium mx-auto px-6">
           <div className="card p-8 md:p-10 border-l-4 border-[var(--accent-amber)]">
             <div className="flex items-start gap-4">
@@ -182,10 +182,10 @@ export default function AboutPage() {
       </section>
 
       {/* Tech Stack */}
-      <section className="py-20 bg-[var(--bg-secondary)] relative">
+      <section className="py-12 bg-[var(--bg-secondary)] relative">
         <div className="absolute inset-0 dot-grid opacity-20" />
         <div className="container-medium mx-auto px-6 relative z-10">
-          <div className="mb-10">
+          <div className="mb-6">
             <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">STACK</p>
             <h2 className="text-3xl">Built With</h2>
           </div>
@@ -215,12 +215,12 @@ export default function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20">
+      <section className="py-12">
         <div className="container-medium mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl mb-4">
             Open Source. <span className="font-serif-italic">Always.</span>
           </h2>
-          <p className="text-lg text-[var(--text-secondary)] max-w-xl mx-auto mb-10">
+          <p className="text-lg text-[var(--text-secondary)] max-w-xl mx-auto mb-8">
             We welcome contributions, suggestions, and feedback.
             Help us build a better benchmark.
           </p>
