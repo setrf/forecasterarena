@@ -1,4 +1,4 @@
-# 🎯 Forecaster Arena
+# Forecaster Arena
 
 <div align="center">
 
@@ -12,145 +12,145 @@
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)](https://sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Live Demo](https://forecasterarena.com) · [Documentation](./docs/) · [Methodology](./docs/METHODOLOGY_v1.md)
+[Live Demo](https://forecasterarena.com) | [Documentation](./docs/) | [Methodology](./docs/METHODOLOGY_v1.md)
 
 </div>
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Why This Matters](#-why-this-matters)
-- [The 7 Competing Models](#-the-7-competing-models)
-- [How It Works](#-how-it-works)
-- [Scoring System](#-scoring-system)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-- [Project Structure](#-project-structure)
-- [API Reference](#-api-reference)
-- [Cron Jobs](#-cron-jobs)
-- [Configuration](#-configuration)
-- [Deployment](#-deployment)
-- [Documentation](#-documentation)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [Overview](#overview)
+- [Why This Matters](#why-this-matters)
+- [The 7 Competing Models](#the-7-competing-models)
+- [How It Works](#how-it-works)
+- [Scoring System](#scoring-system)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [API Reference](#api-reference)
+- [Cron Jobs](#cron-jobs)
+- [Configuration](#configuration)
+- [Deployment](#deployment)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## 🌟 Overview
+## Overview
 
 Forecaster Arena is an **academic-grade benchmark** that tests Large Language Model (LLM) forecasting capabilities using real prediction markets from [Polymarket](https://polymarket.com). 
 
-Unlike traditional benchmarks that may be contaminated by training data, this system evaluates **genuine predictive reasoning** about future events that cannot exist in any training corpus—because they haven't happened yet.
+Unlike traditional benchmarks that may be contaminated by training data, this system evaluates **genuine predictive reasoning** about future events that cannot exist in any training corpus, because they have not happened yet.
 
 ### Key Features
 
 | Feature | Description |
 |---------|-------------|
-| 🎲 **Real Markets** | Live data from Polymarket prediction markets |
-| 🤖 **7 Frontier LLMs** | Head-to-head competition with identical conditions |
-| 📊 **Dual Scoring** | Brier Score (calibration) + Portfolio Returns (value) |
-| 🔬 **Full Reproducibility** | Every prompt, decision, and calculation is logged |
-| 📚 **Academic Grade** | Methodology designed for publication standards |
-| 🌐 **Open Source** | Complete transparency in code and methodology |
+| **Real Markets** | Live data from Polymarket prediction markets |
+| **7 Frontier LLMs** | Head-to-head competition with identical conditions |
+| **Dual Scoring** | Brier Score (calibration) + Portfolio Returns (value) |
+| **Full Reproducibility** | Every prompt, decision, and calculation is logged |
+| **Academic Grade** | Methodology designed for publication standards |
+| **Open Source** | Complete transparency in code and methodology |
 
 ---
 
-## 🧠 Why This Matters
+## Why This Matters
 
 ### The Problem with Traditional Benchmarks
 
 Traditional LLM benchmarks face a fundamental challenge:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  TRADITIONAL BENCHMARK PROBLEM                               │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Training Data ──────────► May Include ──────────► Benchmark │
-│       │                    Benchmark Answers        Answers  │
-│       │                                               ▲      │
-│       └───────────────────────────────────────────────┘      │
-│                                                              │
-│  Result: High scores may reflect MEMORIZATION,               │
-│          not genuine REASONING ability                       │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|  TRADITIONAL BENCHMARK PROBLEM                               |
++-------------------------------------------------------------+
+|                                                              |
+|  Training Data --------> May Include --------> Benchmark     |
+|       |                  Benchmark Answers      Answers      |
+|       |                                           ^          |
+|       +-------------------------------------------+          |
+|                                                              |
+|  Result: High scores may reflect MEMORIZATION,               |
+|          not genuine REASONING ability                       |
+|                                                              |
++-------------------------------------------------------------+
 ```
 
 ### Our Solution: Reality as Benchmark
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  FORECASTER ARENA APPROACH                                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Future Events ──────────► Cannot Exist ──────────► Genuine  │
-│       │                    in Training Data         Reasoning│
-│       │                                               ▲      │
-│       └───────── Prediction Markets ─────────────────┘      │
-│                                                              │
-│  Result: Scores reflect TRUE forecasting ability             │
-│          No memorization possible                            │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|  FORECASTER ARENA APPROACH                                   |
++-------------------------------------------------------------+
+|                                                              |
+|  Future Events --------> Cannot Exist --------> Genuine      |
+|       |                  in Training Data       Reasoning    |
+|       |                                           ^          |
+|       +--------- Prediction Markets --------------+          |
+|                                                              |
+|  Result: Scores reflect TRUE forecasting ability             |
+|          No memorization possible                            |
+|                                                              |
++-------------------------------------------------------------+
 ```
 
 ---
 
-## 🤖 The 7 Competing Models
+## The 7 Competing Models
 
 | Model | Provider | Color | Description |
 |-------|----------|-------|-------------|
-| **GPT-5.1** | OpenAI | 🟢 Emerald | Latest GPT architecture |
-| **Gemini 3 Pro** | Google | 🔵 Blue | Google's frontier model |
-| **Grok 4** | xAI | 🟣 Violet | xAI's reasoning model |
-| **Claude Opus 4.5** | Anthropic | 🟡 Amber | Anthropic's most capable |
-| **DeepSeek V3** | DeepSeek | 🔴 Red | Open-weight powerhouse |
-| **Kimi K2** | Moonshot AI | 🌸 Pink | Thinking-enabled model |
-| **Qwen 3** | Alibaba | 🔷 Cyan | 235B parameter giant |
+| **GPT-5.1** | OpenAI | Emerald | Latest GPT architecture |
+| **Gemini 3 Pro** | Google | Blue | Google's frontier model |
+| **Grok 4** | xAI | Violet | xAI's reasoning model |
+| **Claude Opus 4.5** | Anthropic | Amber | Anthropic's most capable |
+| **DeepSeek V3** | DeepSeek | Red | Open-weight powerhouse |
+| **Kimi K2** | Moonshot AI | Pink | Thinking-enabled model |
+| **Qwen 3** | Alibaba | Cyan | 235B parameter giant |
 
 All models receive:
-- ✅ Identical system prompts
-- ✅ Identical market information
-- ✅ Identical starting capital ($10,000)
-- ✅ Identical betting constraints
-- ✅ Temperature = 0 (deterministic)
+- Identical system prompts
+- Identical market information
+- Identical starting capital ($10,000)
+- Identical betting constraints
+- Temperature = 0 (deterministic)
 
 ---
 
-## ⚙️ How It Works
+## How It Works
 
 ### Weekly Cycle
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  SUNDAY 00:00 UTC - WEEKLY DECISION CYCLE                    │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  1. 📅 New Cohort Created (if Sunday)                        │
-│     └── 7 agents initialized with $10,000 each              │
-│                                                              │
-│  2. 🔄 Market Sync                                           │
-│     └── Fetch top 100 markets from Polymarket by volume     │
-│                                                              │
-│  3. 🤖 LLM Decisions (for each model)                        │
-│     ├── Build context: portfolio + markets                   │
-│     ├── Call OpenRouter API (temp=0)                         │
-│     ├── Parse response (retry once if malformed)             │
-│     └── Execute trades (BET/SELL/HOLD)                       │
-│                                                              │
-│  4. 📊 Resolution Check                                      │
-│     ├── Check for resolved markets                           │
-│     ├── Settle winning/losing positions                      │
-│     └── Calculate Brier scores                               │
-│                                                              │
-│  5. 📈 Portfolio Snapshots                                   │
-│     └── Daily mark-to-market valuations                      │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|  SUNDAY 00:00 UTC - WEEKLY DECISION CYCLE                    |
++-------------------------------------------------------------+
+|                                                              |
+|  1. New Cohort Created (if Sunday)                           |
+|     +-- 7 agents initialized with $10,000 each               |
+|                                                              |
+|  2. Market Sync                                              |
+|     +-- Fetch top 100 markets from Polymarket by volume      |
+|                                                              |
+|  3. LLM Decisions (for each model)                           |
+|     +-- Build context: portfolio + markets                   |
+|     +-- Call OpenRouter API (temp=0)                         |
+|     +-- Parse response (retry once if malformed)             |
+|     +-- Execute trades (BET/SELL/HOLD)                       |
+|                                                              |
+|  4. Resolution Check                                         |
+|     +-- Check for resolved markets                           |
+|     +-- Settle winning/losing positions                      |
+|     +-- Calculate Brier scores                               |
+|                                                              |
+|  5. Portfolio Snapshots                                      |
+|     +-- Daily mark-to-market valuations                      |
+|                                                              |
++-------------------------------------------------------------+
 ```
 
 ### Decision Format
@@ -185,21 +185,21 @@ Models respond with JSON in one of three formats:
 
 ---
 
-## 📊 Scoring System
+## Scoring System
 
 ### 1. Brier Score (Calibration)
 
 Measures how well confidence matches accuracy.
 
 ```
-Brier Score = (forecast - outcome)²
+Brier Score = (forecast - outcome)^2
 
 Where:
 - forecast = implied confidence from bet size
 - outcome = 1 if correct, 0 if wrong
 
 Implied Confidence = bet_amount / max_possible_bet
-Max Possible Bet = cash_balance × 0.25
+Max Possible Bet = cash_balance x 0.25
 
 Score Range:
 - 0.00 = Perfect prediction
@@ -220,14 +220,14 @@ Measures practical value generation.
 
 ```
 P/L = Final Portfolio Value - Initial Balance ($10,000)
-Return % = (P/L / $10,000) × 100
+Return % = (P/L / $10,000) x 100
 
 Position Value:
-- YES positions: shares × current_YES_price
-- NO positions: shares × (1 - current_YES_price)
+- YES positions: shares x current_YES_price
+- NO positions: shares x (1 - current_YES_price)
 
 Settlement:
-- Winning positions: shares × $1
+- Winning positions: shares x $1
 - Losing positions: $0
 ```
 
@@ -242,45 +242,45 @@ The ideal forecaster excels at both: confident when right, cautious when uncerta
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           FORECASTER ARENA                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐                │
-│  │  Polymarket  │────▶│  Market Sync │────▶│   SQLite     │                │
-│  │     API      │     │   Service    │     │   Database   │                │
-│  └──────────────┘     └──────────────┘     └──────┬───────┘                │
-│                                                    │                        │
-│  ┌──────────────┐     ┌──────────────┐            │                        │
-│  │  OpenRouter  │◀────│   Decision   │◀───────────┤                        │
-│  │     API      │────▶│    Engine    │            │                        │
-│  └──────────────┘     └──────────────┘            │                        │
-│                              │                     │                        │
-│                              ▼                     │                        │
-│                       ┌──────────────┐            │                        │
-│                       │    Trade     │────────────┤                        │
-│                       │  Execution   │            │                        │
-│                       └──────────────┘            │                        │
-│                                                    │                        │
-│  ┌──────────────┐     ┌──────────────┐            │                        │
-│  │  Resolution  │────▶│   Scoring    │◀───────────┤                        │
-│  │   Service    │     │    Engine    │            │                        │
-│  └──────────────┘     └──────────────┘            │                        │
-│                                                    │                        │
-│                       ┌──────────────┐            │                        │
-│                       │   Next.js    │◀───────────┘                        │
-│                       │   Frontend   │                                      │
-│                       └──────────────┘                                      │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------------------+
+|                           FORECASTER ARENA                                   |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  +--------------+     +--------------+     +--------------+                  |
+|  |  Polymarket  |---->|  Market Sync |---->|   SQLite     |                  |
+|  |     API      |     |   Service    |     |   Database   |                  |
+|  +--------------+     +--------------+     +------+-------+                  |
+|                                                   |                          |
+|  +--------------+     +--------------+            |                          |
+|  |  OpenRouter  |<----|   Decision   |<-----------+                          |
+|  |     API      |---->|    Engine    |            |                          |
+|  +--------------+     +--------------+            |                          |
+|                              |                    |                          |
+|                              v                    |                          |
+|                       +--------------+            |                          |
+|                       |    Trade     |------------+                          |
+|                       |  Execution   |            |                          |
+|                       +--------------+            |                          |
+|                                                   |                          |
+|  +--------------+     +--------------+            |                          |
+|  |  Resolution  |---->|   Scoring    |<-----------+                          |
+|  |   Service    |     |    Engine    |            |                          |
+|  +--------------+     +--------------+            |                          |
+|                                                   |                          |
+|                       +--------------+            |                          |
+|                       |   Next.js    |<-----------+                          |
+|                       |   Frontend   |                                       |
+|                       +--------------+                                       |
+|                                                                              |
++-----------------------------------------------------------------------------+
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
@@ -294,7 +294,7 @@ The ideal forecaster excels at both: confident when right, cautious when uncerta
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -355,95 +355,95 @@ npm start
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 forecasterarena/
-├── app/                          # Next.js App Router
-│   ├── page.tsx                  # Homepage
-│   ├── layout.tsx                # Root layout with header/footer
-│   ├── globals.css               # Global styles + CSS variables
-│   ├── models/
-│   │   ├── page.tsx              # Models list
-│   │   └── [id]/page.tsx         # Model detail
-│   ├── cohorts/
-│   │   ├── page.tsx              # Cohorts list
-│   │   └── [id]/page.tsx         # Cohort detail
-│   ├── markets/
-│   │   ├── page.tsx              # Markets list
-│   │   └── [id]/page.tsx         # Market detail
-│   ├── methodology/page.tsx      # Methodology documentation
-│   ├── about/page.tsx            # About page
-│   ├── changelog/page.tsx        # Version history
-│   ├── admin/
-│   │   ├── page.tsx              # Admin dashboard
-│   │   ├── logs/page.tsx         # System logs
-│   │   └── costs/page.tsx        # API costs
-│   └── api/
-│       ├── leaderboard/          # Aggregate leaderboard
-│       ├── models/[id]/          # Model data
-│       ├── cohorts/[id]/         # Cohort data
-│       ├── markets/              # Markets list & detail
-│       ├── decisions/recent/     # Recent decisions
-│       ├── performance-data/     # Chart data
-│       ├── admin/                # Admin APIs
-│       └── cron/                 # Scheduled jobs
-│           ├── sync-markets/
-│           ├── run-decisions/
-│           ├── start-cohort/
-│           ├── check-resolutions/
-│           ├── take-snapshots/
-│           └── backup/
-├── components/
-│   ├── charts/
-│   │   ├── PerformanceChart.tsx  # Multi-line time series
-│   │   ├── PnLBarChart.tsx       # P/L comparison bars
-│   │   └── BrierBarChart.tsx     # Brier score bars
-│   └── DecisionFeed.tsx          # Live decision feed
-├── lib/
-│   ├── constants.ts              # App configuration
-│   ├── types.ts                  # TypeScript types
-│   ├── utils.ts                  # Utility functions
-│   ├── db/
-│   │   ├── index.ts              # Database connection
-│   │   ├── schema.ts             # Table definitions
-│   │   └── queries.ts            # 52 query functions
-│   ├── engine/
-│   │   ├── cohort.ts             # Cohort management
-│   │   ├── decision.ts           # Decision orchestration
-│   │   ├── execution.ts          # Trade execution
-│   │   └── resolution.ts         # Market resolution
-│   ├── scoring/
-│   │   ├── brier.ts              # Brier score calculation
-│   │   └── pnl.ts                # P/L calculation
-│   ├── openrouter/
-│   │   ├── client.ts             # API client
-│   │   ├── parser.ts             # Response parser
-│   │   └── prompts.ts            # Prompt templates
-│   └── polymarket/
-│       ├── client.ts             # API client
-│       └── types.ts              # Type definitions
-├── docs/
-│   ├── METHODOLOGY_v1.md         # Complete methodology
-│   ├── ARCHITECTURE.md           # System architecture
-│   ├── DATABASE_SCHEMA.md        # Database documentation
-│   ├── PROMPT_DESIGN.md          # Prompt engineering
-│   ├── SCORING.md                # Scoring formulas
-│   ├── API_REFERENCE.md          # API documentation
-│   ├── DEPLOYMENT.md             # Deployment guide
-│   └── DECISIONS.md              # Design decisions
-├── data/                         # SQLite database (gitignored)
-├── backups/                      # Database backups (gitignored)
-├── .env.example                  # Environment template
-├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-└── next.config.mjs
+|-- app/                          # Next.js App Router
+|   |-- page.tsx                  # Homepage
+|   |-- layout.tsx                # Root layout with header/footer
+|   |-- globals.css               # Global styles + CSS variables
+|   |-- models/
+|   |   |-- page.tsx              # Models list
+|   |   +-- [id]/page.tsx         # Model detail
+|   |-- cohorts/
+|   |   |-- page.tsx              # Cohorts list
+|   |   +-- [id]/page.tsx         # Cohort detail
+|   |-- markets/
+|   |   |-- page.tsx              # Markets list
+|   |   +-- [id]/page.tsx         # Market detail
+|   |-- methodology/page.tsx      # Methodology documentation
+|   |-- about/page.tsx            # About page
+|   |-- changelog/page.tsx        # Version history
+|   |-- admin/
+|   |   |-- page.tsx              # Admin dashboard
+|   |   |-- logs/page.tsx         # System logs
+|   |   +-- costs/page.tsx        # API costs
+|   +-- api/
+|       |-- leaderboard/          # Aggregate leaderboard
+|       |-- models/[id]/          # Model data
+|       |-- cohorts/[id]/         # Cohort data
+|       |-- markets/              # Markets list & detail
+|       |-- decisions/recent/     # Recent decisions
+|       |-- performance-data/     # Chart data
+|       |-- admin/                # Admin APIs
+|       +-- cron/                 # Scheduled jobs
+|           |-- sync-markets/
+|           |-- run-decisions/
+|           |-- start-cohort/
+|           |-- check-resolutions/
+|           |-- take-snapshots/
+|           +-- backup/
+|-- components/
+|   |-- charts/
+|   |   |-- PerformanceChart.tsx  # Multi-line time series
+|   |   |-- PnLBarChart.tsx       # P/L comparison bars
+|   |   +-- BrierBarChart.tsx     # Brier score bars
+|   +-- DecisionFeed.tsx          # Live decision feed
+|-- lib/
+|   |-- constants.ts              # App configuration
+|   |-- types.ts                  # TypeScript types
+|   |-- utils.ts                  # Utility functions
+|   |-- db/
+|   |   |-- index.ts              # Database connection
+|   |   |-- schema.ts             # Table definitions
+|   |   +-- queries.ts            # 52 query functions
+|   |-- engine/
+|   |   |-- cohort.ts             # Cohort management
+|   |   |-- decision.ts           # Decision orchestration
+|   |   |-- execution.ts          # Trade execution
+|   |   +-- resolution.ts         # Market resolution
+|   |-- scoring/
+|   |   |-- brier.ts              # Brier score calculation
+|   |   +-- pnl.ts                # P/L calculation
+|   |-- openrouter/
+|   |   |-- client.ts             # API client
+|   |   |-- parser.ts             # Response parser
+|   |   +-- prompts.ts            # Prompt templates
+|   +-- polymarket/
+|       |-- client.ts             # API client
+|       +-- types.ts              # Type definitions
+|-- docs/
+|   |-- METHODOLOGY_v1.md         # Complete methodology
+|   |-- ARCHITECTURE.md           # System architecture
+|   |-- DATABASE_SCHEMA.md        # Database documentation
+|   |-- PROMPT_DESIGN.md          # Prompt engineering
+|   |-- SCORING.md                # Scoring formulas
+|   |-- API_REFERENCE.md          # API documentation
+|   |-- DEPLOYMENT.md             # Deployment guide
+|   +-- DECISIONS.md              # Design decisions
+|-- data/                         # SQLite database (gitignored)
+|-- backups/                      # Database backups (gitignored)
+|-- .env.example                  # Environment template
+|-- package.json
+|-- tsconfig.json
+|-- tailwind.config.ts
++-- next.config.mjs
 ```
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### Public Endpoints
 
@@ -485,7 +485,7 @@ Authorization: Bearer {CRON_SECRET}
 
 ---
 
-## ⏰ Cron Jobs
+## Cron Jobs
 
 Set up cron jobs on your server:
 
@@ -516,7 +516,7 @@ crontab -e
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Betting Constraints
 
@@ -537,7 +537,7 @@ crontab -e
 
 ---
 
-## 🚢 Deployment
+## Deployment
 
 ### DigitalOcean Droplet
 
@@ -569,7 +569,7 @@ pm2 start npm --name forecaster -- start
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 | Document | Description |
 |----------|-------------|
@@ -577,14 +577,14 @@ pm2 start npm --name forecaster -- start
 | [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture diagrams |
 | [DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md) | All tables and relationships |
 | [PROMPT_DESIGN.md](./docs/PROMPT_DESIGN.md) | LLM prompt engineering |
-| [SCORING.md](./docs/SCORING.md) | Brier Score & P/L formulas |
+| [SCORING.md](./docs/SCORING.md) | Brier Score and P/L formulas |
 | [API_REFERENCE.md](./docs/API_REFERENCE.md) | Complete API documentation |
 | [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Step-by-step deployment |
 | [DECISIONS.md](./docs/DECISIONS.md) | Design decision rationale |
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read our contributing guidelines:
 
@@ -596,15 +596,15 @@ Contributions are welcome! Please read our contributing guidelines:
 
 ### Areas for Contribution
 
-- 📊 Additional chart visualizations
-- 🧪 Test coverage
-- 📝 Documentation improvements
-- 🐛 Bug fixes
-- ✨ New features
+- Additional chart visualizations
+- Test coverage
+- Documentation improvements
+- Bug fixes
+- New features
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 **This is a research and educational project.**
 
@@ -616,13 +616,13 @@ Contributions are welcome! Please read our contributing guidelines:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Polymarket](https://polymarket.com) for market data
 - [OpenRouter](https://openrouter.ai) for unified LLM API access
@@ -632,8 +632,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ for the AI research community**
+**Built for the AI research community**
 
-[⬆ Back to Top](#-forecaster-arena)
+[Back to Top](#forecaster-arena)
 
 </div>

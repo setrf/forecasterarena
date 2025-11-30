@@ -153,7 +153,6 @@ export default function CohortsPage() {
       {/* How Cohorts Work */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="stat-card">
-          <div className="text-2xl mb-3">🚀</div>
           <h3 className="font-semibold mb-2">Weekly Start</h3>
           <p className="text-sm text-[var(--text-secondary)]">
             New cohorts begin every Sunday at midnight UTC with fresh capital for all models.
@@ -161,7 +160,6 @@ export default function CohortsPage() {
         </div>
         
         <div className="stat-card">
-          <div className="text-2xl mb-3">🔄</div>
           <h3 className="font-semibold mb-2">Independent Runs</h3>
           <p className="text-sm text-[var(--text-secondary)]">
             Each cohort is independent. Models can be compared across cohorts for statistical significance.
@@ -169,14 +167,12 @@ export default function CohortsPage() {
         </div>
         
         <div className="stat-card">
-          <div className="text-2xl mb-3">✅</div>
           <h3 className="font-semibold mb-2">Full Resolution</h3>
           <p className="text-sm text-[var(--text-secondary)]">
-            Cohorts complete only when all bets have resolved—no artificial time limits.
+            Cohorts complete only when all bets have resolved. No artificial time limits.
           </p>
         </div>
       </div>
     </div>
   );
 }
-

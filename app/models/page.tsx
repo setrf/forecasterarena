@@ -112,19 +112,19 @@ export default function ModelsPage() {
           <h3 className="text-lg font-semibold mb-2">Model Selection Criteria</h3>
           <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
             <li className="flex items-start gap-2">
-              <span className="text-[var(--accent-emerald)]">✓</span>
+              <span className="text-[var(--accent-emerald)]">+</span>
               Frontier-class reasoning capabilities
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-[var(--accent-emerald)]">✓</span>
+              <span className="text-[var(--accent-emerald)]">+</span>
               Available via OpenRouter API
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-[var(--accent-emerald)]">✓</span>
+              <span className="text-[var(--accent-emerald)]">+</span>
               Mix of commercial and open-weight models
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-[var(--accent-emerald)]">✓</span>
+              <span className="text-[var(--accent-emerald)]">+</span>
               Diverse provider representation
             </li>
           </ul>

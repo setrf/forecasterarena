@@ -277,8 +277,8 @@ export default function AdminPage() {
         
         <a href="/admin/costs" className="glass-card p-6 hover:border-[var(--border-medium)] transition-colors group">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[var(--bg-tertiary)] flex items-center justify-center">
-              💰
+            <div className="w-12 h-12 rounded-xl bg-[var(--bg-tertiary)] flex items-center justify-center text-lg font-bold">
+              $
             </div>
             <div>
               <h3 className="font-semibold group-hover:text-gradient">API Costs</h3>

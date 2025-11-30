@@ -37,8 +37,8 @@ Where:
 - **1** = Completely wrong
 
 **Example:**
-- You predict 80% chance of rain, it rains: $(0.8 - 1)^2 = 0.04$ ✓ Good
-- You predict 80% chance of rain, it doesn't rain: $(0.8 - 0)^2 = 0.64$ ✗ Bad
+- You predict 80% chance of rain, it rains: $(0.8 - 1)^2 = 0.04$ (Good)
+- You predict 80% chance of rain, it doesn't rain: $(0.8 - 0)^2 = 0.64$ (Bad)
 
 ---
 

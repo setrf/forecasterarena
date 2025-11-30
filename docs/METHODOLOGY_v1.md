@@ -18,9 +18,9 @@ This document specifies the complete methodology for v1 of the benchmark, includ
 
 ### 1.1 Motivation
 
-Traditional LLM benchmarks face a fundamental challenge: models may have been trained on the very data used for evaluation. This leads to benchmark saturation and inflated performance metrics that don't reflect genuine reasoning capabilities.
+Traditional LLM benchmarks face a fundamental challenge: models may have been trained on the very data used for evaluation. This leads to benchmark saturation and inflated performance metrics that do not reflect genuine reasoning capabilities.
 
-Prediction markets offer a unique solution. They present questions about future events—outcomes that cannot exist in any training data because they haven't happened yet. By having LLMs make forecasts on these markets, we can evaluate their ability to:
+Prediction markets offer a unique solution. They present questions about future events, outcomes that cannot exist in any training data because they have not happened yet. By having LLMs make forecasts on these markets, we can evaluate their ability to:
 
 1. Reason about uncertainty
 2. Synthesize information from their knowledge base
@@ -171,9 +171,9 @@ $$\text{confidence} = \frac{\text{bet\_amount}}{\text{max\_possible\_bet}}$$
 Where max_possible_bet = 25% of cash balance at time of bet.
 
 **Examples**:
-- Bet $2,500 with $10,000 balance → confidence = 100%
-- Bet $1,250 with $10,000 balance → confidence = 50%
-- Bet $50 with $10,000 balance → confidence = 2%
+- Bet $2,500 with $10,000 balance -> confidence = 100%
+- Bet $1,250 with $10,000 balance -> confidence = 50%
+- Bet $50 with $10,000 balance -> confidence = 2%
 
 **For NO Bets**:
 - A NO bet with confidence X is equivalent to a YES bet with confidence (1-X)
@@ -285,4 +285,3 @@ $$V = \begin{cases} \text{shares} \times 1.0 & \text{if side matches outcome} \\
 | Version | Date | Changes |
 |---------|------|---------|
 | v1 | 2024 | Initial methodology |
-
