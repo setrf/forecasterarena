@@ -16,18 +16,19 @@ export async function GET(request: NextRequest) {
   try {
     const db = getDb();
     
-    // Get costs aggregated by model
+    // Get costs aggregated by model from decisions table
     const rawCosts = db.prepare(`
       SELECT 
         m.id as model_id,
         m.display_name as model_name,
         m.color,
-        COALESCE(SUM(ac.cost_usd), 0) as total_cost,
-        COALESCE(SUM(ac.tokens_input), 0) as total_input_tokens,
-        COALESCE(SUM(ac.tokens_output), 0) as total_output_tokens,
-        COUNT(ac.id) as decision_count
+        COALESCE(SUM(d.api_cost_usd), 0) as total_cost,
+        COALESCE(SUM(d.tokens_input), 0) as total_input_tokens,
+        COALESCE(SUM(d.tokens_output), 0) as total_output_tokens,
+        COUNT(d.id) as decision_count
       FROM models m
-      LEFT JOIN api_costs ac ON m.id = ac.model_id
+      LEFT JOIN agents a ON m.id = a.model_id
+      LEFT JOIN decisions d ON a.id = d.agent_id
       GROUP BY m.id, m.display_name, m.color
       ORDER BY total_cost DESC
     `).all() as Array<{

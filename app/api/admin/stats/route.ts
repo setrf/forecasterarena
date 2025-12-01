@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
       SELECT COUNT(*) as count FROM markets
     `).get() as { count: number }).count;
     
-    // Get total API costs
+    // Get total API costs from decisions table
     const totalCost = (db.prepare(`
-      SELECT COALESCE(SUM(cost_usd), 0) as total FROM api_costs
+      SELECT COALESCE(SUM(api_cost_usd), 0) as total FROM decisions
     `).get() as { total: number }).total;
     
     return NextResponse.json({
