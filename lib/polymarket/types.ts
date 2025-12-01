@@ -36,12 +36,17 @@ export interface PolymarketMarket {
   active: boolean;               // Whether market is active for trading
   category?: string;             // Category (Politics, Crypto, etc.)
   liquidity?: string | number;   // Current liquidity
-  volume?: string | number;      // Total trading volume
+  volume?: string | number;      // Total trading volume (string format)
+  volumeNum?: number;            // Total trading volume (numeric format)
   resolving?: boolean;           // Whether market is in resolution process
   resolved?: boolean;            // Whether market is fully resolved
   conditionId?: string;          // Alternative ID field
   slug?: string;                 // URL slug
   image?: string;                // Market image URL
+  negRisk?: boolean;             // Whether this is a negative risk market
+  negRiskMarketID?: string;      // Parent negative risk market ID
+  clobTokenIds?: string;         // CLOB token IDs (JSON string)
+  groupItemTitle?: string;       // Title of item in a group (e.g., "Bad Bunny")
 }
 
 /**

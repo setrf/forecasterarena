@@ -152,7 +152,8 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     status,
     current_price: currentPrice,
     current_prices: currentPrices,
-    volume: market.volume ? parseFloat(String(market.volume)) : null,
+    // Prefer volumeNum (numeric) over volume (string) for accuracy
+    volume: market.volumeNum ?? (market.volume ? parseFloat(String(market.volume)) : null),
     liquidity: market.liquidity ? parseFloat(String(market.liquidity)) : null,
   };
 }
@@ -227,6 +228,11 @@ export async function fetchEventBySlug(slug: string): Promise<PolymarketEvent | 
 /**
  * Fetch all markets from events (recommended approach per docs)
  * This extracts individual markets from events for better coverage
+ * 
+ * IMPORTANT: Some events have duplicate slugs (e.g., "top-spotify-artist-2025" and 
+ * "top-spotify-artist-2025-146"). Only the one with volume has active markets.
+ * 
+ * @see https://docs.polymarket.com/developers/gamma-markets-api/fetch-markets-guide
  */
 export async function fetchMarketsFromEvents(limit: number = 100): Promise<PolymarketMarket[]> {
   const events = await fetchEvents(limit);
@@ -235,27 +241,33 @@ export async function fetchMarketsFromEvents(limit: number = 100): Promise<Polym
   for (const event of events) {
     if (event.markets && Array.isArray(event.markets)) {
       for (const market of event.markets) {
-        // Only include active, non-closed markets
-        if (market.active !== false && !market.closed) {
+        // Only include active, non-closed markets with volume > 0
+        // Markets with active=true AND volumeNum > 0 are actually tradeable
+        const volumeNum = parseFloat(String(market.volumeNum || market.volume || 0));
+        if (market.active === true && !market.closed && volumeNum > 0) {
           allMarkets.push(market);
         }
       }
     }
   }
   
-  console.log(`Extracted ${allMarkets.length} markets from ${events.length} events`);
+  console.log(`Extracted ${allMarkets.length} active markets from ${events.length} events`);
   return allMarkets;
 }
 
 /**
  * Fetch and simplify top markets by volume
  * Uses both direct markets endpoint and events endpoint for better coverage
+ * 
+ * Events can contain 20-100+ markets each (e.g., "Top Spotify Artist 2025" has 36 markets)
+ * so we fetch more events to ensure good coverage.
  */
 export async function fetchTopMarkets(limit: number = TOP_MARKETS_COUNT): Promise<SimplifiedMarket[]> {
   // Fetch from both sources for maximum coverage
+  // Events are fetched with higher limit since each event contains many markets
   const [directMarkets, eventMarkets] = await Promise.all([
     fetchMarkets(limit),
-    fetchMarketsFromEvents(Math.ceil(limit / 5)) // Events contain multiple markets each
+    fetchMarketsFromEvents(Math.max(50, limit)) // Fetch at least 50 events for good coverage
   ]);
   
   // Combine and deduplicate by polymarket_id
