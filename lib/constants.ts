@@ -101,7 +101,7 @@ export const METHODOLOGY_VERSION = 'v1';
 export const MODELS = [
   {
     id: 'gpt-5.1',
-    openrouterId: 'openai/gpt-5.1',
+    openrouterId: 'openai/gpt-5.1-chat',
     displayName: 'GPT-5.1',
     provider: 'OpenAI',
     color: '#10B981' // Emerald

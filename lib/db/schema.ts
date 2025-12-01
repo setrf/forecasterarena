@@ -360,7 +360,7 @@ VALUES (
 export const SEED_MODELS_SQL = `
 INSERT OR IGNORE INTO models (id, openrouter_id, display_name, provider, color)
 VALUES 
-  ('gpt-5.1', 'openai/gpt-5.1', 'GPT-5.1', 'OpenAI', '#10B981'),
+  ('gpt-5.1', 'openai/gpt-5.1-chat', 'GPT-5.1', 'OpenAI', '#10B981'),
   ('gemini-2.5-flash', 'google/gemini-2.5-flash', 'Gemini 2.5 Flash', 'Google', '#3B82F6'),
   ('grok-4', 'x-ai/grok-4', 'Grok 4', 'xAI', '#8B5CF6'),
   ('claude-opus-4.5', 'anthropic/claude-opus-4.5', 'Claude Opus 4.5', 'Anthropic', '#F59E0B'),
