@@ -55,6 +55,7 @@ export default function ModelDetailPage() {
   const model = MODELS.find(m => m.id === id);
   const [data, setData] = useState<ModelData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -267,9 +268,10 @@ export default function ModelDetailPage() {
           ) : (
             <div className="space-y-3">
               {data.recent_decisions.slice(0, 5).map((decision) => (
-                <div 
+                <button 
                   key={decision.id}
-                  className="p-4 bg-[var(--bg-tertiary)] rounded-lg"
+                  onClick={() => setSelectedDecision(decision)}
+                  className="w-full text-left p-4 bg-[var(--bg-tertiary)] rounded-lg hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -283,21 +285,91 @@ export default function ModelDetailPage() {
                         Cohort #{decision.cohort_number}, Week {decision.decision_week}
                       </span>
                     </div>
-                    <span className="text-sm text-[var(--text-muted)]">
-                      {formatDate(decision.decision_timestamp)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-[var(--text-muted)]">
+                        {formatDate(decision.decision_timestamp)}
+                      </span>
+                      <svg className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
                   {decision.reasoning && (
                     <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
                       {decision.reasoning}
                     </p>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Decision Detail Modal */}
+      {selectedDecision && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedDecision(null)}
+        >
+          <div 
+            className="bg-[var(--bg-secondary)] rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl border border-[var(--border-primary)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-[var(--border-primary)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className={`badge ${
+                    selectedDecision.action === 'BET' ? 'badge-active' :
+                    selectedDecision.action === 'SELL' ? 'badge-pending' : ''
+                  }`}>
+                    {selectedDecision.action}
+                  </span>
+                  <span className="text-[var(--text-secondary)]">
+                    Cohort #{selectedDecision.cohort_number}, Week {selectedDecision.decision_week}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setSelectedDecision(null)}
+                  className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-[var(--text-muted)] mt-2">
+                {formatDate(selectedDecision.decision_timestamp)}
+              </p>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <h4 className="text-sm font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
+                Reasoning
+              </h4>
+              {selectedDecision.reasoning ? (
+                <p className="text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">
+                  {selectedDecision.reasoning}
+                </p>
+              ) : (
+                <p className="text-[var(--text-muted)] italic">No reasoning provided</p>
+              )}
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[var(--border-primary)] bg-[var(--bg-tertiary)]">
+              <button 
+                onClick={() => setSelectedDecision(null)}
+                className="w-full py-2 px-4 bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
