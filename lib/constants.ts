@@ -33,7 +33,7 @@ export const MAX_BET_PERCENT = 0.25;
  * Number of top markets by volume to show to LLMs
  * Limits context size while focusing on most liquid markets
  */
-export const TOP_MARKETS_COUNT = 100;
+export const TOP_MARKETS_COUNT = 500;
 
 // ============================================================================
 // LLM CONFIGURATION
