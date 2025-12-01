@@ -19,25 +19,22 @@ interface LeaderboardEntry {
   win_rate: number | null;
 }
 
-// Deterministic mock data
-const mockPnL = [2340, 1890, 1250, 890, 320, -180, -640];
-const mockBrier = [0.167, 0.182, 0.198, 0.203, 0.215, 0.231, 0.245];
-const mockWinRate = [0.64, 0.61, 0.58, 0.55, 0.52, 0.49, 0.47];
-
-const mockLeaderboard: LeaderboardEntry[] = MODELS.map((model, i) => ({
+// Empty initial state - will be populated from API when competition starts
+const emptyLeaderboard: LeaderboardEntry[] = MODELS.map((model) => ({
   model_id: model.id,
   display_name: model.displayName,
   provider: model.provider,
   color: model.color,
-  total_pnl: mockPnL[i] || 0,
-  total_pnl_percent: (mockPnL[i] || 0) / 100,
-  avg_brier_score: mockBrier[i] || 0.2,
-  num_cohorts: 3,
-  num_resolved_bets: 28 - i * 2,
-  win_rate: mockWinRate[i] || 0.5,
+  total_pnl: 0,
+  total_pnl_percent: 0,
+  avg_brier_score: null,
+  num_cohorts: 0,
+  num_resolved_bets: 0,
+  win_rate: null,
 }));
 
-function formatPnL(value: number): string {
+function formatPnL(value: number | null, hasData: boolean): string {
+  if (!hasData || value === null) return 'N/A';
   const sign = value >= 0 ? '+' : '';
   return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
@@ -95,7 +92,7 @@ function HeroSection() {
 }
 
 // Live Stats Dashboard - Immediately below hero
-function LiveStatsDashboard({ leader }: { leader: LeaderboardEntry | null }) {
+function LiveStatsDashboard({ leader, hasRealData }: { leader: LeaderboardEntry | null; hasRealData: boolean }) {
   return (
     <section className="border-y border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
       <div className="container-wide mx-auto">
@@ -103,17 +100,17 @@ function LiveStatsDashboard({ leader }: { leader: LeaderboardEntry | null }) {
           {/* Current Leader - P/L as the big number */}
           <div className="py-6 md:py-8 pl-6 pr-6 md:border-r border-[var(--border-subtle)] animate-fade-in">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Leading</p>
-            {leader ? (
+            {hasRealData && leader ? (
               <>
                 <p className={`text-3xl md:text-4xl font-bold ${leader.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {formatPnL(leader.total_pnl)}
+                  {formatPnL(leader.total_pnl, true)}
                 </p>
                 <p className="text-sm text-[var(--text-secondary)]">{leader.display_name}</p>
               </>
             ) : (
               <>
-                <p className="text-3xl md:text-4xl font-bold text-[var(--text-muted)]">---</p>
-                <p className="text-sm text-[var(--text-secondary)]">Awaiting data</p>
+                <p className="text-3xl md:text-4xl font-bold text-[var(--text-muted)]">N/A</p>
+                <p className="text-sm text-[var(--text-secondary)]">Competition not started</p>
               </>
             )}
           </div>
@@ -145,7 +142,7 @@ function LiveStatsDashboard({ leader }: { leader: LeaderboardEntry | null }) {
 }
 
 // Leaderboard Preview - Featured cards
-function LeaderboardPreview({ data }: { data: LeaderboardEntry[] }) {
+function LeaderboardPreview({ data, hasRealData }: { data: LeaderboardEntry[]; hasRealData: boolean }) {
   const top3 = data.slice(0, 3);
   const rest = data.slice(3);
   
@@ -197,8 +194,8 @@ function LeaderboardPreview({ data }: { data: LeaderboardEntry[] }) {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-[var(--text-muted)] mb-1">Total P/L</p>
-                <p className={`text-2xl font-bold ${entry.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {formatPnL(entry.total_pnl)}
+                <p className={`text-2xl font-bold ${!hasRealData ? 'text-[var(--text-muted)]' : entry.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
+                  {formatPnL(entry.total_pnl, hasRealData)}
                 </p>
               </div>
               
@@ -238,8 +235,8 @@ function LeaderboardPreview({ data }: { data: LeaderboardEntry[] }) {
                 </div>
               </div>
               <div className="text-right">
-                <p className={`font-mono ${entry.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {formatPnL(entry.total_pnl)}
+                <p className={`font-mono ${!hasRealData ? 'text-[var(--text-muted)]' : entry.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
+                  {formatPnL(entry.total_pnl, hasRealData)}
                 </p>
               </div>
             </Link>
@@ -430,7 +427,8 @@ function CTASection() {
 }
 
 export default function Home() {
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(mockLeaderboard);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(emptyLeaderboard);
+  const [hasRealData, setHasRealData] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -439,11 +437,18 @@ export default function Home() {
         if (res.ok) {
           const data = await res.json();
           if (data.leaderboard && data.leaderboard.length > 0) {
-            setLeaderboard(data.leaderboard);
+            // Check if we have actual competition data (non-zero P/L or resolved bets)
+            const hasActualData = data.leaderboard.some(
+              (entry: LeaderboardEntry) => entry.total_pnl !== 0 || entry.num_resolved_bets > 0
+            );
+            if (hasActualData) {
+              setLeaderboard(data.leaderboard);
+              setHasRealData(true);
+            }
           }
         }
       } catch {
-        console.log('Using mock data');
+        console.log('No data available yet');
       }
     }
     fetchData();
@@ -452,8 +457,8 @@ export default function Home() {
   return (
     <main>
       <HeroSection />
-      <LiveStatsDashboard leader={leaderboard[0] || null} />
-      <LeaderboardPreview data={leaderboard} />
+      <LiveStatsDashboard leader={leaderboard[0] || null} hasRealData={hasRealData} />
+      <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />
       <PerformanceChartSection />
       <HowItWorks />
       <CTASection />
