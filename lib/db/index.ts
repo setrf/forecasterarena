@@ -123,6 +123,7 @@ export function generateId(): string {
  * Create a database backup
  * 
  * Copies the database file to the backup directory with timestamp.
+ * Automatically cleans up old backups (keeps last 30 days).
  * 
  * @returns Path to backup file
  */
@@ -137,7 +138,55 @@ export function createBackup(): string {
   
   console.log(`[DB] Backup created: ${backupPath}`);
   
+  // Clean up old backups (keep last 30 days)
+  cleanupOldBackups();
+  
   return backupPath;
+}
+
+/**
+ * Clean up old backup files
+ * 
+ * Removes backups older than 30 days to prevent disk space issues.
+ * Keeps at least the 10 most recent backups regardless of age.
+ */
+function cleanupOldBackups(): void {
+  try {
+    if (!fs.existsSync(BACKUP_PATH)) {
+      return;
+    }
+    
+    const files = fs.readdirSync(BACKUP_PATH)
+      .filter(file => file.startsWith('forecaster-') && file.endsWith('.db'))
+      .map(file => ({
+        name: file,
+        path: path.join(BACKUP_PATH, file),
+        mtime: fs.statSync(path.join(BACKUP_PATH, file)).mtime
+      }))
+      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime()); // Newest first
+    
+    if (files.length <= 10) {
+      return; // Keep all if 10 or fewer
+    }
+    
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    let deletedCount = 0;
+    
+    // Delete backups older than 30 days, but keep at least 10 most recent
+    for (let i = 10; i < files.length; i++) {
+      const file = files[i];
+      if (file.mtime.getTime() < thirtyDaysAgo) {
+        fs.unlinkSync(file.path);
+        deletedCount++;
+      }
+    }
+    
+    if (deletedCount > 0) {
+      console.log(`[DB] Cleaned up ${deletedCount} old backup(s)`);
+    }
+  } catch (error) {
+    console.error('[DB] Error cleaning up old backups:', error);
+  }
 }
 
 /**
