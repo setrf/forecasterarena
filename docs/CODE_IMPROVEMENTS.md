@@ -12,14 +12,8 @@ This document lists all code-level improvements made before deployment.
 - **Implementation**: `cleanupOldBackups()` function called after each backup
 - **Policy**: Keeps last 10 backups minimum, deletes backups older than 30 days
 
-### 2. Log Rotation (Critical)
-**File**: `lib/db/maintenance.ts`, `app/api/cron/maintenance/route.ts`
-
-- **Problem**: `system_logs` table would grow indefinitely
-- **Solution**: Log cleanup function removes logs older than 90 days
-- **Implementation**: New maintenance endpoint `/api/cron/maintenance`
-- **Policy**: Keeps last 10,000 log entries minimum, deletes logs older than 90 days
-- **Schedule**: Should be run weekly (add to cron: `0 1 * * 0`)
+### 2. Log Rotation (Removed)
+**Status**: Log deletion removed per user request - all logs are preserved for audit trail
 
 ### 3. React Error Boundaries (High Priority)
 **File**: `components/ErrorBoundary.tsx`
@@ -67,14 +61,7 @@ This document lists all code-level improvements made before deployment.
    }
    ```
 
-2. **Add Maintenance Cron Job**
-   Add to crontab:
-   ```bash
-   # Weekly maintenance (Sunday 01:00 UTC)
-   0 1 * * 0 curl -X POST http://localhost:3000/api/cron/maintenance -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/maintenance.log 2>&1
-   ```
-
-3. **Environment Variable Validation**
+2. **Environment Variable Validation**
    Consider adding startup validation in `lib/constants.ts`:
    ```typescript
    if (process.env.NODE_ENV === 'production') {
@@ -93,9 +80,9 @@ This document lists all code-level improvements made before deployment.
    - Ensure at least 10 backups are kept
 
 2. **Monitor Log Growth**
-   - Check `system_logs` table size
-   - Verify maintenance cron is running
-   - Adjust retention policy if needed
+   - Check `system_logs` table size periodically
+   - All logs are preserved for audit trail
+   - Consider archiving old logs if database grows too large
 
 3. **Monitor Error Boundaries**
    - Check for error boundary triggers
@@ -105,8 +92,6 @@ This document lists all code-level improvements made before deployment.
 ## 🔍 Files Modified
 
 - `lib/db/index.ts` - Backup cleanup
-- `lib/db/maintenance.ts` - Log rotation (new)
-- `app/api/cron/maintenance/route.ts` - Maintenance endpoint (new)
 - `components/ErrorBoundary.tsx` - Error boundary component (new)
 - `lib/utils/security.ts` - Security utilities (new)
 - `lib/constants.ts` - Production warnings
@@ -115,15 +100,16 @@ This document lists all code-level improvements made before deployment.
 
 ## 📊 Impact
 
-- **Disk Space**: Prevents unbounded growth of backups and logs
+- **Disk Space**: Prevents unbounded growth of backups (logs preserved)
 - **Reliability**: Error boundaries prevent app crashes
 - **Security**: Improved authentication and input validation
 - **Monitoring**: Health check endpoint for system status
+- **Audit Trail**: All system logs preserved for analysis
 
 ## ⚠️ Notes
 
 - Backup cleanup runs automatically after each backup
-- Log cleanup requires manual cron job setup (see above)
+- All system logs are preserved (no automatic deletion)
 - Error boundaries are optional but recommended
 - All changes are backward compatible
 
