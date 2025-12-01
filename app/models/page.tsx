@@ -12,20 +12,13 @@ interface ModelStats {
   num_resolved_bets: number;
 }
 
-// Mock data for visual richness
-const mockData: Record<string, ModelStats> = {
-  'gpt-5.1': { model_id: 'gpt-5.1', total_pnl: 2340, avg_brier_score: 0.167, win_rate: 0.64, num_resolved_bets: 28 },
-  'gemini-3-pro': { model_id: 'gemini-3-pro', total_pnl: 1890, avg_brier_score: 0.182, win_rate: 0.61, num_resolved_bets: 26 },
-  'grok-4': { model_id: 'grok-4', total_pnl: 1250, avg_brier_score: 0.198, win_rate: 0.58, num_resolved_bets: 24 },
-  'claude-opus-4.5': { model_id: 'claude-opus-4.5', total_pnl: 890, avg_brier_score: 0.203, win_rate: 0.55, num_resolved_bets: 22 },
-  'deepseek-v3': { model_id: 'deepseek-v3', total_pnl: 320, avg_brier_score: 0.215, win_rate: 0.52, num_resolved_bets: 20 },
-  'kimi-k2': { model_id: 'kimi-k2', total_pnl: -180, avg_brier_score: 0.231, win_rate: 0.49, num_resolved_bets: 18 },
-  'qwen-3': { model_id: 'qwen-3', total_pnl: -640, avg_brier_score: 0.245, win_rate: 0.47, num_resolved_bets: 16 },
-};
+// Empty initial state - populated from API when competition starts
+const emptyStats: Record<string, ModelStats> = {};
 
 export default function ModelsPage() {
-  const [stats, setStats] = useState<Map<string, ModelStats>>(new Map(Object.entries(mockData)));
+  const [stats, setStats] = useState<Map<string, ModelStats>>(new Map(Object.entries(emptyStats)));
   const [loading, setLoading] = useState(true);
+  const [hasRealData, setHasRealData] = useState(false);
 
   useEffect(() => {
     async function fetchStats() {
@@ -35,7 +28,11 @@ export default function ModelsPage() {
           const data = await res.json();
           if (data.leaderboard && data.leaderboard.length > 0) {
             const statsMap = new Map<string, ModelStats>();
+            let foundRealData = false;
             for (const entry of data.leaderboard) {
+              if (entry.total_pnl !== 0 || entry.num_resolved_bets > 0) {
+                foundRealData = true;
+              }
               statsMap.set(entry.model_id, {
                 model_id: entry.model_id,
                 total_pnl: entry.total_pnl,
@@ -44,11 +41,14 @@ export default function ModelsPage() {
                 num_resolved_bets: entry.num_resolved_bets
               });
             }
-            setStats(statsMap);
+            if (foundRealData) {
+              setStats(statsMap);
+              setHasRealData(true);
+            }
           }
         }
       } catch {
-        console.log('Using mock data');
+        console.log('No data available yet');
       } finally {
         setLoading(false);
       }
@@ -56,7 +56,8 @@ export default function ModelsPage() {
     fetchStats();
   }, []);
 
-  function formatPnL(value: number): string {
+  function formatPnL(value: number | null, hasData: boolean): string {
+    if (!hasData || value === null) return 'N/A';
     const sign = value >= 0 ? '+' : '';
     return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   }
@@ -122,20 +123,20 @@ export default function ModelsPage() {
                   <div className="flex-1 grid grid-cols-3 gap-6 md:gap-8 md:pl-8 md:border-l border-[var(--border-subtle)]">
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Total P/L</p>
-                      <p className={`text-2xl md:text-3xl font-bold ${(leaderStats?.total_pnl ?? 0) >= 0 ? 'text-positive' : 'text-negative'}`}>
-                        {formatPnL(leaderStats?.total_pnl ?? 0)}
+                      <p className={`text-2xl md:text-3xl font-bold ${!hasRealData ? 'text-[var(--text-muted)]' : (leaderStats?.total_pnl ?? 0) >= 0 ? 'text-positive' : 'text-negative'}`}>
+                        {formatPnL(leaderStats?.total_pnl ?? null, hasRealData)}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Brier Score</p>
                       <p className="text-2xl md:text-3xl font-mono">
-                        {leaderStats?.avg_brier_score?.toFixed(3) ?? 'N/A'}
+                        {hasRealData && leaderStats?.avg_brier_score != null ? leaderStats.avg_brier_score.toFixed(3) : 'N/A'}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Win Rate</p>
                       <p className="text-2xl md:text-3xl font-mono">
-                        {leaderStats?.win_rate ? `${(leaderStats.win_rate * 100).toFixed(0)}%` : 'N/A'}
+                        {hasRealData && leaderStats?.win_rate ? `${(leaderStats.win_rate * 100).toFixed(0)}%` : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -197,33 +198,35 @@ export default function ModelsPage() {
                   <span className="font-mono text-lg text-[var(--text-muted)]">#{rank}</span>
                 </div>
                 
-                {/* Progress bar showing relative P/L */}
+                {/* Progress bar showing relative P/L - hidden when no data */}
                 <div className="mb-5">
                   <div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${pnl >= 0 ? 'bg-[var(--color-positive)]' : 'bg-[var(--color-negative)]'}`}
-                      style={{ width: `${Math.min(Math.abs(pnl) / 30, 100)}%` }}
-                    />
+                    {hasRealData && (
+                      <div 
+                        className={`h-full rounded-full ${pnl >= 0 ? 'bg-[var(--color-positive)]' : 'bg-[var(--color-negative)]'}`}
+                        style={{ width: `${Math.min(Math.abs(pnl) / 30, 100)}%` }}
+                      />
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-[var(--text-muted)] mb-1">P/L</p>
-                    <p className={`font-semibold ${pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                      {loading ? '...' : formatPnL(pnl)}
+                    <p className={`font-semibold ${!hasRealData ? 'text-[var(--text-muted)]' : pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
+                      {loading ? '...' : formatPnL(hasRealData ? pnl : null, hasRealData)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--text-muted)] mb-1">Brier</p>
                     <p className="font-mono text-sm">
-                      {loading ? '...' : brier?.toFixed(3) ?? 'N/A'}
+                      {loading ? '...' : (hasRealData && brier != null) ? brier.toFixed(3) : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--text-muted)] mb-1">Win %</p>
                     <p className="font-mono text-sm">
-                      {loading ? '...' : winRate ? `${(winRate * 100).toFixed(0)}%` : 'N/A'}
+                      {loading ? '...' : (hasRealData && winRate) ? `${(winRate * 100).toFixed(0)}%` : 'N/A'}
                     </p>
                   </div>
                 </div>
