@@ -107,9 +107,9 @@ export const MODELS = [
     color: '#10B981' // Emerald
   },
   {
-    id: 'gemini-3-pro',
-    openrouterId: 'google/gemini-3-pro-preview',
-    displayName: 'Gemini 3 Pro',
+    id: 'gemini-2.5-flash',
+    openrouterId: 'google/gemini-2.5-flash',
+    displayName: 'Gemini 2.5 Flash',
     provider: 'Google',
     color: '#3B82F6' // Blue
   },
@@ -128,9 +128,9 @@ export const MODELS = [
     color: '#F59E0B' // Amber
   },
   {
-    id: 'deepseek-v3',
-    openrouterId: 'deepseek/deepseek-v3-0324',
-    displayName: 'DeepSeek V3',
+    id: 'deepseek-v3.1',
+    openrouterId: 'deepseek/deepseek-chat-v3.1',
+    displayName: 'DeepSeek V3.1',
     provider: 'DeepSeek',
     color: '#EF4444' // Red
   },
@@ -142,9 +142,9 @@ export const MODELS = [
     color: '#EC4899' // Pink
   },
   {
-    id: 'qwen-3',
-    openrouterId: 'qwen/qwen3-235b-a22b-instruct-2507',
-    displayName: 'Qwen 3',
+    id: 'qwen-3-next',
+    openrouterId: 'qwen/qwen3-next-80b-a3b-instruct',
+    displayName: 'Qwen 3 Next',
     provider: 'Alibaba',
     color: '#06B6D4' // Cyan
   }

@@ -361,11 +361,11 @@ export const SEED_MODELS_SQL = `
 INSERT OR IGNORE INTO models (id, openrouter_id, display_name, provider, color)
 VALUES 
   ('gpt-5.1', 'openai/gpt-5.1', 'GPT-5.1', 'OpenAI', '#10B981'),
-  ('gemini-3-pro', 'google/gemini-3-pro-preview', 'Gemini 3 Pro', 'Google', '#3B82F6'),
+  ('gemini-2.5-flash', 'google/gemini-2.5-flash', 'Gemini 2.5 Flash', 'Google', '#3B82F6'),
   ('grok-4', 'x-ai/grok-4', 'Grok 4', 'xAI', '#8B5CF6'),
   ('claude-opus-4.5', 'anthropic/claude-opus-4.5', 'Claude Opus 4.5', 'Anthropic', '#F59E0B'),
-  ('deepseek-v3', 'deepseek/deepseek-v3-0324', 'DeepSeek V3', 'DeepSeek', '#EF4444'),
+  ('deepseek-v3.1', 'deepseek/deepseek-chat-v3.1', 'DeepSeek V3.1', 'DeepSeek', '#EF4444'),
   ('kimi-k2', 'moonshotai/kimi-k2-thinking', 'Kimi K2', 'Moonshot AI', '#EC4899'),
-  ('qwen-3', 'qwen/qwen3-235b-a22b-instruct-2507', 'Qwen 3', 'Alibaba', '#06B6D4');
+  ('qwen-3-next', 'qwen/qwen3-next-80b-a3b-instruct', 'Qwen 3 Next', 'Alibaba', '#06B6D4');
 `;
 
