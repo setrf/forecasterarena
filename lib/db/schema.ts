@@ -110,6 +110,8 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE TABLE IF NOT EXISTS markets (
   id TEXT PRIMARY KEY,                           -- Internal UUID
   polymarket_id TEXT NOT NULL UNIQUE,            -- Polymarket's ID
+  slug TEXT,                                     -- URL slug for Polymarket links
+  event_slug TEXT,                               -- Event slug for multi-outcome markets
   question TEXT NOT NULL,                        -- Market question
   description TEXT,                              -- Detailed description
   category TEXT,                                 -- e.g., 'Politics', 'Crypto'

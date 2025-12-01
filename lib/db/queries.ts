@@ -349,7 +349,9 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
     // Update
     db.prepare(`
       UPDATE markets
-      SET question = COALESCE(?, question),
+      SET slug = COALESCE(?, slug),
+          event_slug = COALESCE(?, event_slug),
+          question = COALESCE(?, question),
           description = COALESCE(?, description),
           category = COALESCE(?, category),
           market_type = COALESCE(?, market_type),
@@ -363,6 +365,8 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
           last_updated_at = CURRENT_TIMESTAMP
       WHERE polymarket_id = ?
     `).run(
+      market.slug,
+      market.event_slug,
       market.question,
       market.description,
       market.category,
@@ -384,12 +388,14 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
     
     db.prepare(`
       INSERT INTO markets (
-        id, polymarket_id, question, description, category, market_type,
+        id, polymarket_id, slug, event_slug, question, description, category, market_type,
         outcomes, close_date, status, current_price, current_prices, volume, liquidity
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       market.polymarket_id,
+      market.slug,
+      market.event_slug,
       market.question || '',
       market.description,
       market.category,

@@ -54,6 +54,7 @@ export interface PolymarketMarket {
  */
 export interface SimplifiedMarket {
   polymarket_id: string;
+  slug: string | null;           // URL slug for Polymarket links
   question: string;
   description: string | null;
   category: string | null;

@@ -68,6 +68,8 @@ export interface Agent {
 export interface Market {
   id: string;
   polymarket_id: string;
+  slug: string | null;
+  event_slug: string | null;
   question: string;
   description: string | null;
   category: string | null;

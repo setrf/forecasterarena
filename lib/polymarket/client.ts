@@ -151,8 +151,13 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     closeDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year from now
   }
   
+  // Get event slug (for multi-outcome markets, the event slug is what links to Polymarket)
+  const eventSlug = market.events?.[0]?.slug || null;
+  
   return {
     polymarket_id: market.id || market.conditionId || '',
+    slug: market.slug || null,
+    event_slug: eventSlug,
     question: market.question || 'Unknown question',
     description: market.description || null,
     category: market.category || null,
