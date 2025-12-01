@@ -204,7 +204,9 @@ CREATE TABLE IF NOT EXISTS trades (
   shares REAL NOT NULL,                          -- Number of shares
   price REAL NOT NULL,                           -- Price at execution
   total_amount REAL NOT NULL,                    -- Total $ amount
-  implied_confidence REAL,                       -- For Brier score
+  implied_confidence REAL,                       -- For Brier score (BUY only)
+  cost_basis REAL,                               -- Cost basis of shares (SELL only)
+  realized_pnl REAL,                             -- Realized P/L (SELL only)
   executed_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id),
   FOREIGN KEY (market_id) REFERENCES markets(id),

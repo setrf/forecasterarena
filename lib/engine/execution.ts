@@ -95,8 +95,32 @@ export function executeBet(
         : (1 - (market.current_price || 0.5));
     } else {
       // Multi-outcome: parse prices from JSON
-      const prices = JSON.parse(market.current_prices || '{}');
-      price = prices[bet.side] || 0.5;
+      // IMPORTANT: Don't default to 0.5 - reject if price is missing
+      try {
+        const prices = JSON.parse(market.current_prices || '{}');
+        const outcomePrice = prices[bet.side];
+        
+        if (outcomePrice === undefined || outcomePrice === null) {
+          return { 
+            success: false, 
+            error: `No price available for outcome "${bet.side}" in multi-outcome market` 
+          };
+        }
+        
+        price = parseFloat(outcomePrice);
+        
+        if (isNaN(price) || price < 0 || price > 1) {
+          return { 
+            success: false, 
+            error: `Invalid price ${outcomePrice} for outcome "${bet.side}"` 
+          };
+        }
+      } catch (e) {
+        return { 
+          success: false, 
+          error: `Failed to parse multi-outcome prices: ${e instanceof Error ? e.message : String(e)}` 
+        };
+      }
     }
     
     // Calculate shares (amount / price)
@@ -208,14 +232,40 @@ export function executeSell(
         ? (market.current_price || 0.5)
         : (1 - (market.current_price || 0.5));
     } else {
-      const prices = JSON.parse(market.current_prices || '{}');
-      currentPrice = prices[position.side] || 0.5;
+      // Multi-outcome: parse prices from JSON
+      try {
+        const prices = JSON.parse(market.current_prices || '{}');
+        const outcomePrice = prices[position.side];
+        
+        if (outcomePrice === undefined || outcomePrice === null) {
+          return { 
+            success: false, 
+            error: `No current price available for outcome "${position.side}"` 
+          };
+        }
+        
+        currentPrice = parseFloat(outcomePrice);
+        
+        if (isNaN(currentPrice) || currentPrice < 0 || currentPrice > 1) {
+          return { 
+            success: false, 
+            error: `Invalid current price ${outcomePrice} for outcome "${position.side}"` 
+          };
+        }
+      } catch (e) {
+        return { 
+          success: false, 
+          error: `Failed to parse multi-outcome prices: ${e instanceof Error ? e.message : String(e)}` 
+        };
+      }
     }
     
-    // Calculate proceeds
+    // Calculate proceeds and cost basis
     const proceeds = sharesToSell * currentPrice;
+    const costBasisSold = (sharesToSell / position.shares) * position.total_cost;
+    const realizedPnL = proceeds - costBasisSold;
     
-    // Record trade
+    // Record trade with P/L tracking
     const trade = createTrade({
       agent_id: agentId,
       market_id: market.id,
@@ -225,11 +275,10 @@ export function executeSell(
       side: position.side,
       shares: sharesToSell,
       price: currentPrice,
-      total_amount: proceeds
+      total_amount: proceeds,
+      cost_basis: costBasisSold,
+      realized_pnl: realizedPnL
     });
-    
-    // Calculate cost basis of shares sold
-    const costBasisSold = (sharesToSell / position.shares) * position.total_cost;
     
     // Reduce position
     reducePosition(position.id, sharesToSell);
@@ -247,7 +296,9 @@ export function executeSell(
       side: position.side,
       shares: sharesToSell,
       proceeds,
-      price: currentPrice
+      price: currentPrice,
+      cost_basis: costBasisSold,
+      realized_pnl: realizedPnL
     });
     
     return {

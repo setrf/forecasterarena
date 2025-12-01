@@ -242,12 +242,38 @@ export function createAgentsForCohort(cohortId: string): Agent[] {
 
 /**
  * Update agent balance after a trade
+ * 
+ * Status logic:
+ * - 'active': Can make new bets (has enough cash for minimum bet)
+ * - 'bankrupt': Zero value remaining (cash + invested = 0)
+ * - Note: An agent with $0 cash but open positions is still 'active'
+ *         because those positions may resolve profitably
  */
 export function updateAgentBalance(id: string, cashBalance: number, totalInvested: number): void {
   const db = getDb();
   
-  // Check for bankruptcy
-  const status = cashBalance <= 0 && totalInvested <= 0 ? 'bankrupt' : 'active';
+  // Import MIN_BET to check if agent can still trade
+  const MIN_BET = 50; // Hardcoded to avoid circular import
+  
+  // Determine status
+  let status: 'active' | 'bankrupt';
+  
+  if (cashBalance <= 0 && totalInvested <= 0) {
+    // Truly bankrupt: no cash and no positions
+    status = 'bankrupt';
+  } else {
+    // Still active - may have positions that could recover
+    status = 'active';
+  }
+  
+  // Log warning if agent can't afford minimum bet but isn't bankrupt
+  if (status === 'active' && cashBalance < MIN_BET && totalInvested > 0) {
+    console.warn(
+      `[Agent ${id}] Cannot afford minimum bet ($${MIN_BET}). ` +
+      `Cash: $${cashBalance.toFixed(2)}, Invested: $${totalInvested.toFixed(2)}. ` +
+      `Agent must wait for positions to resolve.`
+    );
+  }
   
   db.prepare(`
     UPDATE agents
@@ -575,6 +601,9 @@ export function updatePositionMTM(id: string, currentValue: number, unrealizedPn
 
 /**
  * Record a new trade
+ * 
+ * For BUY trades: Set implied_confidence for Brier scoring
+ * For SELL trades: Set cost_basis and realized_pnl for P/L tracking
  */
 export function createTrade(trade: {
   agent_id: string;
@@ -586,7 +615,9 @@ export function createTrade(trade: {
   shares: number;
   price: number;
   total_amount: number;
-  implied_confidence?: number;
+  implied_confidence?: number; // BUY only
+  cost_basis?: number;         // SELL only
+  realized_pnl?: number;       // SELL only
 }): Trade {
   const db = getDb();
   const id = generateId();
@@ -594,8 +625,9 @@ export function createTrade(trade: {
   db.prepare(`
     INSERT INTO trades (
       id, agent_id, market_id, position_id, decision_id,
-      trade_type, side, shares, price, total_amount, implied_confidence
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      trade_type, side, shares, price, total_amount, 
+      implied_confidence, cost_basis, realized_pnl
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     trade.agent_id,
@@ -607,7 +639,9 @@ export function createTrade(trade: {
     trade.shares,
     trade.price,
     trade.total_amount,
-    trade.implied_confidence
+    trade.implied_confidence,
+    trade.cost_basis,
+    trade.realized_pnl
   );
   
   return db.prepare('SELECT * FROM trades WHERE id = ?').get(id) as Trade;
@@ -992,13 +1026,21 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
     `).get(model.id) as { avg_brier: number | null };
     
     // Calculate win rate
+    // A "win" is when the model's bet side matches the winning outcome
+    // We need to join with trades to get the side, then compare with market resolution
     const winResult = db.prepare(`
       SELECT 
-        COUNT(CASE WHEN bs.actual_outcome = 1 THEN 1 END) as wins,
+        COUNT(CASE WHEN 
+          (t.side = 'YES' AND m.resolution_outcome = 'YES') OR
+          (t.side = 'NO' AND m.resolution_outcome = 'NO') OR
+          (t.side = m.resolution_outcome)
+        THEN 1 END) as wins,
         COUNT(*) as total
       FROM brier_scores bs
       JOIN agents a ON bs.agent_id = a.id
-      WHERE a.model_id = ?
+      JOIN trades t ON bs.trade_id = t.id
+      JOIN markets m ON bs.market_id = m.id
+      WHERE a.model_id = ? AND m.status = 'resolved'
     `).get(model.id) as { wins: number; total: number };
     
     leaderboard.push({

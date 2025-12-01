@@ -93,19 +93,36 @@ function settlePositionForMarket(
  * 
  * @param market - Resolved market
  * @param winningOutcome - The winning outcome
+ * @returns Number of Brier scores recorded
  */
 function recordBrierScoresForMarket(
   market: Market,
   winningOutcome: string
-): void {
+): number {
   const trades = getTradesByMarket(market.id);
+  let recorded = 0;
+  let skipped = 0;
   
   for (const trade of trades) {
     // Only score BUY trades (not SELLs)
     if (trade.trade_type !== 'BUY') continue;
     
-    // Skip if no implied confidence
+    // Skip if no implied confidence - but log a warning
     if (trade.implied_confidence === null || trade.implied_confidence === undefined) {
+      skipped++;
+      console.warn(
+        `[Brier] Skipping trade ${trade.id}: no implied_confidence recorded. ` +
+        `Market: "${market.question.slice(0, 40)}..."`
+      );
+      continue;
+    }
+    
+    // Validate implied confidence is in valid range
+    if (trade.implied_confidence < 0 || trade.implied_confidence > 1) {
+      skipped++;
+      console.warn(
+        `[Brier] Skipping trade ${trade.id}: invalid implied_confidence ${trade.implied_confidence}`
+      );
       continue;
     }
     
@@ -125,7 +142,19 @@ function recordBrierScoresForMarket(
       actual_outcome: trade.side.toUpperCase() === winningOutcome.toUpperCase() ? 1 : 0,
       brier_score: brierScore
     });
+    
+    recorded++;
   }
+  
+  if (skipped > 0) {
+    logSystemEvent('brier_scores_skipped', {
+      market_id: market.id,
+      skipped_count: skipped,
+      recorded_count: recorded
+    }, 'warning');
+  }
+  
+  return recorded;
 }
 
 /**

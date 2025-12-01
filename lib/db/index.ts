@@ -76,6 +76,7 @@ export function getDb(): Database.Database {
  * Initialize database schema
  * 
  * Creates all tables if they don't exist.
+ * Runs any pending migrations.
  * Seeds initial data.
  * 
  * @param database - Database connection
@@ -86,6 +87,9 @@ function initializeSchema(database: Database.Database): void {
   // Create all tables and indexes
   database.exec(SCHEMA_SQL);
   
+  // Run migrations for existing databases
+  runMigrations(database);
+  
   // Seed methodology version
   database.exec(SEED_METHODOLOGY_SQL);
   
@@ -93,6 +97,31 @@ function initializeSchema(database: Database.Database): void {
   database.exec(SEED_MODELS_SQL);
   
   console.log('[DB] Database schema initialized');
+}
+
+/**
+ * Run database migrations
+ * 
+ * Adds new columns to existing tables if they don't exist.
+ * This ensures existing databases are updated without data loss.
+ * 
+ * @param database - Database connection
+ */
+function runMigrations(database: Database.Database): void {
+  // Migration 1: Add cost_basis and realized_pnl columns to trades table
+  // These track P/L on partial sells
+  const tradesColumns = database.prepare(`PRAGMA table_info(trades)`).all() as Array<{ name: string }>;
+  const columnNames = tradesColumns.map(c => c.name);
+  
+  if (!columnNames.includes('cost_basis')) {
+    console.log('[DB] Migration: Adding cost_basis column to trades table');
+    database.exec(`ALTER TABLE trades ADD COLUMN cost_basis REAL`);
+  }
+  
+  if (!columnNames.includes('realized_pnl')) {
+    console.log('[DB] Migration: Adding realized_pnl column to trades table');
+    database.exec(`ALTER TABLE trades ADD COLUMN realized_pnl REAL`);
+  }
 }
 
 /**

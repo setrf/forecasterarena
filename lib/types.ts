@@ -110,6 +110,8 @@ export interface Position {
  * Trade - A buy or sell transaction
  * 
  * All transactions are recorded for audit trail and reproducibility.
+ * For BUY trades: implied_confidence is set for Brier scoring
+ * For SELL trades: cost_basis and realized_pnl are set for P/L tracking
  */
 export interface Trade {
   id: string;
@@ -122,7 +124,9 @@ export interface Trade {
   shares: number;
   price: number;
   total_amount: number;
-  implied_confidence: number | null;
+  implied_confidence: number | null; // BUY only: for Brier score
+  cost_basis: number | null;         // SELL only: cost basis of shares sold
+  realized_pnl: number | null;       // SELL only: proceeds - cost_basis
   executed_at: string;
 }
 

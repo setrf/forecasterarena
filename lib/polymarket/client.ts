@@ -139,7 +139,17 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     : null;
   
   // Handle different date field names from API
-  const closeDate = market.end_date_iso || market.endDateIso || market.endDate || new Date().toISOString();
+  // IMPORTANT: Don't default to now - log warning if date is missing
+  let closeDate = market.end_date_iso || market.endDateIso || market.endDate;
+  
+  if (!closeDate) {
+    console.warn(
+      `[Market ${market.id}] No close date found. Question: "${market.question?.slice(0, 50)}...". ` +
+      `Using far-future date as placeholder.`
+    );
+    // Use far-future date instead of "now" to avoid premature market closing
+    closeDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year from now
+  }
   
   return {
     polymarket_id: market.id || market.conditionId || '',
@@ -160,17 +170,60 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
 
 /**
  * Check if a market has resolved
+ * 
+ * IMPORTANT: Newer markets may not have a `tokens` array and instead use
+ * `outcomes` and `outcomePrices` as JSON strings. We handle both formats.
  */
 export function checkResolution(market: PolymarketMarket): MarketResolution {
   if (!market.resolved) return { resolved: false };
   
-  const winnerToken = market.tokens.find(t => t.winner === true);
-  if (winnerToken) {
-    return { resolved: true, winner: winnerToken.outcome.toUpperCase() };
+  // Method 1: Check tokens array (older format)
+  if (market.tokens && Array.isArray(market.tokens) && market.tokens.length > 0) {
+    // Look for winner flag
+    const winnerToken = market.tokens.find(t => t.winner === true);
+    if (winnerToken && winnerToken.outcome) {
+      return { resolved: true, winner: winnerToken.outcome.toUpperCase() };
+    }
+    
+    // Fallback: look for price = 1 (winning outcome)
+    const winnerByPrice = market.tokens.find(t => {
+      const price = parseFloat(t.price || '0');
+      return price === 1 || price >= 0.99;
+    });
+    if (winnerByPrice && winnerByPrice.outcome) {
+      return { resolved: true, winner: winnerByPrice.outcome.toUpperCase() };
+    }
   }
   
-  const winnerByPrice = market.tokens.find(t => parseFloat(t.price) === 1);
-  return { resolved: true, winner: winnerByPrice?.outcome.toUpperCase() };
+  // Method 2: Check outcomePrices (newer format - JSON string)
+  if (market.outcomePrices) {
+    try {
+      const outcomes = typeof market.outcomes === 'string' 
+        ? JSON.parse(market.outcomes) 
+        : market.outcomes || [];
+      const prices = typeof market.outcomePrices === 'string' 
+        ? JSON.parse(market.outcomePrices) 
+        : market.outcomePrices || [];
+      
+      if (Array.isArray(outcomes) && Array.isArray(prices)) {
+        for (let i = 0; i < prices.length; i++) {
+          const price = parseFloat(prices[i]);
+          if (price === 1 || price >= 0.99) {
+            const winner = outcomes[i];
+            if (winner) {
+              return { resolved: true, winner: winner.toUpperCase() };
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing outcomePrices for resolution:', e);
+    }
+  }
+  
+  // Market is resolved but we couldn't determine winner
+  console.warn(`Market ${market.id} is resolved but winner could not be determined`);
+  return { resolved: false };
 }
 
 /**
@@ -283,9 +336,10 @@ export async function fetchTopMarkets(limit: number = TOP_MARKETS_COUNT): Promis
   }
   
   // Sort by volume and take top N
+  // IMPORTANT: Prefer volumeNum (numeric) over volume (string) to avoid string comparison bugs
   allMarkets.sort((a, b) => {
-    const volA = parseFloat(String(a.volume || a.volumeNum || 0));
-    const volB = parseFloat(String(b.volume || b.volumeNum || 0));
+    const volA = a.volumeNum ?? (a.volume ? parseFloat(String(a.volume)) : 0);
+    const volB = b.volumeNum ?? (b.volume ? parseFloat(String(b.volume)) : 0);
     return volB - volA;
   });
   
