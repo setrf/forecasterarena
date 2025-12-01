@@ -60,6 +60,63 @@ Require session cookie from login. Cookie name: `forecaster_admin`
 
 ## Public Endpoints
 
+### GET /api/health
+
+Health check endpoint for monitoring system status.
+
+**Request:**
+```http
+GET /api/health
+```
+
+**Response (Healthy):**
+```json
+{
+  "status": "ok",
+  "timestamp": "2025-12-01T20:18:53.198Z",
+  "checks": {
+    "database": {
+      "status": "ok"
+    },
+    "environment": {
+      "status": "ok"
+    },
+    "data_integrity": {
+      "status": "ok"
+    }
+  }
+}
+```
+
+**Response (Unhealthy):**
+```json
+{
+  "status": "error",
+  "timestamp": "2025-12-01T20:18:53.198Z",
+  "checks": {
+    "database": {
+      "status": "error",
+      "message": "Database connection failed"
+    },
+    "environment": {
+      "status": "error",
+      "message": "Missing: OPENROUTER_API_KEY"
+    }
+  }
+}
+```
+
+**HTTP Status Codes:**
+- `200` - All checks passed
+- `503` - One or more checks failed
+
+**Use Cases:**
+- Uptime monitoring
+- Load balancer health checks
+- Automated alerting
+
+---
+
 ### GET /api/leaderboard
 
 Returns aggregate leaderboard across all cohorts.

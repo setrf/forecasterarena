@@ -580,6 +580,9 @@ pm2 start npm --name forecaster -- start
 | [SCORING.md](./docs/SCORING.md) | Brier Score and P/L formulas |
 | [API_REFERENCE.md](./docs/API_REFERENCE.md) | Complete API documentation |
 | [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Step-by-step deployment |
+| [DEPLOYMENT_CHECKLIST.md](./docs/DEPLOYMENT_CHECKLIST.md) | Pre-deployment checklist |
+| [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) | Troubleshooting guide |
+| [OPERATIONS.md](./docs/OPERATIONS.md) | Operations runbook |
 | [DECISIONS.md](./docs/DECISIONS.md) | Design decision rationale |
 
 ---
