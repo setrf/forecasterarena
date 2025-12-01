@@ -100,7 +100,7 @@ export default function CohortDetailPage() {
     
     // Build chart data
     return Array.from(allDates).sort().map(date => {
-      const point: Record<string, string | number> = { date };
+      const point: { date: string; [modelId: string]: string | number } = { date };
       Object.entries(equityCurves).forEach(([modelId, curve]) => {
         const dataPoint = curve.find(p => p.date === date);
         point[modelId] = dataPoint?.value || 10000;

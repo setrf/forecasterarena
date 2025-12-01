@@ -151,7 +151,9 @@ export default function PnLBarChart({
         <XAxis
           dataKey="model_name"
           stroke="var(--text-muted)"
-          tick={{ fill: 'var(--text-muted)', fontSize: 11, angle: -45, textAnchor: 'end' }}
+          tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+          angle={-45}
+          textAnchor="end"
           axisLine={{ stroke: 'var(--border-subtle)' }}
           height={60}
         />

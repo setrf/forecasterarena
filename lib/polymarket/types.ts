@@ -47,6 +47,7 @@ export interface PolymarketMarket {
   negRiskMarketID?: string;      // Parent negative risk market ID
   clobTokenIds?: string;         // CLOB token IDs (JSON string)
   groupItemTitle?: string;       // Title of item in a group (e.g., "Bad Bunny")
+  events?: PolymarketEvent[];    // Parent events (for multi-outcome markets)
 }
 
 /**
@@ -55,6 +56,7 @@ export interface PolymarketMarket {
 export interface SimplifiedMarket {
   polymarket_id: string;
   slug: string | null;           // URL slug for Polymarket links
+  event_slug: string | null;     // Event slug for multi-outcome markets
   question: string;
   description: string | null;
   category: string | null;

@@ -176,6 +176,24 @@ export const CRON_SECRET = process.env.CRON_SECRET || 'dev-secret';
  */
 export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 
+// Production security warnings
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.CRON_SECRET || CRON_SECRET === 'dev-secret') {
+    console.error('SECURITY WARNING: CRON_SECRET is not set or using default value!');
+    console.error('Set CRON_SECRET environment variable in production.');
+  }
+  
+  if (!process.env.ADMIN_PASSWORD || ADMIN_PASSWORD === 'admin') {
+    console.error('SECURITY WARNING: ADMIN_PASSWORD is not set or using default value!');
+    console.error('Set ADMIN_PASSWORD environment variable in production.');
+  }
+  
+  if (!OPENROUTER_API_KEY) {
+    console.error('SECURITY WARNING: OPENROUTER_API_KEY is not set!');
+    console.error('Set OPENROUTER_API_KEY environment variable.');
+  }
+}
+
 /**
  * Site URL for API headers
  */

@@ -6,6 +6,8 @@ import { useParams } from 'next/navigation';
 interface Market {
   id: string;
   polymarket_id: string;
+  slug: string | null;
+  event_slug: string | null;
   question: string;
   description: string | null;
   category: string | null;

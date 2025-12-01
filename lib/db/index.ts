@@ -168,6 +168,14 @@ export function getDbStats(): Record<string, number> {
   const stats: Record<string, number> = {};
   
   for (const table of tables) {
+    // Validate table name to prevent SQL injection (whitelist approach)
+    const validTables = [
+      'cohorts', 'models', 'agents', 'markets', 'positions', 'trades',
+      'decisions', 'portfolio_snapshots', 'brier_scores', 'system_logs'
+    ];
+    if (!validTables.includes(table)) {
+      throw new Error(`Invalid table name: ${table}`);
+    }
     const result = database.prepare(`SELECT COUNT(*) as count FROM ${table}`).get() as { count: number };
     stats[table] = result.count;
   }

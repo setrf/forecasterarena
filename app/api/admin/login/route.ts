@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ADMIN_PASSWORD } from '@/lib/constants';
 import { logSystemEvent } from '@/lib/db';
+import { verifyAdminPassword } from '@/lib/utils/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (password !== ADMIN_PASSWORD) {
+    // Constant-time comparison to prevent timing attacks
+    if (!verifyAdminPassword(password, ADMIN_PASSWORD)) {
       logSystemEvent('admin_login_failed', {
         ip: request.headers.get('x-forwarded-for') || 'unknown'
       }, 'warning');
