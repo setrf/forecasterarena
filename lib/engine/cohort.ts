@@ -14,7 +14,8 @@ import {
   getCohortById,
   completeCohort,
   getAgentsByCohort,
-  getOpenPositions
+  getOpenPositions,
+  getTotalDecisionsForCohort
 } from '../db/queries';
 import type { Cohort, Agent } from '../types';
 
@@ -105,6 +106,13 @@ export function isCohortComplete(cohortId: string): boolean {
     if (openPositions.length > 0) {
       return false;
     }
+  }
+  
+  // Additional check: ensure at least some trading activity occurred
+  // A cohort with no trades shouldn't be auto-completed
+  const totalDecisions = getTotalDecisionsForCohort(cohortId);
+  if (totalDecisions === 0) {
+    return false;
   }
   
   return true;

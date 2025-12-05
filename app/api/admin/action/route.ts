@@ -13,6 +13,7 @@ import { ADMIN_PASSWORD, CRON_SECRET } from '@/lib/constants';
 import { maybeStartNewCohort } from '@/lib/engine/cohort';
 import { syncMarkets } from '@/lib/engine/market';
 import { logSystemEvent } from '@/lib/db';
+import { checkAndCompleteCohorts } from '@/lib/engine/cohort';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,26 +95,40 @@ export async function POST(request: NextRequest) {
                 });
             }
 
+            case 'check-cohorts': {
+                const { checkAndCompleteCohorts } = await import('@/lib/engine/cohort');
+                const completedCount = checkAndCompleteCohorts();
+                
+                logSystemEvent('admin_check_cohorts', {
+                    cohorts_checked: completedCount
+                }, 'info');
+                
+                return NextResponse.json({
+                    success: true,
+                    cohorts_completed: completedCount
+                });
+            }
+            
             case 'backup': {
                 // Import backup function dynamically to avoid issues
                 const fs = await import('fs');
                 const path = await import('path');
-
+                
                 const dbPath = path.join(process.cwd(), 'data', 'forecaster.db');
                 const backupDir = path.join(process.cwd(), 'data', 'backups');
-
+                
                 // Create backups directory if it doesn't exist
                 if (!fs.existsSync(backupDir)) {
                     fs.mkdirSync(backupDir, { recursive: true });
                 }
-
+                
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
                 const backupPath = path.join(backupDir, `forecaster_${timestamp}.db`);
-
+                
                 fs.copyFileSync(dbPath, backupPath);
-
+                
                 logSystemEvent('admin_backup', { backup_path: backupPath }, 'info');
-
+                
                 return NextResponse.json({
                     success: true,
                     backup_path: backupPath
