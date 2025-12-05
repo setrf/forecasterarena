@@ -2,7 +2,7 @@
  * Market Sync Cron Endpoint
  * 
  * Syncs markets from Polymarket API to local database.
- * Schedule: Every 6 hours
+ * Schedule: Every 10 minutes
  * 
  * @route POST /api/cron/sync-markets
  */

@@ -192,8 +192,8 @@ Responsibilities:
 ## Cron Schedule
 
 ```bash
-# Sync markets every 6 hours
-0 */6 * * * /api/cron/sync-markets
+# Sync markets every 10 minutes
+*/10 * * * * /api/cron/sync-markets
 
 # Start new cohort every Sunday at 00:00 UTC
 0 0 * * 0 /api/cron/start-cohort
@@ -201,8 +201,8 @@ Responsibilities:
 # Run decisions every Sunday at 00:00 UTC
 0 0 * * 0 /api/cron/run-decisions
 
-# Check resolutions every hour
-0 * * * * /api/cron/check-resolutions
+# Check resolutions every 10 minutes
+*/10 * * * * /api/cron/check-resolutions
 
 # Take snapshots daily at 00:00 UTC
 0 0 * * * /api/cron/take-snapshots
