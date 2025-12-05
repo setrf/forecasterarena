@@ -26,23 +26,23 @@ export async function fetchMarkets(
   // Use volumeNum for proper volume sorting (API quirk)
   url.searchParams.set('order', 'volumeNum');
   url.searchParams.set('ascending', 'false');
-  
+
   console.log(`Fetching markets from Polymarket: ${url}`);
-  
+
   const response = await fetch(url.toString(), {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
-  
+
   if (!response.ok) {
     throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   const markets = Array.isArray(data) ? data : data.markets || [];
-  
+
   console.log(`Fetched ${markets.length} markets from Polymarket`);
-  
+
   return markets as PolymarketMarket[];
 }
 
@@ -51,17 +51,17 @@ export async function fetchMarkets(
  */
 export async function fetchMarketById(marketId: string): Promise<PolymarketMarket | null> {
   const url = `${POLYMARKET_GAMMA_API_HOST}/markets/${marketId}`;
-  
+
   const response = await fetch(url, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
-  
+
   if (response.status === 404) return null;
   if (!response.ok) {
     throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
   }
-  
+
   return await response.json() as PolymarketMarket;
 }
 
@@ -76,7 +76,7 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
   // Parse outcomes and prices from JSON strings (actual API format)
   let outcomesList: string[] = [];
   let pricesList: string[] = [];
-  
+
   try {
     // Handle both formats: JSON string or array
     if (typeof market.outcomes === 'string') {
@@ -84,7 +84,7 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     } else if (Array.isArray(market.outcomes)) {
       outcomesList = market.outcomes;
     }
-    
+
     if (typeof market.outcomePrices === 'string') {
       pricesList = JSON.parse(market.outcomePrices);
     } else if (Array.isArray(market.outcomePrices)) {
@@ -96,14 +96,14 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     outcomesList = tokens.map(t => t.outcome).filter(Boolean);
     pricesList = tokens.map(t => t.price).filter(Boolean);
   }
-  
-  const isBinary = outcomesList.length === 2 && 
+
+  const isBinary = outcomesList.length === 2 &&
     outcomesList.some(o => o?.toLowerCase() === 'yes') &&
     outcomesList.some(o => o?.toLowerCase() === 'no');
-  
+
   let currentPrice: number | null = null;
   let currentPrices: string | null = null;
-  
+
   if (outcomesList.length > 0 && pricesList.length > 0) {
     if (isBinary) {
       // Find YES price
@@ -129,19 +129,19 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
       currentPrices = Object.keys(prices).length > 0 ? JSON.stringify(prices) : null;
     }
   }
-  
+
   let status: 'active' | 'closed' | 'resolved' = 'active';
   if (market.resolved) status = 'resolved';
   else if (market.closed) status = 'closed';
-  
+
   const outcomes = !isBinary && outcomesList.length > 0
     ? JSON.stringify(outcomesList)
     : null;
-  
+
   // Handle different date field names from API
   // IMPORTANT: Don't default to now - log warning if date is missing
   let closeDate = market.end_date_iso || market.endDateIso || market.endDate;
-  
+
   if (!closeDate) {
     console.warn(
       `[Market ${market.id}] No close date found. Question: "${market.question?.slice(0, 50)}...". ` +
@@ -150,10 +150,10 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     // Use far-future date instead of "now" to avoid premature market closing
     closeDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year from now
   }
-  
+
   // Get event slug (for multi-outcome markets, the event slug is what links to Polymarket)
   const eventSlug = market.events?.[0]?.slug || null;
-  
+
   return {
     polymarket_id: market.id || market.conditionId || '',
     slug: market.slug || null,
@@ -181,7 +181,7 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
  */
 export function checkResolution(market: PolymarketMarket): MarketResolution {
   if (!market.resolved) return { resolved: false };
-  
+
   // Method 1: Check tokens array (older format)
   if (market.tokens && Array.isArray(market.tokens) && market.tokens.length > 0) {
     // Look for winner flag
@@ -189,7 +189,7 @@ export function checkResolution(market: PolymarketMarket): MarketResolution {
     if (winnerToken && winnerToken.outcome) {
       return { resolved: true, winner: winnerToken.outcome.toUpperCase() };
     }
-    
+
     // Fallback: look for price = 1 (winning outcome)
     const winnerByPrice = market.tokens.find(t => {
       const price = parseFloat(t.price || '0');
@@ -199,17 +199,17 @@ export function checkResolution(market: PolymarketMarket): MarketResolution {
       return { resolved: true, winner: winnerByPrice.outcome.toUpperCase() };
     }
   }
-  
+
   // Method 2: Check outcomePrices (newer format - JSON string)
   if (market.outcomePrices) {
     try {
-      const outcomes = typeof market.outcomes === 'string' 
-        ? JSON.parse(market.outcomes) 
+      const outcomes = typeof market.outcomes === 'string'
+        ? JSON.parse(market.outcomes)
         : market.outcomes || [];
-      const prices = typeof market.outcomePrices === 'string' 
-        ? JSON.parse(market.outcomePrices) 
+      const prices = typeof market.outcomePrices === 'string'
+        ? JSON.parse(market.outcomePrices)
         : market.outcomePrices || [];
-      
+
       if (Array.isArray(outcomes) && Array.isArray(prices)) {
         for (let i = 0; i < prices.length; i++) {
           const price = parseFloat(prices[i]);
@@ -225,7 +225,7 @@ export function checkResolution(market: PolymarketMarket): MarketResolution {
       console.error('Error parsing outcomePrices for resolution:', e);
     }
   }
-  
+
   // Market is resolved but we couldn't determine winner
   console.warn(`Market ${market.id} is resolved but winner could not be determined`);
   return { resolved: false };
@@ -247,18 +247,18 @@ export async function fetchEvents(
   url.searchParams.set('order', 'volume');
   url.searchParams.set('ascending', 'false');
   url.searchParams.set('closed', 'false');
-  
+
   console.log(`Fetching events from Polymarket: ${url}`);
-  
+
   const response = await fetch(url.toString(), {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
-  
+
   if (!response.ok) {
     throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return Array.isArray(data) ? data : [];
 }
@@ -269,17 +269,17 @@ export async function fetchEvents(
  */
 export async function fetchEventBySlug(slug: string): Promise<PolymarketEvent | null> {
   const url = `${POLYMARKET_GAMMA_API_HOST}/events/slug/${slug}`;
-  
+
   const response = await fetch(url, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
   });
-  
+
   if (response.status === 404) return null;
   if (!response.ok) {
     throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
   }
-  
+
   return await response.json();
 }
 
@@ -295,7 +295,7 @@ export async function fetchEventBySlug(slug: string): Promise<PolymarketEvent | 
 export async function fetchMarketsFromEvents(limit: number = 100): Promise<PolymarketMarket[]> {
   const events = await fetchEvents(limit);
   const allMarkets: PolymarketMarket[] = [];
-  
+
   for (const event of events) {
     if (event.markets && Array.isArray(event.markets)) {
       for (const market of event.markets) {
@@ -308,7 +308,7 @@ export async function fetchMarketsFromEvents(limit: number = 100): Promise<Polym
       }
     }
   }
-  
+
   console.log(`Extracted ${allMarkets.length} active markets from ${events.length} events`);
   return allMarkets;
 }
@@ -327,11 +327,11 @@ export async function fetchTopMarkets(limit: number = TOP_MARKETS_COUNT): Promis
     fetchMarkets(limit),
     fetchMarketsFromEvents(Math.max(50, limit)) // Fetch at least 50 events for good coverage
   ]);
-  
+
   // Combine and deduplicate by polymarket_id
   const seen = new Set<string>();
   const allMarkets: PolymarketMarket[] = [];
-  
+
   for (const market of [...directMarkets, ...eventMarkets]) {
     const id = market.id || market.conditionId || '';
     if (id && !seen.has(id)) {
@@ -339,7 +339,7 @@ export async function fetchTopMarkets(limit: number = TOP_MARKETS_COUNT): Promis
       allMarkets.push(market);
     }
   }
-  
+
   // Sort by volume and take top N
   // IMPORTANT: Prefer volumeNum (numeric) over volume (string) to avoid string comparison bugs
   allMarkets.sort((a, b) => {
@@ -347,7 +347,7 @@ export async function fetchTopMarkets(limit: number = TOP_MARKETS_COUNT): Promis
     const volB = b.volumeNum ?? (b.volume ? parseFloat(String(b.volume)) : 0);
     return volB - volA;
   });
-  
+
   return allMarkets.slice(0, limit).map(simplifyMarket);
 }
 
@@ -359,10 +359,10 @@ export async function checkMultipleResolutions(
 ): Promise<Map<string, MarketResolution>> {
   const results = new Map<string, MarketResolution>();
   const batchSize = 10;
-  
+
   for (let i = 0; i < polymarketIds.length; i += batchSize) {
     const batch = polymarketIds.slice(i, i + batchSize);
-    
+
     const promises = batch.map(async (id) => {
       try {
         const market = await fetchMarketById(id);
@@ -371,14 +371,14 @@ export async function checkMultipleResolutions(
         console.error(`Error checking resolution for ${id}:`, error);
       }
     });
-    
+
     await Promise.all(promises);
-    
+
     if (i + batchSize < polymarketIds.length) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
-  
+
   return results;
 }
 

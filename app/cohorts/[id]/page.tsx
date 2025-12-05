@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import PerformanceChart from '@/components/charts/PerformanceChart';
+import DecisionFeed from '@/components/DecisionFeed';
 import { MODELS } from '@/lib/constants';
 
 interface Cohort {
@@ -42,12 +43,15 @@ interface CohortStats {
 
 interface Decision {
   id: string;
+  agent_id: string;
+  cohort_id: string;
   decision_week: number;
   decision_timestamp: string;
   action: string;
   reasoning: string | null;
   model_display_name: string;
   model_color: string;
+  cohort_number?: number;
 }
 
 export default function CohortDetailPage() {
@@ -91,16 +95,16 @@ export default function CohortDetailPage() {
   // Transform equity curves for chart
   const chartData = useMemo(() => {
     if (Object.keys(equityCurves).length === 0) return [];
-    
+
     // Get all unique dates
     const allDates = new Set<string>();
     Object.values(equityCurves).forEach(curve => {
       curve.forEach(point => allDates.add(point.date));
     });
-    
+
     // Build chart data
     return Array.from(allDates).sort().map(date => {
-      const point: { date: string; [modelId: string]: string | number } = { date };
+      const point: { date: string;[modelId: string]: string | number } = { date };
       Object.entries(equityCurves).forEach(([modelId, curve]) => {
         const dataPoint = curve.find(p => p.date === date);
         point[modelId] = dataPoint?.value || 10000;
@@ -238,7 +242,7 @@ export default function CohortDetailPage() {
                   <td className="text-[var(--text-muted)]">{i + 1}</td>
                   <td>
                     <div className="flex items-center gap-2">
-                      <div 
+                      <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: agent.model_color }}
                       />
@@ -282,36 +286,7 @@ export default function CohortDetailPage() {
             No decisions yet. Decisions are made every Sunday at 00:00 UTC.
           </p>
         ) : (
-          <div className="space-y-4">
-            {decisions.map((decision) => (
-              <div key={decision.id} className="p-4 bg-[var(--bg-tertiary)] rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: decision.model_color }}
-                    />
-                    <span className="font-medium">{decision.model_display_name}</span>
-                    <span className={`badge ${
-                      decision.action === 'BET' ? 'badge-active' :
-                      decision.action === 'SELL' ? 'badge-pending' :
-                      ''
-                    }`}>
-                      {decision.action}
-                    </span>
-                  </div>
-                  <span className="text-sm text-[var(--text-muted)]">
-                    Week {decision.decision_week} • {formatDate(decision.decision_timestamp)}
-                  </span>
-                </div>
-                {decision.reasoning && (
-                  <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
-                    {decision.reasoning}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
+          <DecisionFeed decisions={decisions} showCohort={false} />
         )}
       </div>
 

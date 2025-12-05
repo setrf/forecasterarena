@@ -54,21 +54,21 @@ export function getDb(): Database.Database {
   }
 
   console.log('[DB] Connecting to database:', DB_PATH);
-  
+
   // Create database connection
   db = new Database(DB_PATH);
-  
+
   // Enable foreign keys (disabled by default in SQLite)
   db.pragma('foreign_keys = ON');
-  
+
   // Enable WAL mode for better concurrent access
   db.pragma('journal_mode = WAL');
-  
+
   // Initialize schema if needed
   initializeSchema(db);
-  
+
   console.log('[DB] Database connection established');
-  
+
   return db;
 }
 
@@ -82,16 +82,16 @@ export function getDb(): Database.Database {
  */
 function initializeSchema(database: Database.Database): void {
   console.log('[DB] Initializing database schema...');
-  
+
   // Create all tables and indexes
   database.exec(SCHEMA_SQL);
-  
+
   // Seed methodology version
   database.exec(SEED_METHODOLOGY_SQL);
-  
+
   // Seed models
   database.exec(SEED_MODELS_SQL);
-  
+
   console.log('[DB] Database schema initialized');
 }
 
@@ -131,16 +131,16 @@ export function createBackup(): string {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const backupFilename = `forecaster-${timestamp}.db`;
   const backupPath = path.join(BACKUP_PATH, backupFilename);
-  
+
   // Use SQLite's backup API for consistency
   const database = getDb();
   database.backup(backupPath);
-  
+
   console.log(`[DB] Backup created: ${backupPath}`);
-  
+
   // Clean up old backups (keep last 30 days)
   cleanupOldBackups();
-  
+
   return backupPath;
 }
 
@@ -155,7 +155,7 @@ function cleanupOldBackups(): void {
     if (!fs.existsSync(BACKUP_PATH)) {
       return;
     }
-    
+
     const files = fs.readdirSync(BACKUP_PATH)
       .filter(file => file.startsWith('forecaster-') && file.endsWith('.db'))
       .map(file => ({
@@ -164,14 +164,14 @@ function cleanupOldBackups(): void {
         mtime: fs.statSync(path.join(BACKUP_PATH, file)).mtime
       }))
       .sort((a, b) => b.mtime.getTime() - a.mtime.getTime()); // Newest first
-    
+
     if (files.length <= 10) {
       return; // Keep all if 10 or fewer
     }
-    
+
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
     let deletedCount = 0;
-    
+
     // Delete backups older than 30 days, but keep at least 10 most recent
     for (let i = 10; i < files.length; i++) {
       const file = files[i];
@@ -180,7 +180,7 @@ function cleanupOldBackups(): void {
         deletedCount++;
       }
     }
-    
+
     if (deletedCount > 0) {
       console.log(`[DB] Cleaned up ${deletedCount} old backup(s)`);
     }
@@ -199,7 +199,7 @@ function cleanupOldBackups(): void {
  */
 export function getDbStats(): Record<string, number> {
   const database = getDb();
-  
+
   const tables = [
     'cohorts',
     'models',
@@ -213,14 +213,14 @@ export function getDbStats(): Record<string, number> {
     'api_costs',
     'system_logs'
   ];
-  
+
   const stats: Record<string, number> = {};
-  
+
   for (const table of tables) {
     // Validate table name to prevent SQL injection (whitelist approach)
     const validTables = [
       'cohorts', 'models', 'agents', 'markets', 'positions', 'trades',
-      'decisions', 'portfolio_snapshots', 'brier_scores', 'system_logs'
+      'decisions', 'portfolio_snapshots', 'brier_scores', 'system_logs', 'api_costs'
     ];
     if (!validTables.includes(table)) {
       throw new Error(`Invalid table name: ${table}`);
@@ -228,7 +228,7 @@ export function getDbStats(): Record<string, number> {
     const result = database.prepare(`SELECT COUNT(*) as count FROM ${table}`).get() as { count: number };
     stats[table] = result.count;
   }
-  
+
   return stats;
 }
 
@@ -245,7 +245,7 @@ export function logSystemEvent(
   severity: 'info' | 'warning' | 'error' = 'info'
 ): void {
   const database = getDb();
-  
+
   database.prepare(`
     INSERT INTO system_logs (id, event_type, event_data, severity)
     VALUES (?, ?, ?, ?)

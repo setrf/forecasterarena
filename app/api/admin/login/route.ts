@@ -21,35 +21,38 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { password } = body;
-    
+
     if (!password) {
       return NextResponse.json(
         { error: 'Password required' },
         { status: 400 }
       );
     }
-    
+
     // Constant-time comparison to prevent timing attacks
     if (!verifyAdminPassword(password, ADMIN_PASSWORD)) {
       logSystemEvent('admin_login_failed', {
         ip: request.headers.get('x-forwarded-for') || 'unknown'
       }, 'warning');
-      
+
       return NextResponse.json(
         { error: 'Invalid password' },
         { status: 401 }
       );
     }
-    
-    // Generate a simple session token
-    const token = Buffer.from(`admin:${Date.now()}`).toString('base64');
-    
+
+    // Generate a signed session token
+    const crypto = await import('crypto');
+    const payload = `admin:${Date.now()}`;
+    const signature = crypto.createHmac('sha256', ADMIN_PASSWORD).update(payload).digest('hex');
+    const token = Buffer.from(`${payload}:${signature}`).toString('base64');
+
     logSystemEvent('admin_login_success', {
       ip: request.headers.get('x-forwarded-for') || 'unknown'
     });
-    
+
     const response = NextResponse.json({ success: true });
-    
+
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -57,12 +60,12 @@ export async function POST(request: NextRequest) {
       maxAge: COOKIE_MAX_AGE,
       path: '/'
     });
-    
+
     return response;
-    
+
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    
+
     return NextResponse.json(
       { error: message },
       { status: 500 }
@@ -73,9 +76,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   // Logout
   const response = NextResponse.json({ success: true });
-  
+
   response.cookies.delete(COOKIE_NAME);
-  
+
   return response;
 }
 

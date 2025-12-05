@@ -182,15 +182,14 @@ if (process.env.NODE_ENV === 'production') {
     console.error('SECURITY WARNING: CRON_SECRET is not set or using default value!');
     console.error('Set CRON_SECRET environment variable in production.');
   }
-  
+
   if (!process.env.ADMIN_PASSWORD || ADMIN_PASSWORD === 'admin') {
     console.error('SECURITY WARNING: ADMIN_PASSWORD is not set or using default value!');
     console.error('Set ADMIN_PASSWORD environment variable in production.');
   }
-  
+
   if (!OPENROUTER_API_KEY) {
-    console.error('SECURITY WARNING: OPENROUTER_API_KEY is not set!');
-    console.error('Set OPENROUTER_API_KEY environment variable.');
+    throw new Error('OPENROUTER_API_KEY is required in production');
   }
 }
 
@@ -321,21 +320,21 @@ export function validateBetAmount(amount: number, cashBalance: number): {
   if (amount < MIN_BET) {
     return { valid: false, error: `Minimum bet is $${MIN_BET}` };
   }
-  
+
   const maxBet = calculateMaxBet(cashBalance);
-  
+
   if (amount > maxBet) {
-    return { 
-      valid: true, 
+    return {
+      valid: true,
       adjustedAmount: maxBet,
       error: `Amount capped to maximum of $${maxBet.toFixed(2)} (25% of balance)`
     };
   }
-  
+
   if (amount > cashBalance) {
     return { valid: false, error: 'Insufficient balance' };
   }
-  
+
   return { valid: true };
 }
 

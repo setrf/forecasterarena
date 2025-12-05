@@ -35,6 +35,7 @@ interface Position {
   total_cost: number;
   current_value: number | null;
   unrealized_pnl: number | null;
+  decision_id: string | null;
 }
 
 interface Trade {
@@ -47,6 +48,7 @@ interface Trade {
   executed_at: string;
   model_display_name: string;
   model_color: string;
+  decision_id: string | null;
 }
 
 interface BrierScore {
@@ -199,7 +201,7 @@ export default function MarketDetailPage() {
               </div>
             </div>
             <div className="h-4 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-[var(--accent-emerald)] to-[var(--accent-blue)]"
                 style={{ width: `${(market.current_price || 0.5) * 100}%` }}
               />
@@ -251,26 +253,30 @@ export default function MarketDetailPage() {
               </thead>
               <tbody>
                 {positions.map((pos) => (
-                  <tr key={pos.id}>
-                    <td>
+                  <tr
+                    key={pos.id}
+                    className={`border-b border-[var(--border-subtle)] last:border-0 ${pos.decision_id && pos.decision_id.length > 5 ? 'cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors' : ''}`}
+                    onClick={() => pos.decision_id && window.location.assign(`/decisions/${pos.decision_id}`)}
+                  >
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <div 
+                        <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: pos.model_color }}
                         />
                         {pos.model_display_name}
                       </div>
                     </td>
-                    <td>
+                    <td className="py-3 px-4">
                       <span className={pos.side === 'YES' ? 'text-positive' : 'text-negative'}>
                         {pos.side}
                       </span>
                     </td>
-                    <td className="text-right font-mono">{pos.shares.toFixed(2)}</td>
-                    <td className="text-right font-mono">{formatPrice(pos.avg_entry_price)}</td>
-                    <td className="text-right font-mono">{formatCurrency(pos.total_cost)}</td>
-                    <td className="text-right font-mono">{formatCurrency(pos.current_value)}</td>
-                    <td className="text-right font-mono">
+                    <td className="text-right font-mono py-3 px-4">{pos.shares.toFixed(2)}</td>
+                    <td className="text-right font-mono py-3 px-4">{formatPrice(pos.avg_entry_price)}</td>
+                    <td className="text-right font-mono py-3 px-4">{formatCurrency(pos.total_cost)}</td>
+                    <td className="text-right font-mono py-3 px-4">{formatCurrency(pos.current_value)}</td>
+                    <td className="text-right font-mono py-3 px-4">
                       <span className={(pos.unrealized_pnl || 0) >= 0 ? 'text-positive' : 'text-negative'}>
                         {pos.unrealized_pnl !== null ? `${pos.unrealized_pnl >= 0 ? '+' : ''}${formatCurrency(pos.unrealized_pnl)}` : 'N/A'}
                       </span>
@@ -304,7 +310,7 @@ export default function MarketDetailPage() {
                     <td className="text-[var(--text-muted)]">{i + 1}</td>
                     <td>
                       <div className="flex items-center gap-2">
-                        <div 
+                        <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: score.model_color }}
                         />
@@ -349,13 +355,17 @@ export default function MarketDetailPage() {
               </thead>
               <tbody>
                 {trades.map((trade) => (
-                  <tr key={trade.id}>
+                  <tr
+                    key={trade.id}
+                    className={`border-b border-[var(--border-subtle)] last:border-0 ${trade.decision_id ? 'cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors' : ''}`}
+                    onClick={() => trade.decision_id && window.location.assign(`/decisions/${trade.decision_id}`)}
+                  >
                     <td className="text-[var(--text-muted)] text-sm">
                       {formatDate(trade.executed_at)}
                     </td>
                     <td>
                       <div className="flex items-center gap-2">
-                        <div 
+                        <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: trade.model_color }}
                         />
@@ -382,7 +392,7 @@ export default function MarketDetailPage() {
       {/* External Link */}
       {(market.event_slug || market.slug) && (
         <div className="mt-8 text-center">
-          <a 
+          <a
             href={`https://polymarket.com/event/${market.event_slug || market.slug}`}
             target="_blank"
             rel="noopener noreferrer"

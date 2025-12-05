@@ -173,9 +173,22 @@ export default function AdminLogsPage() {
             const eventData = formatEventData(log.event_data);
             
             return (
-              <div key={log.id} className="p-4 hover:bg-[var(--bg-secondary)] transition-colors">
+              <div 
+                key={log.id} 
+                className="p-4 hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
+                onClick={() => setExpandedId(isExpanded ? null : log.id)}
+              >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
+                    {/* Chevron indicator */}
+                    <svg 
+                      className={`w-4 h-4 text-[var(--text-muted)] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                     <div className={`w-2 h-2 rounded-full ${style.dot}`} />
                     <span className={`px-2 py-0.5 text-xs font-medium rounded ${style.bg} ${style.text}`}>
                       {log.severity.toUpperCase()}
@@ -187,24 +200,20 @@ export default function AdminLogsPage() {
                   </span>
                 </div>
                 
-                {eventData && (
-                  <div>
+                {eventData && isExpanded && (
+                  <div className="mt-3 ml-7">
                     <pre 
-                      className={`text-sm text-[var(--text-secondary)] bg-[var(--bg-tertiary)] p-3 rounded-lg overflow-x-auto ${
-                        isExpanded ? '' : 'max-h-20 overflow-hidden'
-                      }`}
+                      className="text-sm text-[var(--text-secondary)] bg-[var(--bg-tertiary)] p-3 rounded-lg overflow-x-auto"
                     >
                       {JSON.stringify(eventData, null, 2)}
                     </pre>
-                    {JSON.stringify(eventData).length > 200 && (
-                      <button
-                        onClick={() => setExpandedId(isExpanded ? null : log.id)}
-                        className="text-xs text-[var(--accent-blue)] hover:underline mt-1"
-                      >
-                        {isExpanded ? 'Collapse' : 'Expand'}
-                      </button>
-                    )}
                   </div>
+                )}
+                
+                {!isExpanded && eventData && (
+                  <p className="text-sm text-[var(--text-muted)] ml-7 truncate">
+                    Click to view details...
+                  </p>
                 )}
               </div>
             );

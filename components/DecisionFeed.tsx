@@ -12,7 +12,7 @@ interface Decision {
   reasoning: string | null;
   model_display_name: string;
   model_color: string;
-  cohort_number: number;
+  cohort_number?: number;
 }
 
 interface DecisionFeedProps {
@@ -20,19 +20,27 @@ interface DecisionFeedProps {
   showCohort?: boolean;
   autoRefresh?: boolean;
   className?: string;
+  decisions?: Decision[];
 }
 
 export default function DecisionFeed({
   limit = 10,
   showCohort = true,
   autoRefresh = false,
-  className = ''
+  className = '',
+  decisions: initialDecisions
 }: DecisionFeedProps) {
-  const [decisions, setDecisions] = useState<Decision[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [decisions, setDecisions] = useState<Decision[]>(initialDecisions || []);
+  const [loading, setLoading] = useState(!initialDecisions);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialDecisions) {
+      setDecisions(initialDecisions);
+      setLoading(false);
+      return;
+    }
+
     async function fetchDecisions() {
       try {
         const res = await fetch(`/api/decisions/recent?limit=${limit}`);
@@ -53,22 +61,22 @@ export default function DecisionFeed({
       const interval = setInterval(fetchDecisions, 30000); // 30 seconds
       return () => clearInterval(interval);
     }
-  }, [limit, autoRefresh]);
+  }, [limit, autoRefresh, initialDecisions]);
 
   function formatTime(dateStr: string): string {
     const date = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    
+
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    
+
     if (minutes < 1) return 'just now';
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
-    
+
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
@@ -115,16 +123,18 @@ export default function DecisionFeed({
       {decisions.map((decision) => {
         const actionStyle = getActionStyle(decision.action);
         const isExpanded = expandedId === decision.id;
-        
+        const hasReasoning = decision.reasoning && decision.reasoning.trim().length > 0;
+
         return (
-          <div 
-            key={decision.id} 
-            className="p-4 bg-[var(--bg-tertiary)] rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
+          <div
+            key={decision.id}
+            className={`p-4 bg-[var(--bg-tertiary)] rounded-lg transition-colors ${hasReasoning ? 'cursor-pointer hover:bg-[var(--bg-secondary)]' : ''}`}
+            onClick={() => hasReasoning && setExpandedId(isExpanded ? null : decision.id)}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div 
+                <div
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: decision.model_color }}
                 />
@@ -133,11 +143,23 @@ export default function DecisionFeed({
                   {decision.action}
                 </span>
               </div>
-              <span className="text-xs text-[var(--text-muted)]">
-                {formatTime(decision.decision_timestamp)}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--text-muted)]">
+                  {formatTime(decision.decision_timestamp)}
+                </span>
+                {hasReasoning && (
+                  <svg
+                    className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </div>
             </div>
-            
+
             {/* Meta */}
             <div className="flex items-center gap-3 text-xs text-[var(--text-muted)] mb-2">
               {showCohort && (
@@ -145,24 +167,33 @@ export default function DecisionFeed({
               )}
               <span>Week {decision.decision_week}</span>
             </div>
-            
-            {/* Reasoning */}
-            {decision.reasoning && (
-              <div>
-                <p 
-                  className={`text-sm text-[var(--text-secondary)] ${isExpanded ? '' : 'line-clamp-2'}`}
-                >
-                  {decision.reasoning}
-                </p>
-                {decision.reasoning.length > 150 && (
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : decision.id)}
-                    className="text-xs text-[var(--accent-blue)] hover:underline mt-1"
-                  >
-                    {isExpanded ? 'Show less' : 'Show more'}
-                  </button>
+
+            {/* Reasoning - Preview or Full */}
+            {hasReasoning && (
+              <div className="mt-2">
+                {!isExpanded ? (
+                  <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
+                    {decision.reasoning}
+                  </p>
+                ) : (
+                  <div className="bg-[var(--bg-primary)] rounded-lg p-3 border border-[var(--border-subtle)]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-4 h-4 text-[var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      <span className="text-xs font-medium text-[var(--text-secondary)]">Model Reasoning</span>
+                    </div>
+                    <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">
+                      {decision.reasoning}
+                    </p>
+                  </div>
                 )}
               </div>
+            )}
+
+            {/* No reasoning indicator */}
+            {!hasReasoning && (
+              <p className="text-sm text-[var(--text-muted)] italic">No reasoning provided</p>
             )}
           </div>
         );

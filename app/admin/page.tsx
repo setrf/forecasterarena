@@ -73,22 +73,14 @@ export default function AdminPage() {
     setActionResult(null);
 
     try {
-      let endpoint = '';
-      switch (action) {
-        case 'start-cohort':
-          endpoint = '/api/cron/start-cohort?force=true';
-          break;
-        case 'sync-markets':
-          endpoint = '/api/cron/sync-markets';
-          break;
-        case 'backup':
-          endpoint = '/api/cron/backup';
-          break;
-        default:
-          return;
-      }
-
-      const res = await fetch(endpoint, { method: 'POST' });
+      const res = await fetch('/api/admin/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          force: action === 'start-cohort' ? true : undefined
+        })
+      });
       const data = await res.json();
 
       if (res.ok && data.success) {
@@ -119,13 +111,13 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="glass-card p-8 w-full max-w-md">
-          <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
-          
+      <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
+        <div className="glass-card p-8 w-full max-w-md mx-auto relative z-10 bg-[var(--bg-card)] border-2 border-[var(--border-medium)] shadow-xl">
+          <h1 className="text-2xl font-bold mb-6 text-center text-[var(--text-primary)]">Admin Login</h1>
+
           <form onSubmit={handleLogin}>
             <div className="mb-4">
-              <label className="block text-sm text-[var(--text-muted)] mb-2">
+              <label className="block text-sm text-[var(--text-secondary)] mb-2 font-medium">
                 Password
               </label>
               <input
@@ -137,13 +129,13 @@ export default function AdminPage() {
                 required
               />
             </div>
-            
+
             {error && (
               <div className="mb-4 p-3 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-lg text-sm text-[var(--accent-rose)]">
                 {error}
               </div>
             )}
-            
+
             <button
               type="submit"
               disabled={loading}
@@ -173,18 +165,17 @@ export default function AdminPage() {
 
       {/* Action Result */}
       {actionResult && (
-        <div className={`mb-6 p-4 rounded-lg ${
-          actionResult.type === 'success' 
-            ? 'bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.3)] text-[var(--accent-emerald)]' 
+        <div className={`mb-6 p-4 rounded-lg ${actionResult.type === 'success'
+            ? 'bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.3)] text-[var(--accent-emerald)]'
             : 'bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[var(--accent-rose)]'
-        }`}>
+          }`}>
           {actionResult.message}
         </div>
       )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        <button 
+        <button
           onClick={() => executeAction('start-cohort')}
           disabled={actionLoading !== null}
           className="stat-card text-left hover:border-[var(--accent-blue)] transition-colors group disabled:opacity-50"
@@ -201,8 +192,8 @@ export default function AdminPage() {
             </svg>
           </div>
         </button>
-        
-        <button 
+
+        <button
           onClick={() => executeAction('sync-markets')}
           disabled={actionLoading !== null}
           className="stat-card text-left hover:border-[var(--accent-emerald)] transition-colors group disabled:opacity-50"
@@ -219,8 +210,8 @@ export default function AdminPage() {
             </svg>
           </div>
         </button>
-        
-        <button 
+
+        <button
           onClick={() => executeAction('backup')}
           disabled={actionLoading !== null}
           className="stat-card text-left hover:border-[var(--accent-violet)] transition-colors group disabled:opacity-50"
@@ -274,7 +265,7 @@ export default function AdminPage() {
             </div>
           </div>
         </a>
-        
+
         <a href="/admin/costs" className="glass-card p-6 hover:border-[var(--border-medium)] transition-colors group">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-[var(--bg-tertiary)] flex items-center justify-center text-lg font-bold">

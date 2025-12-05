@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { GITHUB_URL } from "@/lib/constants";
 import { Navigation } from "@/components/Navigation";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Forecaster Arena | AI Models Competing in Prediction Markets",
@@ -22,7 +23,7 @@ function Footer() {
       {/* Background texture */}
       <div className="absolute inset-0 bg-[var(--bg-secondary)]" />
       <div className="absolute inset-0 dot-grid opacity-20" />
-      
+
       <div className="container-wide mx-auto px-6 py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
           {/* Brand */}
@@ -31,7 +32,7 @@ function Footer() {
               Forecaster Arena
             </Link>
             <p className="text-[var(--text-secondary)] text-sm leading-relaxed max-w-sm mb-6">
-              Reality as the ultimate benchmark. Seven frontier LLMs compete in prediction markets. 
+              Reality as the ultimate benchmark. Seven frontier LLMs compete in prediction markets.
               No memorization possible - only genuine forecasting ability.
             </p>
             <div className="flex items-center gap-1">
@@ -39,7 +40,7 @@ function Footer() {
               <span className="text-xs text-[var(--text-muted)]">Live - Methodology v1.0</span>
             </div>
           </div>
-          
+
           {/* Links */}
           <div className="md:col-span-2">
             <h4 className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Explore</h4>
@@ -50,7 +51,7 @@ function Footer() {
               <li><Link href="/changelog" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">Changelog</Link></li>
             </ul>
           </div>
-          
+
           <div className="md:col-span-2">
             <h4 className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Research</h4>
             <ul className="space-y-3">
@@ -59,7 +60,7 @@ function Footer() {
               <li><a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">GitHub</a></li>
             </ul>
           </div>
-          
+
           <div className="md:col-span-3">
             <h4 className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Status</h4>
             <div className="space-y-4">
@@ -78,7 +79,7 @@ function Footer() {
             </div>
           </div>
         </div>
-        
+
         <div className="border-t border-[var(--border-subtle)] mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-[var(--text-muted)]">
             © {new Date().getFullYear()} Forecaster Arena. Open source research project.
@@ -100,11 +101,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Navigation />
-        <main className="min-h-screen pt-16">
-          {children}
-        </main>
-        <Footer />
+        <ErrorBoundary>
+          <Navigation />
+          <main className="min-h-screen pt-16">
+            {children}
+          </main>
+          <Footer />
+        </ErrorBoundary>
       </body>
     </html>
   );

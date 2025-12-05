@@ -87,12 +87,12 @@ export function createCohort(): Cohort {
   const id = generateId();
   const cohortNumber = getLatestCohortNumber() + 1;
   const now = new Date().toISOString();
-  
+
   db.prepare(`
     INSERT INTO cohorts (id, cohort_number, started_at, methodology_version)
     VALUES (?, ?, ?, ?)
   `).run(id, cohortNumber, now, METHODOLOGY_VERSION);
-  
+
   return getCohortById(id)!;
 }
 
@@ -102,7 +102,7 @@ export function createCohort(): Cohort {
 export function completeCohort(id: string): void {
   const db = getDb();
   const now = new Date().toISOString();
-  
+
   db.prepare(`
     UPDATE cohorts
     SET status = 'completed', completed_at = ?
@@ -225,18 +225,18 @@ export function createAgentsForCohort(cohortId: string): Agent[] {
   const db = getDb();
   const models = getActiveModels();
   const agents: Agent[] = [];
-  
+
   for (const model of models) {
     const id = generateId();
-    
+
     db.prepare(`
       INSERT INTO agents (id, cohort_id, model_id, cash_balance, total_invested, status)
       VALUES (?, ?, ?, ?, 0, 'active')
     `).run(id, cohortId, model.id, INITIAL_BALANCE);
-    
+
     agents.push(getAgentById(id)!);
   }
-  
+
   return agents;
 }
 
@@ -251,13 +251,13 @@ export function createAgentsForCohort(cohortId: string): Agent[] {
  */
 export function updateAgentBalance(id: string, cashBalance: number, totalInvested: number): void {
   const db = getDb();
-  
+
   // Import MIN_BET to check if agent can still trade
   const MIN_BET = 50; // Hardcoded to avoid circular import
-  
+
   // Determine status
   let status: 'active' | 'bankrupt';
-  
+
   if (cashBalance <= 0 && totalInvested <= 0) {
     // Truly bankrupt: no cash and no positions
     status = 'bankrupt';
@@ -265,7 +265,7 @@ export function updateAgentBalance(id: string, cashBalance: number, totalInveste
     // Still active - may have positions that could recover
     status = 'active';
   }
-  
+
   // Log warning if agent can't afford minimum bet but isn't bankrupt
   if (status === 'active' && cashBalance < MIN_BET && totalInvested > 0) {
     console.warn(
@@ -274,7 +274,7 @@ export function updateAgentBalance(id: string, cashBalance: number, totalInveste
       `Agent must wait for positions to resolve.`
     );
   }
-  
+
   db.prepare(`
     UPDATE agents
     SET cash_balance = ?, total_invested = ?, status = ?
@@ -344,7 +344,7 @@ export function getMarketByPolymarketId(polymarketId: string): Market | undefine
 export function upsertMarket(market: Partial<Market> & { polymarket_id: string }): Market {
   const db = getDb();
   const existing = getMarketByPolymarketId(market.polymarket_id);
-  
+
   if (existing) {
     // Update
     db.prepare(`
@@ -380,12 +380,12 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
       market.liquidity,
       market.polymarket_id
     );
-    
+
     return getMarketByPolymarketId(market.polymarket_id)!;
   } else {
     // Insert
     const id = generateId();
-    
+
     db.prepare(`
       INSERT INTO markets (
         id, polymarket_id, slug, event_slug, question, description, category, market_type,
@@ -408,7 +408,7 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
       market.volume,
       market.liquidity
     );
-    
+
     return getMarketById(id)!;
   }
 }
@@ -419,7 +419,7 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
 export function resolveMarket(id: string, outcome: string): void {
   const db = getDb();
   const now = new Date().toISOString();
-  
+
   db.prepare(`
     UPDATE markets
     SET status = 'resolved',
@@ -507,29 +507,29 @@ export function upsertPosition(
 ): Position {
   const db = getDb();
   const existing = getPosition(agentId, marketId, side);
-  
+
   if (existing) {
     // Update existing position (average in)
     const newShares = existing.shares + shares;
     const newCost = existing.total_cost + cost;
     const newAvgPrice = newCost / newShares;
-    
+
     db.prepare(`
       UPDATE positions
       SET shares = ?, avg_entry_price = ?, total_cost = ?
       WHERE id = ?
     `).run(newShares, newAvgPrice, newCost, existing.id);
-    
+
     return getPositionById(existing.id)!;
   } else {
     // Create new position
     const id = generateId();
-    
+
     db.prepare(`
       INSERT INTO positions (id, agent_id, market_id, side, shares, avg_entry_price, total_cost, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'open')
     `).run(id, agentId, marketId, side, shares, price, cost);
-    
+
     return getPositionById(id)!;
   }
 }
@@ -540,13 +540,13 @@ export function upsertPosition(
 export function reducePosition(id: string, sharesToSell: number): void {
   const db = getDb();
   const position = getPositionById(id);
-  
+
   if (!position) return;
-  
+
   const newShares = position.shares - sharesToSell;
   const costReduction = (sharesToSell / position.shares) * position.total_cost;
   const newCost = position.total_cost - costReduction;
-  
+
   if (newShares <= 0) {
     // Close position completely
     db.prepare(`
@@ -569,7 +569,7 @@ export function reducePosition(id: string, sharesToSell: number): void {
  */
 export function settlePosition(id: string): void {
   const db = getDb();
-  
+
   db.prepare(`
     UPDATE positions
     SET status = 'settled', closed_at = CURRENT_TIMESTAMP
@@ -593,7 +593,7 @@ export function getPositionsByMarket(marketId: string): Position[] {
  */
 export function updatePositionMTM(id: string, currentValue: number, unrealizedPnl: number): void {
   const db = getDb();
-  
+
   db.prepare(`
     UPDATE positions
     SET current_value = ?, unrealized_pnl = ?
@@ -627,7 +627,7 @@ export function createTrade(trade: {
 }): Trade {
   const db = getDb();
   const id = generateId();
-  
+
   db.prepare(`
     INSERT INTO trades (
       id, agent_id, market_id, position_id, decision_id,
@@ -649,7 +649,7 @@ export function createTrade(trade: {
     trade.cost_basis,
     trade.realized_pnl
   );
-  
+
   return db.prepare('SELECT * FROM trades WHERE id = ?').get(id) as Trade;
 }
 
@@ -658,7 +658,7 @@ export function createTrade(trade: {
  */
 export function getTradesByAgent(agentId: string, limit?: number): Trade[] {
   const db = getDb();
-  
+
   if (limit) {
     return db.prepare(`
       SELECT * FROM trades
@@ -667,7 +667,7 @@ export function getTradesByAgent(agentId: string, limit?: number): Trade[] {
       LIMIT ?
     `).all(agentId, limit) as Trade[];
   }
-  
+
   return db.prepare(`
     SELECT * FROM trades
     WHERE agent_id = ?
@@ -726,7 +726,7 @@ export function createDecision(decision: {
   const db = getDb();
   const id = generateId();
   const now = new Date().toISOString();
-  
+
   db.prepare(`
     INSERT INTO decisions (
       id, agent_id, cohort_id, decision_week, decision_timestamp,
@@ -753,7 +753,7 @@ export function createDecision(decision: {
     decision.response_time_ms,
     decision.error_message
   );
-  
+
   return db.prepare('SELECT * FROM decisions WHERE id = ?').get(id) as Decision;
 }
 
@@ -762,7 +762,7 @@ export function createDecision(decision: {
  */
 export function getDecisionsByAgent(agentId: string, limit?: number): Decision[] {
   const db = getDb();
-  
+
   if (limit) {
     return db.prepare(`
       SELECT * FROM decisions
@@ -771,7 +771,7 @@ export function getDecisionsByAgent(agentId: string, limit?: number): Decision[]
       LIMIT ?
     `).all(agentId, limit) as Decision[];
   }
-  
+
   return db.prepare(`
     SELECT * FROM decisions
     WHERE agent_id = ?
@@ -811,7 +811,7 @@ export function createPortfolioSnapshot(snapshot: {
 }): PortfolioSnapshot {
   const db = getDb();
   const id = generateId();
-  
+
   // Use upsert to handle duplicate dates
   db.prepare(`
     INSERT INTO portfolio_snapshots (
@@ -838,7 +838,7 @@ export function createPortfolioSnapshot(snapshot: {
     snapshot.brier_score,
     snapshot.num_resolved_bets || 0
   );
-  
+
   return db.prepare(`
     SELECT * FROM portfolio_snapshots
     WHERE agent_id = ? AND snapshot_date = ?
@@ -850,7 +850,7 @@ export function createPortfolioSnapshot(snapshot: {
  */
 export function getSnapshotsByAgent(agentId: string, limit?: number): PortfolioSnapshot[] {
   const db = getDb();
-  
+
   if (limit) {
     return db.prepare(`
       SELECT * FROM portfolio_snapshots
@@ -859,7 +859,7 @@ export function getSnapshotsByAgent(agentId: string, limit?: number): PortfolioS
       LIMIT ?
     `).all(agentId, limit) as PortfolioSnapshot[];
   }
-  
+
   return db.prepare(`
     SELECT * FROM portfolio_snapshots
     WHERE agent_id = ?
@@ -897,7 +897,7 @@ export function createBrierScore(score: {
 }): BrierScoreRecord {
   const db = getDb();
   const id = generateId();
-  
+
   db.prepare(`
     INSERT INTO brier_scores (
       id, agent_id, trade_id, market_id,
@@ -912,7 +912,7 @@ export function createBrierScore(score: {
     score.actual_outcome,
     score.brier_score
   );
-  
+
   return db.prepare('SELECT * FROM brier_scores WHERE id = ?').get(id) as BrierScoreRecord;
 }
 
@@ -938,7 +938,7 @@ export function getAverageBrierScore(agentId: string): number | null {
     FROM brier_scores
     WHERE agent_id = ?
   `).get(agentId) as { avg_brier: number | null };
-  
+
   return result.avg_brier;
 }
 
@@ -958,12 +958,12 @@ export function createApiCost(cost: {
 }): ApiCost {
   const db = getDb();
   const id = generateId();
-  
+
   db.prepare(`
     INSERT INTO api_costs (id, model_id, decision_id, tokens_input, tokens_output, cost_usd)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(id, cost.model_id, cost.decision_id, cost.tokens_input, cost.tokens_output, cost.cost_usd);
-  
+
   return db.prepare('SELECT * FROM api_costs WHERE id = ?').get(id) as ApiCost;
 }
 
@@ -977,12 +977,12 @@ export function getTotalCostsByModel(): Record<string, number> {
     FROM api_costs
     GROUP BY model_id
   `).all() as { model_id: string; total_cost: number }[];
-  
+
   const costs: Record<string, number> = {};
   for (const r of results) {
     costs[r.model_id] = r.total_cost;
   }
-  
+
   return costs;
 }
 
@@ -995,11 +995,11 @@ export function getTotalCostsByModel(): Record<string, number> {
  */
 export function getAggregateLeaderboard(): LeaderboardEntry[] {
   const db = getDb();
-  
+
   // Get all models with their aggregate stats
   const models = getAllModels();
   const leaderboard: LeaderboardEntry[] = [];
-  
+
   for (const model of models) {
     // Get all agents for this model across cohorts
     const agents = db.prepare(`
@@ -1008,13 +1008,13 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       JOIN cohorts c ON a.cohort_id = c.id
       WHERE a.model_id = ?
     `).all(model.id) as (Agent & { cohort_number: number })[];
-    
+
     if (agents.length === 0) continue;
-    
+
     // Calculate aggregate stats
     let totalPnl = 0;
     let totalResolvedBets = 0;
-    
+
     for (const agent of agents) {
       const snapshot = getLatestSnapshot(agent.id);
       if (snapshot) {
@@ -1022,7 +1022,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         totalResolvedBets += snapshot.num_resolved_bets;
       }
     }
-    
+
     // Get average Brier score
     const brierResult = db.prepare(`
       SELECT AVG(bs.brier_score) as avg_brier
@@ -1030,7 +1030,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       JOIN agents a ON bs.agent_id = a.id
       WHERE a.model_id = ?
     `).get(model.id) as { avg_brier: number | null };
-    
+
     // Calculate win rate
     // A "win" is when the model's bet side matches the winning outcome
     // We need to join with trades to get the side, then compare with market resolution
@@ -1048,7 +1048,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       JOIN markets m ON bs.market_id = m.id
       WHERE a.model_id = ? AND m.status = 'resolved'
     `).get(model.id) as { wins: number; total: number };
-    
+
     leaderboard.push({
       model_id: model.id,
       display_name: model.display_name,
@@ -1062,7 +1062,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       win_rate: winResult.total > 0 ? winResult.wins / winResult.total : null
     });
   }
-  
+
   // Sort by total P/L descending
   return leaderboard.sort((a, b) => b.total_pnl - a.total_pnl);
 }
@@ -1072,7 +1072,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
  */
 export function getCohortSummaries(): CohortSummary[] {
   const db = getDb();
-  
+
   return db.prepare(`
     SELECT 
       c.id,
