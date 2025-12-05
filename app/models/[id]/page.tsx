@@ -6,6 +6,7 @@ import { MODELS } from '@/lib/constants';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 
 interface CohortPerformance {
+  cohort_id: string;
   cohort_number: number;
   cohort_status: string;
   agent_status: string;
@@ -222,9 +223,11 @@ export default function ModelDetailPage() {
           ) : (
             <div className="space-y-3">
               {data.cohort_performance.map((cohort) => (
-                <div 
+                <div
                   key={cohort.cohort_number}
-                  className="p-4 bg-[var(--bg-tertiary)] rounded-lg"
+                  onClick={() => window.location.href = `/cohorts/${cohort.cohort_id}/models/${id}`}
+                  className="p-4 bg-[var(--bg-tertiary)] rounded-lg cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors"
+                  title={`View detailed performance in Cohort #${cohort.cohort_number}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium">Cohort #{cohort.cohort_number}</span>

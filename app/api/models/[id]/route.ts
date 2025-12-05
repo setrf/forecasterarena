@@ -66,8 +66,9 @@ export async function GET(
       const snapshots = getSnapshotsByAgent(agent.id, 30);
       const latestSnapshot = snapshots[snapshots.length - 1];
       const brierScore = getAverageBrierScore(agent.id);
-      
+
       return {
+        cohort_id: agent.cohort_id,
         cohort_number: agent.cohort_number,
         cohort_status: agent.cohort_status,
         agent_status: agent.status,

@@ -238,7 +238,12 @@ export default function CohortDetailPage() {
             </thead>
             <tbody>
               {agents.map((agent, i) => (
-                <tr key={agent.id}>
+                <tr
+                  key={agent.id}
+                  onClick={() => window.location.href = `/cohorts/${id}/models/${agent.model_id}`}
+                  className="cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors"
+                  title={`View ${agent.model_display_name}'s performance in this cohort`}
+                >
                   <td className="text-[var(--text-muted)]">{i + 1}</td>
                   <td>
                     <div className="flex items-center gap-2">
