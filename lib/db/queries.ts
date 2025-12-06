@@ -791,6 +791,19 @@ export function getRecentDecisions(limit: number = 20): Decision[] {
   `).all(limit) as Decision[];
 }
 
+/**
+ * Get total number of decisions for a cohort
+ */
+export function getTotalDecisionsForCohort(cohortId: string): number {
+  const db = getDb();
+  const result = db.prepare(`
+    SELECT COUNT(*) as count
+    FROM decisions
+    WHERE cohort_id = ?
+  `).get(cohortId) as { count: number };
+  return result.count;
+}
+
 // ============================================================================
 // PORTFOLIO SNAPSHOT QUERIES
 // ============================================================================
