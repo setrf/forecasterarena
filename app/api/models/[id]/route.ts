@@ -63,9 +63,14 @@ export async function GET(
     
     // Get performance for each cohort
     const cohortPerformance = agents.map(agent => {
-      const snapshots = getSnapshotsByAgent(agent.id, 30);
-      const latestSnapshot = snapshots[snapshots.length - 1];
+      const snapshots = getSnapshotsByAgent(agent.id);  // No limit - get all snapshots
+      const latestSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
       const brierScore = getAverageBrierScore(agent.id);
+
+      // Calculate current values with proper fallbacks
+      const totalValue = latestSnapshot?.total_value || agent.cash_balance + agent.total_invested;
+      const totalPnl = latestSnapshot?.total_pnl || (totalValue - INITIAL_BALANCE);
+      const totalPnlPercent = latestSnapshot?.total_pnl_percent || ((totalPnl / INITIAL_BALANCE) * 100);
 
       return {
         cohort_id: agent.cohort_id,
@@ -73,9 +78,9 @@ export async function GET(
         cohort_status: agent.cohort_status,
         agent_status: agent.status,
         cash_balance: agent.cash_balance,
-        total_value: latestSnapshot?.total_value || agent.cash_balance,
-        total_pnl: latestSnapshot?.total_pnl || 0,
-        total_pnl_percent: latestSnapshot?.total_pnl_percent || 0,
+        total_value: totalValue,
+        total_pnl: totalPnl,
+        total_pnl_percent: totalPnlPercent,
         brier_score: brierScore,
         num_resolved_bets: latestSnapshot?.num_resolved_bets || 0
       };
