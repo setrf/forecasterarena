@@ -490,7 +490,7 @@ export function getPosition(agentId: string, marketId: string, side: string): Po
   const db = getDb();
   return db.prepare(`
     SELECT * FROM positions
-    WHERE agent_id = ? AND market_id = ? AND side = ?
+    WHERE agent_id = ? AND market_id = ? AND side = ? AND status = 'open'
   `).get(agentId, marketId, side) as Position | undefined;
 }
 
@@ -551,7 +551,7 @@ export function reducePosition(id: string, sharesToSell: number): void {
     // Close position completely
     db.prepare(`
       UPDATE positions
-      SET shares = 0, total_cost = 0, status = 'closed', closed_at = CURRENT_TIMESTAMP
+      SET shares = 0, total_cost = 0, current_value = 0, unrealized_pnl = 0, status = 'closed', closed_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(id);
   } else {
