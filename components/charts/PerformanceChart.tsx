@@ -192,8 +192,8 @@ export default function PerformanceChart({
             name={model.id}
             stroke={model.color}
             strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, strokeWidth: 0 }}
+            dot={{ r: 3, fill: model.color, strokeWidth: 0 }}
+            activeDot={{ r: 5, strokeWidth: 0 }}
           />
         ))}
       </LineChart>
