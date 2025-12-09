@@ -167,7 +167,7 @@ export interface Decision {
 export interface PortfolioSnapshot {
   id: string;
   agent_id: string;
-  snapshot_date: string;
+  snapshot_timestamp: string;
   cash_balance: number;
   positions_value: number;
   total_value: number;

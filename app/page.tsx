@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MODELS, GITHUB_URL } from '@/lib/constants';
 import PerformanceChartComponent from '@/components/charts/PerformanceChart';
+import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
 
 // Types
 interface LeaderboardEntry {
@@ -250,13 +251,13 @@ function LeaderboardPreview({ data, hasRealData }: { data: LeaderboardEntry[]; h
 // Performance Chart Section
 function PerformanceChartSection() {
   const [chartData, setChartData] = useState<Array<{ date: string; [key: string]: number | string }>>([]);
-  const [timeRange, setTimeRange] = useState<'1W' | '1M' | '3M' | 'ALL'>('1M');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchChartData() {
       try {
-        const res = await fetch(`/api/performance-data?range=${timeRange}`);
+        const res = await fetch('/api/performance-data');
         if (res.ok) {
           const json = await res.json();
           setChartData(json.data || []);
@@ -268,7 +269,7 @@ function PerformanceChartSection() {
       }
     }
     fetchChartData();
-  }, [timeRange]);
+  }, []);
 
   const modelConfigs = MODELS.map(m => ({
     id: m.id,
@@ -284,28 +285,15 @@ function PerformanceChartSection() {
             <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">PERFORMANCE</p>
             <h2 className="text-2xl md:text-3xl">Portfolio Value Over Time</h2>
           </div>
-          <div className="flex gap-2">
-            {(['1W', '1M', '3M', 'ALL'] as const).map(range => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-4 py-2 text-sm rounded-lg transition-all ${
-                  timeRange === range 
-                    ? 'bg-[var(--accent-gold)] text-[var(--bg-primary)] font-medium' 
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
-                }`}
-              >
-                {range}
-              </button>
-            ))}
+          <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </div>
-      </div>
 
         <PerformanceChartComponent
           data={chartData}
           models={modelConfigs}
           height={380}
           showLegend={true}
+          timeRange={timeRange}
         />
       </div>
     </section>

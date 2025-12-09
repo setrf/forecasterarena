@@ -31,6 +31,7 @@ export default function MarketsPage() {
   const [category, setCategory] = useState<string>('');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortOption>('volume');
+  const [cohortBets, setCohortBets] = useState(false);
   const [offset, setOffset] = useState(0);
 
   const fetchMarkets = useCallback(async (reset = false) => {
@@ -40,6 +41,7 @@ export default function MarketsPage() {
       params.set('status', status);
       if (category) params.set('category', category);
       if (search) params.set('search', search);
+      if (cohortBets) params.set('cohort_bets', 'true');
       params.set('sort', sort);
       params.set('limit', '50');
       params.set('offset', reset ? '0' : String(offset));
@@ -63,12 +65,12 @@ export default function MarketsPage() {
     } finally {
       setLoading(false);
     }
-  }, [status, category, search, sort, offset]);
+  }, [status, category, search, sort, cohortBets, offset]);
 
   useEffect(() => {
     fetchMarkets(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, category, sort]);
+  }, [status, category, sort, cohortBets]);
 
   // Debounced search
   useEffect(() => {
@@ -83,7 +85,7 @@ export default function MarketsPage() {
 
   function formatVolume(volume: number | null): string {
     if (!volume) return 'N/A';
-    if (volume >= 1000000) return `$${(volume / 1000000).toFixed(1)}M`;
+    if (volume >= 1000000) return `$${(volume / 1000000).toFixed(0)}M`;
     if (volume >= 1000) return `$${(volume / 1000).toFixed(0)}K`;
     return `$${volume.toFixed(0)}`;
   }
@@ -167,6 +169,17 @@ export default function MarketsPage() {
             </div>
             
             <div className="flex items-center gap-2">
+              {/* Cohort Bets Toggle */}
+              <label className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm cursor-pointer hover:border-[var(--accent-gold)] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={cohortBets}
+                  onChange={(e) => setCohortBets(e.target.checked)}
+                  className="w-4 h-4 rounded border-[var(--border-subtle)] text-[var(--accent-gold)] focus:ring-[var(--accent-gold)] focus:ring-offset-0"
+                />
+                <span>Current Cohort</span>
+              </label>
+
               {/* Status */}
               <select
                 value={status}

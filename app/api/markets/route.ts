@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const sort = searchParams.get('sort') || 'volume';
+    const withCohortBets = searchParams.get('cohort_bets') === 'true';
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
     
@@ -41,6 +42,18 @@ export async function GET(request: NextRequest) {
     if (search) {
       conditions.push('m.question LIKE ?');
       params.push(`%${search}%`);
+    }
+    
+    // Filter for markets with bets from current cohort
+    if (withCohortBets) {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM positions p
+        JOIN agents a ON p.agent_id = a.id
+        JOIN cohorts c ON a.cohort_id = c.id
+        WHERE p.market_id = m.id
+        AND c.status = 'active'
+        AND p.status = 'open'
+      )`);
     }
     
     const whereClause = conditions.length > 0 
@@ -95,6 +108,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
 
 

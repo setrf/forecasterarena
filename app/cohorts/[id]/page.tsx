@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import DecisionFeed from '@/components/DecisionFeed';
 import { MODELS } from '@/lib/constants';
+import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
 
 interface Cohort {
   id: string;
@@ -64,6 +65,7 @@ export default function CohortDetailPage() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
   useEffect(() => {
     async function fetchData() {
@@ -147,7 +149,7 @@ export default function CohortDetailPage() {
   }
 
   function formatCurrency(value: number): string {
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   }
 
   function formatPnL(value: number): string {
@@ -209,12 +211,16 @@ export default function CohortDetailPage() {
 
       {/* Performance Chart */}
       <div className="chart-container mb-8">
-        <h3 className="text-lg font-semibold mb-4">Portfolio Performance</h3>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h3 className="text-lg font-semibold">Portfolio Performance</h3>
+          <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
+        </div>
         <PerformanceChart
           data={chartData}
           models={modelConfigs}
           height={350}
           showLegend={true}
+          timeRange={timeRange}
         />
       </div>
 

@@ -122,7 +122,7 @@ export default function MarketDetailPage() {
 
   function formatCurrency(value: number | null): string {
     if (value === null) return 'N/A';
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   }
 
   function formatDate(dateStr: string): string {

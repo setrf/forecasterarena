@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Build query for snapshots
     let query = `
       SELECT 
-        ps.snapshot_date,
+        ps.snapshot_timestamp,
         m.id as model_id,
         m.display_name,
         m.color,
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       FROM portfolio_snapshots ps
       JOIN agents a ON ps.agent_id = a.id
       JOIN models m ON a.model_id = m.id
-      WHERE ps.snapshot_date >= ?
+      WHERE ps.snapshot_timestamp >= ?
     `;
     const params: (string | number)[] = [startDateStr];
     
@@ -53,10 +53,10 @@ export async function GET(request: NextRequest) {
       params.push(cohortId);
     }
     
-    query += ' ORDER BY ps.snapshot_date ASC, m.display_name ASC';
+    query += ' ORDER BY ps.snapshot_timestamp ASC, m.display_name ASC';
     
     const rows = db.prepare(query).all(...params) as Array<{
-      snapshot_date: string;
+      snapshot_timestamp: string;
       model_id: string;
       display_name: string;
       color: string;
@@ -67,10 +67,10 @@ export async function GET(request: NextRequest) {
     const dataByDate = new Map<string, Record<string, number | string>>();
     
     for (const row of rows) {
-      if (!dataByDate.has(row.snapshot_date)) {
-        dataByDate.set(row.snapshot_date, { date: row.snapshot_date });
+      if (!dataByDate.has(row.snapshot_timestamp)) {
+        dataByDate.set(row.snapshot_timestamp, { date: row.snapshot_timestamp });
       }
-      const dateData = dataByDate.get(row.snapshot_date)!;
+      const dateData = dataByDate.get(row.snapshot_timestamp)!;
       
       // If cohort filter, use exact value; otherwise average across cohorts
       if (dateData[row.model_id] === undefined) {

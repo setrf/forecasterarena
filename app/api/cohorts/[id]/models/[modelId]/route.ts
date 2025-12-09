@@ -89,8 +89,8 @@ export async function GET(
         COUNT(*) + 1 as rank,
         (SELECT COUNT(*) FROM agents WHERE cohort_id = ?) as total_agents
       FROM agents a1
-      LEFT JOIN portfolio_snapshots ps1 ON a1.id = ps1.agent_id AND ps1.snapshot_date = (
-        SELECT MAX(snapshot_date) FROM portfolio_snapshots WHERE agent_id = a1.id
+      LEFT JOIN portfolio_snapshots ps1 ON a1.id = ps1.agent_id AND ps1.snapshot_timestamp = (
+        SELECT MAX(snapshot_timestamp) FROM portfolio_snapshots WHERE agent_id = a1.id
       )
       WHERE a1.cohort_id = ?
         AND COALESCE(ps1.total_value, a1.cash_balance + a1.total_invested) > ?
@@ -125,8 +125,8 @@ export async function GET(
       LEFT JOIN (
         SELECT agent_id, total_pnl_percent
         FROM portfolio_snapshots
-        WHERE (agent_id, snapshot_date) IN (
-          SELECT agent_id, MAX(snapshot_date)
+        WHERE (agent_id, snapshot_timestamp) IN (
+          SELECT agent_id, MAX(snapshot_timestamp)
           FROM portfolio_snapshots
           GROUP BY agent_id
         )
@@ -154,7 +154,7 @@ export async function GET(
 
     // Get equity curve (portfolio snapshots for this agent in this cohort)
     const equityCurve = snapshots.map(s => ({
-      date: s.snapshot_date,
+      date: s.snapshot_timestamp,
       value: s.total_value
     }));
 

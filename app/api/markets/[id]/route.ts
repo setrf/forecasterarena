@@ -18,11 +18,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const fs = require('fs');
-    fs.appendFileSync('debug.log', `[API] Fetching market with ID: ${id}\n`);
 
     const market = getMarketById(id);
-    fs.appendFileSync('debug.log', `[API] Market found: ${!!market}\n`);
 
     if (!market) {
       return NextResponse.json(

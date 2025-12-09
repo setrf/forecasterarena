@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, use } from 'react';
 import { useParams } from 'next/navigation';
 import { MODELS } from '@/lib/constants';
 import PerformanceChart from '@/components/charts/PerformanceChart';
+import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
 
 interface CohortPerformance {
   cohort_id: string;
@@ -28,7 +29,7 @@ interface Decision {
 }
 
 interface EquityPoint {
-  snapshot_date: string;
+  snapshot_timestamp: string;
   total_value: number;
   cohort_number: number;
 }
@@ -57,6 +58,7 @@ export default function ModelDetailPage() {
   const [data, setData] = useState<ModelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
   useEffect(() => {
     async function fetchData() {
@@ -80,7 +82,7 @@ export default function ModelDetailPage() {
   const chartData = useMemo(() => {
     if (!data?.equity_curve?.length) return [];
     return data.equity_curve.map(point => ({
-      date: point.snapshot_date,
+      date: point.snapshot_timestamp,
       [id]: point.total_value
     }));
   }, [data, id]);
@@ -198,12 +200,16 @@ export default function ModelDetailPage() {
       
       {/* Performance Chart */}
       <div className="chart-container mb-10">
-        <h3 className="text-lg font-semibold mb-4">Portfolio Value Over Time</h3>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h3 className="text-lg font-semibold">Portfolio Value Over Time</h3>
+          <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
+        </div>
         <PerformanceChart
           data={chartData}
           models={chartModels}
           height={280}
           showLegend={false}
+          timeRange={timeRange}
         />
       </div>
       

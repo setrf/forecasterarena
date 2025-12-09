@@ -464,12 +464,19 @@ export function getOpenPositions(agentId: string): Position[] {
 export function getPositionsWithMarkets(agentId: string): PositionWithMarket[] {
   const db = getDb();
   return db.prepare(`
-    SELECT 
+    SELECT
       p.*,
       m.question as market_question,
-      m.current_price
+      m.current_price,
+      t.decision_id as opening_decision_id
     FROM positions p
     JOIN markets m ON p.market_id = m.id
+    LEFT JOIN (
+      SELECT market_id, agent_id, side, decision_id, MIN(executed_at) as first_trade
+      FROM trades
+      WHERE trade_type = 'BUY'
+      GROUP BY market_id, agent_id, side
+    ) t ON p.market_id = t.market_id AND p.agent_id = t.agent_id AND p.side = t.side
     WHERE p.agent_id = ? AND p.status = 'open'
     ORDER BY p.opened_at DESC
   `).all(agentId) as PositionWithMarket[];
@@ -813,7 +820,7 @@ export function getTotalDecisionsForCohort(cohortId: string): number {
  */
 export function createPortfolioSnapshot(snapshot: {
   agent_id: string;
-  snapshot_date: string;
+  snapshot_timestamp: string;
   cash_balance: number;
   positions_value: number;
   total_value: number;
@@ -828,10 +835,10 @@ export function createPortfolioSnapshot(snapshot: {
   // Use upsert to handle duplicate dates
   db.prepare(`
     INSERT INTO portfolio_snapshots (
-      id, agent_id, snapshot_date, cash_balance, positions_value,
+      id, agent_id, snapshot_timestamp, cash_balance, positions_value,
       total_value, total_pnl, total_pnl_percent, brier_score, num_resolved_bets
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(agent_id, snapshot_date) DO UPDATE SET
+    ON CONFLICT(agent_id, snapshot_timestamp) DO UPDATE SET
       cash_balance = excluded.cash_balance,
       positions_value = excluded.positions_value,
       total_value = excluded.total_value,
@@ -842,7 +849,7 @@ export function createPortfolioSnapshot(snapshot: {
   `).run(
     id,
     snapshot.agent_id,
-    snapshot.snapshot_date,
+    snapshot.snapshot_timestamp,
     snapshot.cash_balance,
     snapshot.positions_value,
     snapshot.total_value,
@@ -854,8 +861,8 @@ export function createPortfolioSnapshot(snapshot: {
 
   return db.prepare(`
     SELECT * FROM portfolio_snapshots
-    WHERE agent_id = ? AND snapshot_date = ?
-  `).get(snapshot.agent_id, snapshot.snapshot_date) as PortfolioSnapshot;
+    WHERE agent_id = ? AND snapshot_timestamp = ?
+  `).get(snapshot.agent_id, snapshot.snapshot_timestamp) as PortfolioSnapshot;
 }
 
 /**
@@ -868,7 +875,7 @@ export function getSnapshotsByAgent(agentId: string, limit?: number): PortfolioS
     return db.prepare(`
       SELECT * FROM portfolio_snapshots
       WHERE agent_id = ?
-      ORDER BY snapshot_date DESC
+      ORDER BY snapshot_timestamp DESC
       LIMIT ?
     `).all(agentId, limit) as PortfolioSnapshot[];
   }
@@ -876,7 +883,7 @@ export function getSnapshotsByAgent(agentId: string, limit?: number): PortfolioS
   return db.prepare(`
     SELECT * FROM portfolio_snapshots
     WHERE agent_id = ?
-    ORDER BY snapshot_date ASC
+    ORDER BY snapshot_timestamp ASC
   `).all(agentId) as PortfolioSnapshot[];
 }
 
@@ -888,7 +895,7 @@ export function getLatestSnapshot(agentId: string): PortfolioSnapshot | undefine
   return db.prepare(`
     SELECT * FROM portfolio_snapshots
     WHERE agent_id = ?
-    ORDER BY snapshot_date DESC
+    ORDER BY snapshot_timestamp DESC
     LIMIT 1
   `).get(agentId) as PortfolioSnapshot | undefined;
 }

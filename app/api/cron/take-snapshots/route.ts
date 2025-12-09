@@ -21,7 +21,7 @@ import {
 } from '@/lib/db/queries';
 import { calculatePositionValue } from '@/lib/scoring/pnl';
 import { logSystemEvent } from '@/lib/db';
-import { today } from '@/lib/utils';
+import { nowTimestamp } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
   
   try {
     console.log('Taking portfolio snapshots...');
-    
+
     const startTime = Date.now();
-    const snapshotDate = today();
+    const snapshotTimestamp = nowTimestamp();
     
     let snapshotsTaken = 0;
     let positionsUpdated = 0;
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
           // Create snapshot
           createPortfolioSnapshot({
             agent_id: agent.id,
-            snapshot_date: snapshotDate,
+            snapshot_timestamp: snapshotTimestamp,
             cash_balance: agent.cash_balance,
             positions_value: positionsValue,
             total_value: totalValue,

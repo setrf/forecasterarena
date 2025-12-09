@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS trades (
 CREATE TABLE IF NOT EXISTS portfolio_snapshots (
   id TEXT PRIMARY KEY,                           -- UUID
   agent_id TEXT NOT NULL,                        -- Links to agents
-  snapshot_date TEXT NOT NULL,                   -- YYYY-MM-DD
+  snapshot_timestamp TEXT NOT NULL,                   -- YYYY-MM-DD HH:MM:SS
   cash_balance REAL NOT NULL,                    -- Cash at snapshot
   positions_value REAL NOT NULL,                 -- Sum of position values
   total_value REAL NOT NULL,                     -- Cash + positions
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS portfolio_snapshots (
   num_resolved_bets INTEGER DEFAULT 0,           -- Number of resolved bets
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id),
-  UNIQUE(agent_id, snapshot_date)                -- One snapshot per day
+  UNIQUE(agent_id, snapshot_timestamp)                -- One snapshot per 10 minutes
 );
 
 -- ============================================================================
@@ -319,8 +319,8 @@ CREATE INDEX IF NOT EXISTS idx_decisions_timestamp ON decisions(decision_timesta
 
 -- Portfolio Snapshots
 CREATE INDEX IF NOT EXISTS idx_snapshots_agent ON portfolio_snapshots(agent_id);
-CREATE INDEX IF NOT EXISTS idx_snapshots_date ON portfolio_snapshots(snapshot_date DESC);
-CREATE INDEX IF NOT EXISTS idx_snapshots_agent_date ON portfolio_snapshots(agent_id, snapshot_date DESC);
+CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON portfolio_snapshots(snapshot_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_snapshots_agent_timestamp ON portfolio_snapshots(agent_id, snapshot_timestamp DESC);
 
 -- Markets
 CREATE INDEX IF NOT EXISTS idx_markets_status ON markets(status);

@@ -134,7 +134,7 @@ export async function GET(
       JOIN agents a ON ps.agent_id = a.id
       JOIN cohorts c ON a.cohort_id = c.id
       WHERE a.model_id = ?
-      ORDER BY ps.snapshot_date ASC
+      ORDER BY ps.snapshot_timestamp ASC
     `).all(id);
     
     return NextResponse.json({

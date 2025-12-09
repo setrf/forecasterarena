@@ -10,10 +10,10 @@
  * Format a number as currency
  * 
  * @param value - Number to format
- * @param decimals - Number of decimal places (default: 2)
- * @returns Formatted string (e.g., "$1,234.56")
+ * @param decimals - Number of decimal places (default: 0)
+ * @returns Formatted string (e.g., "$1,234")
  */
-export function formatCurrency(value: number, decimals: number = 2): string {
+export function formatCurrency(value: number, decimals: number = 0): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -37,10 +37,10 @@ export function formatPercent(value: number, decimals: number = 1): string {
  * Format a number with +/- sign for P/L display
  * 
  * @param value - Number to format
- * @param decimals - Number of decimal places (default: 2)
- * @returns Formatted string (e.g., "+$123.45" or "-$67.89")
+ * @param decimals - Number of decimal places (default: 0)
+ * @returns Formatted string (e.g., "+$123" or "-$68")
  */
-export function formatPnL(value: number, decimals: number = 2): string {
+export function formatPnL(value: number, decimals: number = 0): string {
   const sign = value >= 0 ? '+' : '';
   return `${sign}${formatCurrency(value, decimals)}`;
 }
@@ -237,8 +237,24 @@ export function today(): string {
 }
 
 /**
+ * Get current timestamp as YYYY-MM-DD HH:MM:SS
+ *
+ * @returns Timestamp string
+ */
+export function nowTimestamp(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Calculate percentage change
- * 
+ *
  * @param oldValue - Original value
  * @param newValue - New value
  * @returns Percentage change as decimal (0.1 = 10%)

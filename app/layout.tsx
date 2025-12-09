@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import "./globals.css";
 import { GITHUB_URL } from "@/lib/constants";
 import { Navigation } from "@/components/Navigation";
@@ -101,6 +102,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        {/* Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-MKLB59R9M6"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-MKLB59R9M6');
+          `}
+        </Script>
+
         <ErrorBoundary>
           <Navigation />
           <main className="min-h-screen pt-16">

@@ -110,7 +110,7 @@ export async function GET(
     for (const agent of rawAgents) {
       const snapshots = getSnapshotsByAgent(agent.id);
       equityCurves[agent.model_id] = snapshots.map(s => ({
-        date: s.snapshot_date,
+        date: s.snapshot_timestamp,
         value: s.total_value
       }));
     }

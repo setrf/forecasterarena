@@ -18,6 +18,8 @@ interface ModelConfig {
   color: string;
 }
 
+export type TimeRange = '10M' | '1H' | '1D' | '1W' | '1M' | '3M' | 'ALL';
+
 interface PerformanceChartProps {
   data: Array<{
     date: string;
@@ -27,6 +29,7 @@ interface PerformanceChartProps {
   height?: number;
   showLegend?: boolean;
   showGrid?: boolean;
+  timeRange?: TimeRange;
 }
 
 function formatCurrency(value: number): string {
@@ -99,14 +102,46 @@ export default function PerformanceChart({
   height = 400,
   showLegend = true,
   showGrid = true,
+  timeRange = 'ALL',
 }: PerformanceChartProps) {
+  // Filter data based on time range
+  const filteredData = useMemo(() => {
+    if (timeRange === 'ALL' || !data.length) return data;
+
+    const now = new Date();
+    const cutoffDate = new Date();
+
+    switch (timeRange) {
+      case '10M':
+        cutoffDate.setMinutes(now.getMinutes() - 10);
+        break;
+      case '1H':
+        cutoffDate.setHours(now.getHours() - 1);
+        break;
+      case '1D':
+        cutoffDate.setDate(now.getDate() - 1);
+        break;
+      case '1W':
+        cutoffDate.setDate(now.getDate() - 7);
+        break;
+      case '1M':
+        cutoffDate.setMonth(now.getMonth() - 1);
+        break;
+      case '3M':
+        cutoffDate.setMonth(now.getMonth() - 3);
+        break;
+    }
+
+    return data.filter(point => new Date(point.date) >= cutoffDate);
+  }, [data, timeRange]);
+
   const yDomain = useMemo(() => {
-    if (!data.length) return [8000, 12000];
+    if (!filteredData.length) return [8000, 12000];
     
     let min = Infinity;
     let max = -Infinity;
-    
-    data.forEach(point => {
+
+    filteredData.forEach(point => {
       models.forEach(model => {
         const value = point[model.id];
         if (typeof value === 'number') {
@@ -115,10 +150,10 @@ export default function PerformanceChart({
         }
       });
     });
-    
-    const padding = (max - min) * 0.1;
-    return [Math.floor((min - padding) / 1000) * 1000, Math.ceil((max + padding) / 1000) * 1000];
-  }, [data, models]);
+
+    const padding = (max - min) * 0.05;
+    return [Math.floor((min - padding) / 100) * 100, Math.ceil((max + padding) / 100) * 100];
+  }, [filteredData, models]);
 
   if (!data.length) {
     return (
@@ -159,41 +194,45 @@ export default function PerformanceChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+      <LineChart data={filteredData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
         {showGrid && (
-          <CartesianGrid 
-            strokeDasharray="3 3" 
-            stroke="var(--border-subtle)" 
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="var(--border-subtle)"
             vertical={false}
+            opacity={0.5}
           />
         )}
         <XAxis
           dataKey="date"
           tickFormatter={formatDateTime}
           stroke="var(--text-muted)"
-          tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
           axisLine={{ stroke: 'var(--border-subtle)' }}
-          tickLine={{ stroke: 'var(--border-subtle)' }}
-          angle={-45}
+          tickLine={false}
+          angle={-35}
           textAnchor="end"
-          height={80}
+          height={70}
+          minTickGap={40}
         />
         <YAxis
           domain={yDomain}
           tickFormatter={formatCurrency}
           stroke="var(--text-muted)"
-          tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
-          axisLine={{ stroke: 'var(--border-subtle)' }}
-          tickLine={{ stroke: 'var(--border-subtle)' }}
-          width={70}
+          tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          width={65}
         />
         <Tooltip content={<CustomTooltip models={models} />} />
         {showLegend && (
           <Legend
-            wrapperStyle={{ paddingTop: 20 }}
+            wrapperStyle={{ paddingTop: 16 }}
+            iconType="circle"
+            iconSize={8}
             formatter={(value) => {
               const model = models.find(m => m.id === value);
-              return <span className="text-sm text-[var(--text-secondary)]">{model?.name || value}</span>;
+              return <span className="text-xs text-[var(--text-secondary)]">{model?.name || value}</span>;
             }}
           />
         )}
@@ -204,9 +243,10 @@ export default function PerformanceChart({
             dataKey={model.id}
             name={model.id}
             stroke={model.color}
-            strokeWidth={2}
-            dot={{ r: 3, fill: model.color, strokeWidth: 0 }}
-            activeDot={{ r: 5, strokeWidth: 0 }}
+            strokeWidth={1.5}
+            dot={false}
+            activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--bg-card)', fill: model.color }}
+            strokeOpacity={0.9}
           />
         ))}
       </LineChart>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import PerformanceChart from '@/components/charts/PerformanceChart';
+import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
 
 interface Cohort {
   id: string;
@@ -79,6 +80,7 @@ interface Position {
   current_value?: number;
   unrealized_pnl?: number;
   status: string;
+  opening_decision_id?: string;
 }
 
 interface Trade {
@@ -115,6 +117,7 @@ export default function AgentCohortDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
   useEffect(() => {
     async function fetchData() {
@@ -181,7 +184,7 @@ export default function AgentCohortDetailPage() {
   }
 
   function formatCurrency(value: number): string {
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   }
 
   function formatPnL(value: number): string {
@@ -311,12 +314,16 @@ export default function AgentCohortDetailPage() {
 
       {/* Portfolio Performance Chart */}
       <div className="chart-container mb-10">
-        <h3 className="text-lg font-semibold mb-4">Portfolio Value Over Time</h3>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h3 className="text-lg font-semibold">Portfolio Value Over Time</h3>
+          <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
+        </div>
         <PerformanceChart
           data={chartData}
           models={chartModels}
           height={280}
           showLegend={false}
+          timeRange={timeRange}
         />
       </div>
 
@@ -518,7 +525,12 @@ export default function AgentCohortDetailPage() {
                     const unrealizedPnl = position.unrealized_pnl || (currentValue - position.shares * position.avg_entry_price);
 
                     return (
-                      <tr key={position.id}>
+                      <tr
+                        key={position.id}
+                        onClick={() => position.opening_decision_id && (window.location.href = `/decisions/${position.opening_decision_id}`)}
+                        className={position.opening_decision_id ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
+                        title={position.opening_decision_id ? 'Click to view opening decision rationale' : undefined}
+                      >
                         <td className="max-w-[200px] truncate" title={position.market_question}>
                           {position.market_question}
                         </td>
@@ -567,7 +579,12 @@ export default function AgentCohortDetailPage() {
                 </thead>
                 <tbody>
                   {data.trades.slice(0, 20).map((trade) => (
-                    <tr key={trade.id}>
+                    <tr
+                      key={trade.id}
+                      onClick={() => trade.decision_id && (window.location.href = `/decisions/${trade.decision_id}`)}
+                      className={trade.decision_id ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
+                      title={trade.decision_id ? 'Click to view decision rationale' : undefined}
+                    >
                       <td className="text-sm">{formatDate(trade.timestamp)}</td>
                       <td>
                         <span className={`text-xs px-2 py-0.5 rounded ${
