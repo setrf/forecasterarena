@@ -320,6 +320,35 @@ const refund = position.total_cost;  // Only refunds remaining 600 shares' cost
 
 ---
 
+## Mark-to-Market & Snapshots (Every 10 Minutes)
+
+**What happens:** `/api/cron/take-snapshots` runs ~every 10 minutes. It:
+- Loads **all open positions** (even on markets with `status='closed'` but unresolved).
+- Marks each position to market using current prices; then writes to `portfolio_snapshots` (upsert on `(agent_id, snapshot_timestamp)`).
+
+**Price sources & fallbacks**
+- Binary market: `market.current_price` is YES; NO price = `1 - YES`.
+- Multi-outcome: parse `market.current_prices` JSON by `position.side`.
+- Fallback if missing/invalid: derive implied YES price from prior `position.current_value / shares`; if side = NO, flip with `1 - value_per_share`.
+- Closed-but-unresolved guard: if feed shows 0/1 that would zero the position (YES @ 0 or NO @ 1), keep prior implied price instead.
+- Final fallback: default to 0.5 only if no prior value exists.
+
+**Snapshot invariants**
+```typescript
+positions_value = SUM(position.current_value for all open positions)
+total_value = cash_balance + positions_value
+total_pnl = total_value - initial_balance
+```
+`portfolio_snapshots` is append-only per timestamp but upserts on conflicts.
+
+**MTM edge cases covered**
+- Feed gaps (null/NaN): use prior implied price.
+- Closed/unresolved with bad price (0/1): keep prior implied price, avoid wipeout.
+- Multi-outcome missing side: use prior implied price.
+- NO positions: implied price uses flip (1 - value_per_share).
+
+---
+
 ## Testing Checklist
 
 - [ ] BUY: cash decreases, invested increases, position created
