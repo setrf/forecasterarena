@@ -36,7 +36,7 @@ sqlite3 data/forecaster.db \
   "SELECT MAX(last_updated_at) FROM markets;"
 ```
 
-Expected: Within last 6 hours (markets sync every 6 hours)
+Expected: Within last 10 minutes (markets sync every 5 minutes)
 
 ---
 
@@ -78,7 +78,7 @@ sqlite3 data/forecaster.db \
 ## Cron Job Schedule
 
 ### Market Sync
-**Schedule**: Every 6 hours (`0 */6 * * *`)
+**Schedule**: Every 5 minutes (`*/5 * * * *`)
 **Endpoint**: `/api/cron/sync-markets`
 **Log**: `/home/forecaster/logs/sync.log`
 
@@ -124,7 +124,7 @@ sqlite3 data/forecaster.db \
 ```
 
 ### Take Snapshots
-**Schedule**: Daily 00:00 UTC (`0 0 * * *`)
+**Schedule**: Every 10 minutes (`*/10 * * * *`)
 **Endpoint**: `/api/cron/take-snapshots`
 **Log**: `/home/forecaster/logs/snapshots.log`
 
@@ -132,7 +132,11 @@ sqlite3 data/forecaster.db \
 ```bash
 # Check today's snapshots
 sqlite3 data/forecaster.db \
-  "SELECT COUNT(*) FROM portfolio_snapshots WHERE snapshot_date = date('now');"
+  "SELECT COUNT(*) FROM portfolio_snapshots WHERE snapshot_timestamp > datetime('now', '-1 hour');"
+
+# Spot-check one agent's latest MTM (closed-but-unresolved markets use prior value if price feeds are 0/1)
+sqlite3 data/forecaster.db \
+  "SELECT snapshot_timestamp, total_value, positions_value FROM portfolio_snapshots WHERE agent_id = (SELECT id FROM agents LIMIT 1) ORDER BY snapshot_timestamp DESC LIMIT 3;"
 ```
 
 ### Backup
@@ -526,4 +530,3 @@ curl https://yourdomain.com/api/health # Test externally
 - **GitHub Issues**: https://github.com/setrf/forecasterarena/issues
 - **Documentation**: `docs/` directory
 - **Health Check**: `/api/health` endpoint
-

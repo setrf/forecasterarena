@@ -105,12 +105,12 @@ Traditional LLM benchmarks face a fundamental challenge:
 | Model | Provider | Color | Description |
 |-------|----------|-------|-------------|
 | **GPT-5.1** | OpenAI | Emerald | Latest GPT architecture |
-| **Gemini 3 Pro** | Google | Blue | Google's frontier model |
+| **Gemini 2.5 Flash** | Google | Blue | Fast Gemini generation |
 | **Grok 4** | xAI | Violet | xAI's reasoning model |
 | **Claude Opus 4.5** | Anthropic | Amber | Anthropic's most capable |
-| **DeepSeek V3** | DeepSeek | Red | Open-weight powerhouse |
+| **DeepSeek V3.1** | DeepSeek | Red | Open-weight powerhouse |
 | **Kimi K2** | Moonshot AI | Pink | Thinking-enabled model |
-| **Qwen 3** | Alibaba | Cyan | 235B parameter giant |
+| **Qwen 3 Next** | Alibaba | Cyan | 235B parameter giant |
 
 All models receive:
 - Identical system prompts
@@ -148,7 +148,7 @@ All models receive:
 |     +-- Calculate Brier scores                               |
 |                                                              |
 |  5. Portfolio Snapshots                                      |
-|     +-- Daily mark-to-market valuations                      |
+|     +-- 10-minute mark-to-market valuations (includes closed-but-unresolved positions with prior-value fallback) |
 |                                                              |
 +-------------------------------------------------------------+
 ```
@@ -471,11 +471,11 @@ forecasterarena/
 
 | Method | Endpoint | Schedule | Description |
 |--------|----------|----------|-------------|
-| POST | `/api/cron/sync-markets` | Every 6h | Sync Polymarket data |
+| POST | `/api/cron/sync-markets` | Every 5m | Sync Polymarket data |
 | POST | `/api/cron/start-cohort` | Sunday 00:00 | Start new cohort |
 | POST | `/api/cron/run-decisions` | Sunday 00:00 | Run LLM decisions |
 | POST | `/api/cron/check-resolutions` | Hourly | Check market resolutions |
-| POST | `/api/cron/take-snapshots` | Daily 00:00 | Portfolio snapshots |
+| POST | `/api/cron/take-snapshots` | Every 10m | Portfolio snapshots & MTM |
 | POST | `/api/cron/backup` | Saturday 23:00 | Database backup |
 
 All cron endpoints require:
@@ -495,8 +495,8 @@ crontab -e
 
 # Add these lines:
 
-# Sync markets every 6 hours
-0 */6 * * * curl -X POST http://localhost:3000/api/cron/sync-markets -H "Authorization: Bearer $CRON_SECRET"
+# Sync markets every 5 minutes
+*/5 * * * * curl -X POST http://localhost:3000/api/cron/sync-markets -H "Authorization: Bearer $CRON_SECRET"
 
 # Start new cohort every Sunday at 00:00 UTC
 0 0 * * 0 curl -X POST http://localhost:3000/api/cron/start-cohort -H "Authorization: Bearer $CRON_SECRET"
@@ -507,8 +507,8 @@ crontab -e
 # Check resolutions every hour
 0 * * * * curl -X POST http://localhost:3000/api/cron/check-resolutions -H "Authorization: Bearer $CRON_SECRET"
 
-# Take snapshots daily at 00:00 UTC
-0 0 * * * curl -X POST http://localhost:3000/api/cron/take-snapshots -H "Authorization: Bearer $CRON_SECRET"
+# Take snapshots every 10 minutes (mark-to-market, including closed-but-unresolved markets)
+*/10 * * * * curl -X POST http://localhost:3000/api/cron/take-snapshots -H "Authorization: Bearer $CRON_SECRET"
 
 # Backup before new cohort (Saturday 23:00 UTC)
 0 23 * * 6 curl -X POST http://localhost:3000/api/cron/backup -H "Authorization: Bearer $CRON_SECRET"
