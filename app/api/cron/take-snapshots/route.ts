@@ -63,13 +63,21 @@ export async function POST(request: NextRequest) {
           const positions = getAllOpenPositions(agent.id);
           let positionsValue = 0;
           const fallbackFromPosition = (pos: typeof positions[number]) => {
-            if (pos.current_value && pos.shares > 0) {
-              const derived = pos.current_value / pos.shares;
-              if (Number.isFinite(derived)) {
-                return Math.min(Math.max(derived, 0), 1);
-              }
+            if (!pos || pos.shares <= 0 || pos.current_value === null || pos.current_value === undefined) {
+              return null;
             }
-            return null;
+
+            const valuePerShare = pos.current_value / pos.shares;
+            if (!Number.isFinite(valuePerShare)) return null;
+
+            // Translate the current position value back into a YES price.
+            const side = (pos.side || '').toUpperCase();
+            const impliedYesPrice =
+              side === 'NO'
+                ? 1 - valuePerShare
+                : valuePerShare;
+
+            return Math.min(Math.max(impliedYesPrice, 0), 1);
           };
           
         for (const position of positions) {
@@ -141,8 +149,13 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // If the market is closed but unresolved and price looks unreliable (null/0/1), keep prior value
-          if (unresolvedClosed && (currentPrice === null || currentPrice === 0 || currentPrice === 1)) {
+          // If the market is closed but unresolved and the price would wipe the position (YES at 0 or NO at 1), keep prior value
+          const wouldZeroPosition =
+            currentPrice !== null &&
+            ((position.side.toUpperCase() === 'YES' && currentPrice === 0) ||
+              (position.side.toUpperCase() === 'NO' && currentPrice === 1));
+
+          if (unresolvedClosed && (currentPrice === null || wouldZeroPosition)) {
             const fallbackPrice = fallbackFromPosition(position);
             if (fallbackPrice !== null) {
               currentPrice = fallbackPrice;
