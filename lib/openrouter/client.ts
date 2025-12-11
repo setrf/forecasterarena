@@ -13,6 +13,7 @@ import {
   OPENROUTER_API_URL,
   LLM_TEMPERATURE,
   LLM_MAX_TOKENS,
+  LLM_TIMEOUT_MS,
   SITE_URL,
   SITE_NAME
 } from '../constants';
@@ -72,6 +73,9 @@ export async function callOpenRouter(
   systemPrompt: string,
   userPrompt: string
 ): Promise<OpenRouterResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+
   if (!OPENROUTER_API_KEY) {
     throw new OpenRouterError('OPENROUTER_API_KEY not configured');
   }
@@ -101,7 +105,13 @@ export async function callOpenRouter(
       'X-Title': SITE_NAME,
     },
     body: JSON.stringify(requestBody),
-  });
+    signal: controller.signal
+  }).catch((error) => {
+    if (error.name === 'AbortError') {
+      throw new OpenRouterError(`OpenRouter request timed out after ${LLM_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  }).finally(() => clearTimeout(timeoutId));
   
   const responseTime = Date.now() - startTime;
   
@@ -216,6 +226,5 @@ export function estimateCost(usage: TokenUsage, modelId: string): number {
   
   return inputCost + outputCost;
 }
-
 
 

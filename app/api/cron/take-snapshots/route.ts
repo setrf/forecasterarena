@@ -61,6 +61,15 @@ export async function POST(request: NextRequest) {
           // Get and update positions MTM
           const positions = getOpenPositions(agent.id);
           let positionsValue = 0;
+          const fallbackFromPosition = (pos: typeof positions[number]) => {
+            if (pos.current_value && pos.shares > 0) {
+              const derived = pos.current_value / pos.shares;
+              if (Number.isFinite(derived)) {
+                return Math.min(Math.max(derived, 0), 1);
+              }
+            }
+            return null;
+          };
           
           for (const position of positions) {
             const market = getMarketById(position.market_id);
@@ -72,7 +81,22 @@ export async function POST(request: NextRequest) {
 
             if (isBinary) {
               // Binary market: use current_price for YES, (1 - price) for NO
-              currentPrice = market.current_price || 0.5;
+              if (typeof market.current_price === 'number' && !Number.isNaN(market.current_price)) {
+                currentPrice = market.current_price;
+              } else {
+                const fallbackPrice = fallbackFromPosition(position);
+                if (fallbackPrice === null) {
+                  console.warn(
+                    `[Snapshot] Missing price for market ${market.id}; keeping prior value for position ${position.id}`
+                  );
+                  positionsValue += position.current_value || 0;
+                  continue;
+                }
+                currentPrice = fallbackPrice;
+                console.warn(
+                  `[Snapshot] Using fallback price ${fallbackPrice.toFixed(4)} for market ${market.id} from prior value`
+                );
+              }
             } else {
               // Multi-outcome market: parse prices from JSON
               try {
@@ -80,22 +104,39 @@ export async function POST(request: NextRequest) {
                 const outcomePrice = prices[position.side];
 
                 if (outcomePrice === undefined || outcomePrice === null) {
+                  const fallbackPrice = fallbackFromPosition(position);
+                  if (fallbackPrice === null) {
+                    console.warn(
+                      `[Snapshot] No price for outcome "${position.side}" in market ${market.id}; keeping prior value`
+                    );
+                    positionsValue += position.current_value || 0;
+                    continue;
+                  }
+                  currentPrice = fallbackPrice;
                   console.warn(
-                    `[Snapshot] No price for outcome "${position.side}" in market ${market.id}`
+                    `[Snapshot] Using fallback price ${fallbackPrice.toFixed(4)} for outcome "${position.side}" in market ${market.id}`
                   );
-                  currentPrice = 0.5;
                 } else {
                   currentPrice = parseFloat(outcomePrice);
                   if (isNaN(currentPrice) || currentPrice < 0 || currentPrice > 1) {
+                    const fallbackPrice = fallbackFromPosition(position);
+                    if (fallbackPrice === null) {
+                      console.warn(
+                        `[Snapshot] Invalid price ${outcomePrice} for "${position.side}" in market ${market.id}; keeping prior value`
+                      );
+                      positionsValue += position.current_value || 0;
+                      continue;
+                    }
+                    currentPrice = fallbackPrice;
                     console.warn(
-                      `[Snapshot] Invalid price ${outcomePrice} for "${position.side}"`
+                      `[Snapshot] Using fallback price ${fallbackPrice.toFixed(4)} for invalid outcome price in market ${market.id}`
                     );
-                    currentPrice = 0.5;
                   }
                 }
               } catch (e) {
-                console.warn(`[Snapshot] Failed to parse prices for market ${market.id}`);
-                currentPrice = 0.5;
+                console.warn(`[Snapshot] Failed to parse prices for market ${market.id}; keeping prior value`);
+                positionsValue += position.current_value || 0;
+                continue;
               }
             }
 
@@ -176,4 +217,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
