@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
 
           // Calculate current value based on market type
           let currentPrice: number | null = null;
+          const unresolvedClosed = market.status === 'closed' && !market.resolution_outcome;
           const isBinary = market.market_type === 'binary';
 
           if (isBinary) {
@@ -136,6 +137,17 @@ export async function POST(request: NextRequest) {
             } catch (e) {
               console.warn(`[Snapshot] Failed to parse prices for market ${market.id}; keeping prior value`);
               currentPrice = null;
+            }
+          }
+
+          // If the market is closed but unresolved and price looks unreliable (null/0/1), keep prior value
+          if (unresolvedClosed && (currentPrice === null || currentPrice === 0 || currentPrice === 1)) {
+            const fallbackPrice = fallbackFromPosition(position);
+            if (fallbackPrice !== null) {
+              currentPrice = fallbackPrice;
+              console.warn(
+                `[Snapshot] Using prior value fallback ${fallbackPrice.toFixed(4)} for closed-unresolved market ${market.id}`
+              );
             }
           }
 
