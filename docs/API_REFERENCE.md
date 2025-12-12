@@ -634,6 +634,45 @@ Clears `forecaster_admin` cookie.
 
 ---
 
+### POST /api/admin/export
+
+Create a small, capped export (CSV+zip) for a cohort and date window.
+
+**Auth:** admin session (`forecaster_admin` cookie)  
+**Body:**
+```json
+{
+  "cohort_id": "uuid-required",
+  "from": "2025-12-01T00:00:00Z",
+  "to":   "2025-12-03T00:00:00Z",
+  "tables": ["decisions","trades","positions","portfolio_snapshots","markets","agents","cohorts","models"],
+  "include_prompts": false
+}
+```
+Notes:
+- Max range: 7 days. Max rows per table: 50k. Rejects if exceeded.
+- Default tables: cohorts, agents, models, markets, decisions, trades, positions, portfolio_snapshots.
+- `include_prompts` adds prompt/response fields to `decisions`; default false.
+
+**Response (success):**
+```json
+{
+  "success": true,
+  "download_url": "/api/admin/export?file=export-<cohort>-<timestamp>.zip",
+  "info": { "cohort_id": "...", "from": "...", "to": "...", "tables": ["..."], "include_prompts": false }
+}
+```
+
+### GET /api/admin/export
+
+Download a previously generated export.
+
+**Auth:** admin session  
+**Query:** `file` = filename returned by POST  
+Returns `application/zip`; 404 if missing/expired (exports cleaned after ~24h).
+
+---
+
 ## Error Handling
 
 ### Common Errors
@@ -686,6 +725,5 @@ Not currently implemented. Planned for v2:
 - Market resolution notifications
 - Decision completion notifications
 - Cohort completion notifications
-
 
 
