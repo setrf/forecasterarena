@@ -17,6 +17,14 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionResult, setActionResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [exportState, setExportState] = useState({
+    cohortId: '',
+    from: '',
+    to: '',
+    includePrompts: false,
+  });
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportResult, setExportResult] = useState<{ type: 'success' | 'error'; message: string; link?: string } | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -106,6 +114,43 @@ export default function AdminPage() {
         return `Backup created successfully`;
       default:
         return 'Action completed';
+    }
+  }
+
+  async function handleExport(e: React.FormEvent) {
+    e.preventDefault();
+    setExportLoading(true);
+    setExportResult(null);
+
+    try {
+      const res = await fetch('/api/admin/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cohort_id: exportState.cohortId,
+          from: exportState.from,
+          to: exportState.to,
+          include_prompts: exportState.includePrompts,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.download_url) {
+        setExportResult({
+          type: 'success',
+          message: 'Export ready. Click to download.',
+          link: data.download_url,
+        });
+      } else {
+        setExportResult({
+          type: 'error',
+          message: data.error || data.message || 'Export failed',
+        });
+      }
+    } catch (err) {
+      setExportResult({ type: 'error', message: 'Connection error' });
+    } finally {
+      setExportLoading(false);
     }
   }
 
@@ -250,6 +295,95 @@ export default function AdminPage() {
           </div>
           <div className="stat-label">API Costs (Total)</div>
         </div>
+      </div>
+
+      {/* Export Section */}
+      <div className="glass-card p-6 mb-10 border border-[var(--border-medium)]">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold">Export Data (CSV + zip)</h3>
+            <p className="text-sm text-[var(--text-muted)]">Admin-only, capped to 7 days / 50k rows per table</p>
+          </div>
+        </div>
+
+        {exportResult && (
+          <div className={`mb-4 p-3 rounded-lg ${exportResult.type === 'success'
+              ? 'bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.3)] text-[var(--accent-emerald)]'
+              : 'bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[var(--accent-rose)]'
+            }`}>
+            <div className="flex items-center justify-between">
+              <span>{exportResult.message}</span>
+              {exportResult.link && (
+                <a
+                  href={exportResult.link}
+                  className="btn btn-primary btn-sm"
+                  download
+                >
+                  Download
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleExport} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">Cohort ID</label>
+            <input
+              type="text"
+              required
+              value={exportState.cohortId}
+              onChange={(e) => setExportState((s) => ({ ...s, cohortId: e.target.value }))}
+              className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none"
+              placeholder="e.g. 1765150233693-eqaag1un5 (cohort UUID)"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">From (ISO)</label>
+              <input
+                type="text"
+                required
+                value={exportState.from}
+                onChange={(e) => setExportState((s) => ({ ...s, from: e.target.value }))}
+                className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none"
+                placeholder="2025-12-01T00:00:00Z"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">To (ISO)</label>
+              <input
+                type="text"
+                required
+                value={exportState.to}
+                onChange={(e) => setExportState((s) => ({ ...s, to: e.target.value }))}
+                className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none"
+                placeholder="2025-12-03T00:00:00Z"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              id="include-prompts"
+              type="checkbox"
+              checked={exportState.includePrompts}
+              onChange={(e) => setExportState((s) => ({ ...s, includePrompts: e.target.checked }))}
+              className="h-4 w-4"
+            />
+            <label htmlFor="include-prompts" className="text-sm text-[var(--text-secondary)]">
+              Include prompts/responses (decisions)
+            </label>
+          </div>
+          <div className="flex items-center md:justify-end">
+            <button
+              type="submit"
+              disabled={exportLoading}
+              className="btn btn-primary"
+            >
+              {exportLoading ? 'Preparing...' : 'Generate Export'}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Navigation */}
