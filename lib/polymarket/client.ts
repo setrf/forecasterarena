@@ -174,13 +174,55 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
 }
 
 /**
+ * Detect if a market has decisive prices indicating resolution
+ *
+ * A decisive result means one outcome is at 1 (winner) and another at 0 (loser).
+ * This is needed because Polymarket API often returns `resolved: null` even
+ * for markets that ARE resolved.
+ */
+function detectDecisivePrices(market: PolymarketMarket): boolean {
+  // Only consider closed markets for price-based resolution detection
+  if (!market.closed) return false;
+
+  try {
+    if (market.outcomePrices) {
+      const prices = typeof market.outcomePrices === 'string'
+        ? JSON.parse(market.outcomePrices)
+        : market.outcomePrices || [];
+
+      if (Array.isArray(prices) && prices.length >= 2) {
+        const numericPrices = prices.map((p: string | number) => parseFloat(String(p)));
+        // A decisive result means one outcome is at 1 (or >=0.99) and another at 0 (or <=0.01)
+        const hasWinner = numericPrices.some((p: number) => p >= 0.99);
+        const hasLoser = numericPrices.some((p: number) => p <= 0.01);
+        return hasWinner && hasLoser;
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
+/**
  * Check if a market has resolved
- * 
+ *
  * IMPORTANT: Newer markets may not have a `tokens` array and instead use
  * `outcomes` and `outcomePrices` as JSON strings. We handle both formats.
+ *
+ * NOTE: Polymarket API often returns `resolved: null` even for markets that
+ * ARE resolved. We detect resolution by checking for decisive prices (1/0 pattern).
  */
 export function checkResolution(market: PolymarketMarket): MarketResolution {
-  if (!market.resolved) return { resolved: false };
+  // Check if market has decisive prices (one outcome at 1, another at 0)
+  // This indicates resolution even when market.resolved is null
+  const hasDecisivePrices = detectDecisivePrices(market);
+
+  // Only return false if market is not explicitly resolved AND doesn't have decisive prices
+  if (!market.resolved && !hasDecisivePrices) {
+    return { resolved: false };
+  }
 
   // Method 1: Check tokens array (older format)
   if (market.tokens && Array.isArray(market.tokens) && market.tokens.length > 0) {
