@@ -225,7 +225,7 @@ export function parseDecision(
         }
         bets.push({
           market_id: bet.market_id,
-          side: bet.side.toUpperCase(),
+          side: bet.side,  // Preserve original case for multi-outcome markets
           amount: bet.amount
         });
       }

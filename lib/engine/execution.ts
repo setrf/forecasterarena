@@ -98,7 +98,9 @@ export function executeBet(
     let price: number;
 
     if (isBinary) {
-      price = bet.side === 'YES'
+      // Normalize binary market sides to uppercase for case-insensitive comparison
+      const normalizedSide = bet.side.toUpperCase();
+      price = normalizedSide === 'YES'
         ? (market.current_price || 0.5)
         : (1 - (market.current_price || 0.5));
     } else {
