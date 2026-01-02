@@ -251,7 +251,7 @@ function LeaderboardPreview({ data, hasRealData }: { data: LeaderboardEntry[]; h
 // Performance Chart Section
 function PerformanceChartSection() {
   const [chartData, setChartData] = useState<Array<{ date: string; [key: string]: number | string }>>([]);
-  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1W');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

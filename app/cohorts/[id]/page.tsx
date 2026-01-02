@@ -65,7 +65,7 @@ export default function CohortDetailPage() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1W');
 
   useEffect(() => {
     async function fetchData() {
@@ -228,7 +228,7 @@ export default function CohortDetailPage() {
         <PerformanceChart
           data={chartData}
           models={modelConfigs}
-          height={350}
+          height={520}
           showLegend={true}
           timeRange={timeRange}
         />

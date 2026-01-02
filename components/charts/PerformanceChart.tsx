@@ -110,10 +110,10 @@ function CustomTooltip({ active, payload, label, models }: CustomTooltipProps) {
 export default function PerformanceChart({
   data,
   models,
-  height = 400,
+  height = 520,
   showLegend = true,
   showGrid = true,
-  timeRange = 'ALL',
+  timeRange = '1W',
 }: PerformanceChartProps) {
   // Filter data based on time range
   const filteredData = useMemo(() => {

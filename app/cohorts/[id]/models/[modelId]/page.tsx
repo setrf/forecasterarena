@@ -138,7 +138,7 @@ export default function AgentCohortDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1W');
 
   useEffect(() => {
     async function fetchData() {
@@ -352,7 +352,7 @@ export default function AgentCohortDetailPage() {
         <PerformanceChart
           data={chartData}
           models={chartModels}
-          height={280}
+          height={520}
           showLegend={false}
           timeRange={timeRange}
         />
