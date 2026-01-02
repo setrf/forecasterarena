@@ -114,10 +114,11 @@ function validateBet(
     return 'Invalid amount';
   }
   
-  // Check side is valid (for binary markets - multi-outcome validated in execution)
-  const normalizedSide = bet.side.toUpperCase();
-  if (!bet.side || !['YES', 'NO'].includes(normalizedSide)) {
-    return `Invalid side: ${bet.side}`;
+  // Side validation: allow any non-empty string
+  // Binary markets use YES/NO, multi-outcome markets use outcome names (e.g., "Trump", "Biden")
+  // The execution layer validates that the side matches an actual market outcome
+  if (!bet.side.trim()) {
+    return 'Side cannot be empty';
   }
   
   // Check amount constraints

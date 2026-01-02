@@ -81,25 +81,12 @@ export async function POST(request: NextRequest) {
             }
             
             case 'backup': {
-                // Import backup function dynamically to avoid issues
-                const fs = await import('fs');
-                const path = await import('path');
-                
-                const dbPath = path.join(process.cwd(), 'data', 'forecaster.db');
-                const backupDir = path.join(process.cwd(), 'data', 'backups');
-                
-                // Create backups directory if it doesn't exist
-                if (!fs.existsSync(backupDir)) {
-                    fs.mkdirSync(backupDir, { recursive: true });
-                }
-                
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                const backupPath = path.join(backupDir, `forecaster_${timestamp}.db`);
-                
-                fs.copyFileSync(dbPath, backupPath);
-                
+                // Use WAL-safe backup via SQLite's backup API
+                const { createBackup } = await import('@/lib/db');
+                const backupPath = createBackup();
+
                 logSystemEvent('admin_backup', { backup_path: backupPath }, 'info');
-                
+
                 return NextResponse.json({
                     success: true,
                     backup_path: backupPath

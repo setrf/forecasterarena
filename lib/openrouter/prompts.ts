@@ -30,12 +30,17 @@ FOR PLACING BETS:
   "bets": [
     {
       "market_id": "uuid",
-      "side": "YES" or "NO",
+      "side": "YES" or "NO" (for binary markets) OR outcome name (for multi-outcome markets),
       "amount": 500.00
     }
   ],
   "reasoning": "Your detailed reasoning"
 }
+
+MARKET TYPES:
+- Binary markets: Use "YES" or "NO" as the side
+- Multi-outcome markets: Use the exact outcome name as the side (e.g., "Trump", "Harris", "Other")
+  Multi-outcome markets show outcomes and prices like: Outcomes: ["Trump", "Harris"] Prices: {"Trump": 0.55, "Harris": 0.45}
 
 FOR SELLING POSITIONS:
 {
@@ -134,16 +139,33 @@ YOUR PORTFOLIO:
   }
 
   prompt += `AVAILABLE MARKETS (Top ${markets.length} by volume):\n`;
-  
+
   for (const market of markets) {
-    const yesPrice = market.current_price || 0.5;
-    const noPrice = 1 - yesPrice;
-    
+    const isBinary = market.market_type === 'binary' || !market.current_prices;
+
     prompt += `- ID: ${market.id}
   Question: "${market.question}"
   Category: ${market.category || 'General'}
-  Current Price: ${(yesPrice * 100).toFixed(1)}% YES / ${(noPrice * 100).toFixed(1)}% NO
-  Volume: $${market.volume?.toLocaleString() || 'N/A'}
+  Type: ${isBinary ? 'Binary (YES/NO)' : 'Multi-outcome'}
+`;
+
+    if (isBinary) {
+      const yesPrice = market.current_price || 0.5;
+      const noPrice = 1 - yesPrice;
+      prompt += `  Prices: ${(yesPrice * 100).toFixed(1)}% YES / ${(noPrice * 100).toFixed(1)}% NO\n`;
+    } else {
+      // Multi-outcome market
+      try {
+        const outcomes = market.outcomes ? JSON.parse(market.outcomes) : [];
+        const prices = market.current_prices ? JSON.parse(market.current_prices) : {};
+        prompt += `  Outcomes: ${JSON.stringify(outcomes)}\n`;
+        prompt += `  Prices: ${JSON.stringify(prices)}\n`;
+      } catch {
+        prompt += `  Prices: (unavailable)\n`;
+      }
+    }
+
+    prompt += `  Volume: $${market.volume?.toLocaleString() || 'N/A'}
   Closes: ${market.close_date.split('T')[0]}
 
 `;
