@@ -148,9 +148,23 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     }
   }
 
+  // Determine status with decisive price detection
+  // Polymarket API often returns `resolved: null` even for markets that ARE resolved
+  // We detect resolution by checking for decisive prices (one at >=0.99, another at <=0.01)
   let status: 'active' | 'closed' | 'resolved' = 'active';
-  if (market.resolved) status = 'resolved';
-  else if (market.closed) status = 'closed';
+  if (market.resolved) {
+    status = 'resolved';
+  } else if (market.closed) {
+    // Check for decisive prices that indicate resolution
+    const numericPrices = pricesList.map(p => parseFloat(String(p)));
+    const hasWinner = numericPrices.some(p => p >= 0.99);
+    const hasLoser = numericPrices.some(p => p <= 0.01);
+    if (hasWinner && hasLoser) {
+      status = 'resolved';
+    } else {
+      status = 'closed';
+    }
+  }
 
   const outcomes = !isBinary && outcomesList.length > 0
     ? JSON.stringify(outcomesList)

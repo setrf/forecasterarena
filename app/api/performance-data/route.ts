@@ -65,23 +65,38 @@ export async function GET(request: NextRequest) {
     }>;
     
     // Group by date and pivot to wide format
+    // Track sums and counts separately to compute correct averages
     const dataByDate = new Map<string, Record<string, number | string>>();
-    
+    const countsByDate = new Map<string, Record<string, number>>();
+
     for (const row of rows) {
       if (!dataByDate.has(row.snapshot_timestamp)) {
         dataByDate.set(row.snapshot_timestamp, { date: row.snapshot_timestamp });
+        countsByDate.set(row.snapshot_timestamp, {});
       }
       const dateData = dataByDate.get(row.snapshot_timestamp)!;
-      
-      // If cohort filter, use exact value; otherwise average across cohorts
+      const counts = countsByDate.get(row.snapshot_timestamp)!;
+
+      // Accumulate sum and count for proper averaging across cohorts
       if (dateData[row.model_id] === undefined) {
         dateData[row.model_id] = row.total_value;
+        counts[row.model_id] = 1;
       } else {
-        // Average if multiple cohorts
-        dateData[row.model_id] = ((dateData[row.model_id] as number) + row.total_value) / 2;
+        dateData[row.model_id] = (dateData[row.model_id] as number) + row.total_value;
+        counts[row.model_id] = (counts[row.model_id] || 1) + 1;
       }
     }
-    
+
+    // Convert sums to averages
+    dataByDate.forEach((dateData, timestamp) => {
+      const counts = countsByDate.get(timestamp)!;
+      for (const modelId of Object.keys(counts)) {
+        if (counts[modelId] > 1) {
+          dateData[modelId] = (dateData[modelId] as number) / counts[modelId];
+        }
+      }
+    });
+
     const data = Array.from(dataByDate.values());
     
     // Model configs for the chart
