@@ -52,30 +52,39 @@ export function calculateBrierScore(
   side: 'YES' | 'NO' | string,
   winningOutcome: 'YES' | 'NO' | string
 ): number {
-  // Normalize to uppercase
+  // Normalize to uppercase for comparison
   const normalizedSide = side.toUpperCase();
   const normalizedOutcome = winningOutcome.toUpperCase();
-  
-  // For binary markets, convert confidence to YES-equivalent
-  let forecastYes: number;
-  
-  if (normalizedSide === 'YES') {
-    // YES bet: confidence IS the YES probability
-    forecastYes = impliedConfidence;
-  } else if (normalizedSide === 'NO') {
-    // NO bet: confidence in NO means low confidence in YES
-    forecastYes = 1 - impliedConfidence;
+
+  // Determine if this is a binary or multi-outcome market
+  const isBinary = normalizedSide === 'YES' || normalizedSide === 'NO';
+
+  if (isBinary) {
+    // Binary market: convert confidence to YES-equivalent probability
+    let forecastYes: number;
+
+    if (normalizedSide === 'YES') {
+      // YES bet: confidence IS the YES probability
+      forecastYes = impliedConfidence;
+    } else {
+      // NO bet: confidence in NO means low confidence in YES
+      forecastYes = 1 - impliedConfidence;
+    }
+
+    // Actual outcome as 0 or 1
+    const actualYes = normalizedOutcome === 'YES' ? 1 : 0;
+
+    // Brier score formula
+    return Math.pow(forecastYes - actualYes, 2);
   } else {
-    // Multi-outcome: treat as binary for now
-    forecastYes = impliedConfidence;
+    // Multi-outcome market: score based on whether this outcome won
+    // Treat the bet as assigning probability=confidence to this specific outcome
+    // If outcome won (actual=1): Brier = (confidence - 1)²
+    // If outcome lost (actual=0): Brier = (confidence - 0)² = confidence²
+    const didOutcomeWin = normalizedOutcome === normalizedSide ? 1 : 0;
+
+    return Math.pow(impliedConfidence - didOutcomeWin, 2);
   }
-  
-  // Actual outcome as 0 or 1
-  const actualYes = normalizedOutcome === 'YES' ? 1 : 
-                    normalizedOutcome === normalizedSide ? 1 : 0;
-  
-  // Brier score formula
-  return Math.pow(forecastYes - actualYes, 2);
 }
 
 /**
