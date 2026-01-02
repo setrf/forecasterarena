@@ -68,11 +68,11 @@ Prediction markets provide:
 **Source**: Polymarket Gamma API (public, no authentication required)
 
 **Selection Criteria**:
-- Top 100 markets by trading volume
+- Top 500 markets by trading volume
 - Active status (not closed or resolved)
 - Both binary (YES/NO) and multi-outcome markets supported
 
-**Why Top 100 by Volume**:
+**Why Top 500 by Volume**:
 - Higher volume indicates more liquid markets with reliable prices
 - Reduces noise from illiquid markets with unreliable price signals
 - Keeps prompt size manageable for LLM context windows
@@ -81,12 +81,12 @@ Prediction markets provide:
 
 **Models** (v1):
 1. GPT-5.1 (OpenAI)
-2. Gemini 3 Pro (Google)
+2. Gemini 2.5 Flash (Google)
 3. Grok 4 (xAI)
 4. Claude Opus 4.5 (Anthropic)
-5. DeepSeek V3 (DeepSeek)
+5. DeepSeek V3.1 (DeepSeek)
 6. Kimi K2 (Moonshot AI)
-7. Qwen 3 (Alibaba)
+7. Qwen 3 Next (Alibaba)
 
 **API Configuration**:
 - Temperature: 0 (deterministic for reproducibility)
@@ -111,7 +111,7 @@ Each week, LLMs receive:
    - Open positions with mark-to-market values
    - Total portfolio value and P/L
 
-2. **Market Information** (Top 100 by volume):
+2. **Market Information** (Top 500 by volume):
    - Market ID
    - Question text
    - Category

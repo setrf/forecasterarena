@@ -14,7 +14,7 @@ import { logSystemEvent } from '@/lib/db';
 import { constantTimeCompare } from '@/lib/utils/security';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300; // 5 minutes max for LLM calls
+export const maxDuration = 600; // 10 minutes max for LLM calls (7 models × ~1-2 min each)
 
 /**
  * Verify cron secret from request

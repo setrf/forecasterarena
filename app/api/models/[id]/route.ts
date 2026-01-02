@@ -8,12 +8,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { 
-  getModelById, 
+import {
+  getModelById,
   getAverageBrierScore,
   getSnapshotsByAgent,
   getDecisionsByAgent,
-  getTradesByAgent
+  getTradesByAgent,
+  calculateActualPortfolioValue
 } from '@/lib/db/queries';
 import { INITIAL_BALANCE } from '@/lib/constants';
 import { safeErrorMessage } from '@/lib/utils/security';
@@ -69,7 +70,7 @@ export async function GET(
       const brierScore = getAverageBrierScore(agent.id);
 
       // Calculate current values with proper fallbacks
-      const totalValue = latestSnapshot?.total_value || agent.cash_balance + agent.total_invested;
+      const totalValue = latestSnapshot?.total_value || calculateActualPortfolioValue(agent.id);
       const totalPnl = latestSnapshot?.total_pnl || (totalValue - INITIAL_BALANCE);
       const totalPnlPercent = latestSnapshot?.total_pnl_percent || ((totalPnl / INITIAL_BALANCE) * 100);
 
@@ -89,8 +90,9 @@ export async function GET(
     
     // Get aggregate stats
     const totalPnl = cohortPerformance.reduce((sum, c) => sum + c.total_pnl, 0);
-    const avgPnlPercent = cohortPerformance.length > 0 
-      ? cohortPerformance.reduce((sum, c) => sum + c.total_pnl_percent, 0) / cohortPerformance.length
+    const totalCapital = cohortPerformance.length * INITIAL_BALANCE;
+    const avgPnlPercent = totalCapital > 0
+      ? (totalPnl / totalCapital) * 100
       : 0;
     
     // Calculate aggregate Brier score
@@ -128,16 +130,31 @@ export async function GET(
       LIMIT 20
     `).all(id);
     
-    // Get equity curve (all snapshots across cohorts)
-    const allSnapshots = db.prepare(`
-      SELECT ps.*, c.cohort_number
+    // Get equity curve (aggregate across cohorts by timestamp)
+    // This averages portfolio values at each timestamp to smooth multi-cohort charts
+    const rawSnapshots = db.prepare(`
+      SELECT ps.snapshot_timestamp, ps.total_value
       FROM portfolio_snapshots ps
       JOIN agents a ON ps.agent_id = a.id
-      JOIN cohorts c ON a.cohort_id = c.id
       WHERE a.model_id = ?
       ORDER BY ps.snapshot_timestamp ASC
-    `).all(id);
-    
+    `).all(id) as Array<{ snapshot_timestamp: string; total_value: number }>;
+
+    // Group by timestamp and average values (consistent with performance chart logic)
+    const snapshotsByTime = new Map<string, number[]>();
+    for (const snap of rawSnapshots) {
+      if (!snapshotsByTime.has(snap.snapshot_timestamp)) {
+        snapshotsByTime.set(snap.snapshot_timestamp, []);
+      }
+      snapshotsByTime.get(snap.snapshot_timestamp)!.push(snap.total_value);
+    }
+
+    // Calculate average for each timestamp
+    const equityCurve = Array.from(snapshotsByTime.entries()).map(([timestamp, values]) => ({
+      snapshot_timestamp: timestamp,
+      total_value: values.reduce((sum, v) => sum + v, 0) / values.length
+    }));
+
     return NextResponse.json({
       model,
       num_cohorts: agents.length,
@@ -147,7 +164,7 @@ export async function GET(
       win_rate: winRate,
       cohort_performance: cohortPerformance,
       recent_decisions: recentDecisions,
-      equity_curve: allSnapshots,
+      equity_curve: equityCurve,
       updated_at: new Date().toISOString()
     });
     

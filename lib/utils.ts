@@ -127,7 +127,10 @@ export function getTimeUntilNextSunday(): {
 
 /**
  * Calculate week number within a cohort
- * 
+ *
+ * Normalizes both dates to midnight UTC to ensure clean weekly boundaries.
+ * This handles legacy cohorts created at non-midnight times.
+ *
  * @param cohortStartDate - When the cohort started
  * @param currentDate - Current date (defaults to now)
  * @returns Week number (1-based)
@@ -136,13 +139,21 @@ export function calculateWeekNumber(
   cohortStartDate: string | Date,
   currentDate: Date = new Date()
 ): number {
-  const start = typeof cohortStartDate === 'string' 
-    ? new Date(cohortStartDate) 
+  const start = typeof cohortStartDate === 'string'
+    ? new Date(cohortStartDate)
     : cohortStartDate;
-  
-  const diffMs = currentDate.getTime() - start.getTime();
+
+  // Normalize both dates to midnight UTC for clean week boundaries
+  // This ensures decisions on Sunday Week 2 at 00:00 count as Week 2, not Week 1
+  const startMidnight = new Date(start);
+  startMidnight.setUTCHours(0, 0, 0, 0);
+
+  const currentMidnight = new Date(currentDate);
+  currentMidnight.setUTCHours(0, 0, 0, 0);
+
+  const diffMs = currentMidnight.getTime() - startMidnight.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
+
   return Math.floor(diffDays / 7) + 1;
 }
 

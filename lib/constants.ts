@@ -48,7 +48,7 @@ export const LLM_TEMPERATURE = 0;
 /**
  * Maximum tokens for LLM response
  */
-export const LLM_MAX_TOKENS = 2000;
+export const LLM_MAX_TOKENS = 16000;
 
 /**
  * Request timeout in milliseconds
@@ -101,22 +101,22 @@ export const METHODOLOGY_VERSION = 'v1';
 export const MODELS = [
   {
     id: 'gpt-5.1',
-    openrouterId: 'openai/gpt-5.1-chat',
-    displayName: 'GPT-5.1',
+    openrouterId: 'openai/gpt-5.2',
+    displayName: 'GPT-5.2',
     provider: 'OpenAI',
     color: '#10B981' // Emerald
   },
   {
     id: 'gemini-2.5-flash',
-    openrouterId: 'google/gemini-2.5-flash',
-    displayName: 'Gemini 2.5 Flash',
+    openrouterId: 'google/gemini-3-pro-preview',
+    displayName: 'Gemini 3 Pro',
     provider: 'Google',
     color: '#3B82F6' // Blue
   },
   {
     id: 'grok-4',
-    openrouterId: 'x-ai/grok-4',
-    displayName: 'Grok 4',
+    openrouterId: 'x-ai/grok-4.1-fast',
+    displayName: 'Grok 4.1',
     provider: 'xAI',
     color: '#8B5CF6' // Violet
   },
@@ -129,8 +129,8 @@ export const MODELS = [
   },
   {
     id: 'deepseek-v3.1',
-    openrouterId: 'deepseek/deepseek-chat-v3.1',
-    displayName: 'DeepSeek V3.1',
+    openrouterId: 'deepseek/deepseek-v3.2',
+    displayName: 'DeepSeek V3.2',
     provider: 'DeepSeek',
     color: '#EF4444' // Red
   },
@@ -143,8 +143,8 @@ export const MODELS = [
   },
   {
     id: 'qwen-3-next',
-    openrouterId: 'qwen/qwen3-next-80b-a3b-instruct',
-    displayName: 'Qwen 3 Next',
+    openrouterId: 'qwen/qwen3-235b-a22b-instruct-2507',
+    displayName: 'Qwen 3',
     provider: 'Alibaba',
     color: '#06B6D4' // Cyan
   }

@@ -312,7 +312,7 @@ function HowItWorks() {
     {
       num: '02',
       title: 'Market Analysis',
-      description: 'Models analyze the top 100 Polymarket markets by volume and make probabilistic assessments.',
+      description: 'Models analyze the top 500 Polymarket markets by volume and make probabilistic assessments.',
       accent: 'var(--accent-blue)'
     },
     {

@@ -13,7 +13,8 @@ import {
   getAgentsWithModelsByCohort,
   getLatestSnapshot,
   getAverageBrierScore,
-  getSnapshotsByAgent
+  getSnapshotsByAgent,
+  calculateActualPortfolioValue
 } from '@/lib/db/queries';
 import { calculateWeekNumber } from '@/lib/utils';
 import { INITIAL_BALANCE } from '@/lib/constants';
@@ -46,15 +47,25 @@ export async function GET(
       const snapshot = getLatestSnapshot(agent.id);
       const brierScore = getAverageBrierScore(agent.id);
       
-      // Count positions and trades
+      // Count positions and trades (only active markets)
       const positionCount = (db.prepare(`
-        SELECT COUNT(*) as count FROM positions WHERE agent_id = ? AND status = 'open'
+        SELECT COUNT(*) as count
+        FROM positions p
+        JOIN markets m ON p.market_id = m.id
+        WHERE p.agent_id = ?
+          AND p.status = 'open'
+          AND m.status = 'active'
       `).get(agent.id) as { count: number }).count;
       
       const tradeCount = (db.prepare(`
         SELECT COUNT(*) as count FROM trades WHERE agent_id = ?
       `).get(agent.id) as { count: number }).count;
       
+      // Calculate actual portfolio value if no snapshot
+      const totalValue = snapshot?.total_value || calculateActualPortfolioValue(agent.id);
+      const totalPnl = snapshot?.total_pnl || (totalValue - INITIAL_BALANCE);
+      const totalPnlPercent = snapshot?.total_pnl_percent || ((totalPnl / INITIAL_BALANCE) * 100);
+
       return {
         id: agent.id,
         model_id: agent.model_id,
@@ -63,9 +74,9 @@ export async function GET(
         cash_balance: agent.cash_balance,
         total_invested: agent.total_invested,
         status: agent.status,
-        total_value: snapshot?.total_value || agent.cash_balance,
-        total_pnl: snapshot?.total_pnl || 0,
-        total_pnl_percent: snapshot?.total_pnl_percent || 0,
+        total_value: totalValue,
+        total_pnl: totalPnl,
+        total_pnl_percent: totalPnlPercent,
         brier_score: brierScore,
         position_count: positionCount,
         trade_count: tradeCount,

@@ -128,7 +128,7 @@ module.exports = {
     cwd: '/home/forecaster/forecasterarena',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000
+      PORT: 3010
     }
   }]
 };
@@ -164,7 +164,7 @@ server {
     server_name yourdomain.com www.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3010;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -215,24 +215,25 @@ Add these entries:
 
 ```cron
 # Forecaster Arena Cron Jobs
+# All times in UTC
 
-# Sync markets every 6 hours
-0 */6 * * * curl -X POST http://localhost:3000/api/cron/sync-markets -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/sync.log 2>&1
+# Sync markets from Polymarket - Every 5 minutes
+*/5 * * * * curl -s -X POST http://localhost:3010/api/cron/sync-markets -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/sync.log 2>&1
 
-# Run decisions every Sunday at 00:00 UTC
-0 0 * * 0 curl -X POST http://localhost:3000/api/cron/run-decisions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/decisions.log 2>&1
+# Run agent decisions every Sunday at 00:00 UTC
+0 0 * * 0 curl -s -X POST http://localhost:3010/api/cron/run-decisions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/decisions.log 2>&1
 
-# Start new cohort every Sunday at 00:00 UTC
-0 0 * * 0 curl -X POST http://localhost:3000/api/cron/start-cohort -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/cohort.log 2>&1
+# Start new cohort every Sunday at 00:05 UTC (runs after decisions)
+5 0 * * 0 curl -s -X POST http://localhost:3010/api/cron/start-cohort -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/cohort.log 2>&1
 
-# Check resolutions every hour
-0 * * * * curl -X POST http://localhost:3000/api/cron/check-resolutions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/resolutions.log 2>&1
+# Check market resolutions every hour
+0 * * * * curl -s -X POST http://localhost:3010/api/cron/check-resolutions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/resolutions.log 2>&1
 
-# Take snapshots daily at 00:00 UTC
-0 0 * * * curl -X POST http://localhost:3000/api/cron/take-snapshots -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/snapshots.log 2>&1
+# Take portfolio snapshots every 10 minutes
+*/10 * * * * curl -s -X POST http://localhost:3010/api/cron/take-snapshots -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/snapshots.log 2>&1
 
-# Weekly backup Saturday 23:00 UTC
-0 23 * * 6 curl -X POST http://localhost:3000/api/cron/backup -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/backup.log 2>&1
+# Database backup - Daily at 02:00 UTC
+0 2 * * * curl -s -X POST http://localhost:3010/api/cron/backup -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/backup.log 2>&1
 ```
 
 Create logs directory:
@@ -318,7 +319,7 @@ cat .env.local
 Verify app is running:
 ```bash
 pm2 status
-curl http://localhost:3000
+curl http://localhost:3010
 ```
 
 

@@ -164,7 +164,7 @@ async function handlePost(request: NextRequest) {
   const cohortId = body.cohort_id as string;
   const fromInput = body.from as string;
   const toInput = body.to as string;
-  const tablesInput = Array.isArray(body.tables) ? body.tables : undefined;
+  const tablesInput = Array.isArray(body.tables) ? (body.tables as string[]) : undefined;
   const includePrompts = body.include_prompts === true;
 
   if (!cohortId || !fromInput || !toInput) {
@@ -189,7 +189,7 @@ async function handlePost(request: NextRequest) {
   }
 
   const tables = (tablesInput && tablesInput.length > 0 ? tablesInput : DEFAULT_TABLES)
-    .filter((t) => DEFAULT_TABLES.includes(t));
+    .filter((t: string): t is (typeof DEFAULT_TABLES)[number] => DEFAULT_TABLES.includes(t));
 
   if (tables.length === 0) {
     return NextResponse.json({ error: 'No valid tables requested' }, { status: 400 });

@@ -112,12 +112,17 @@ export function createCohort(): Cohort {
   const db = getDb();
   const id = generateId();
   const cohortNumber = getLatestCohortNumber() + 1;
-  const now = new Date().toISOString();
+
+  // Normalize to midnight UTC for clean week calculations
+  // This ensures decisions on subsequent Sundays at 00:00 will be Week 2, 3, etc.
+  const now = new Date();
+  now.setUTCHours(0, 0, 0, 0);
+  const startedAt = now.toISOString();
 
   db.prepare(`
     INSERT INTO cohorts (id, cohort_number, started_at, methodology_version)
     VALUES (?, ?, ?, ?)
-  `).run(id, cohortNumber, now, METHODOLOGY_VERSION);
+  `).run(id, cohortNumber, startedAt, METHODOLOGY_VERSION);
 
   return getCohortById(id)!;
 }
@@ -308,6 +313,36 @@ export function updateAgentBalance(id: string, cashBalance: number, totalInveste
   `).run(cashBalance, totalInvested, status, id);
 }
 
+/**
+ * Calculate actual portfolio value for an agent
+ *
+ * Returns: cash_balance + sum of current position values
+ *
+ * This is the CORRECT way to calculate portfolio value.
+ * DO NOT use cash_balance + total_invested (which is cost basis, not current value).
+ */
+export function calculateActualPortfolioValue(agentId: string): number {
+  const db = getDb();
+
+  // Get agent's cash balance
+  const agent = db.prepare(`
+    SELECT cash_balance FROM agents WHERE id = ?
+  `).get(agentId) as { cash_balance: number } | undefined;
+
+  if (!agent) {
+    throw new Error(`Agent ${agentId} not found`);
+  }
+
+  // Get sum of open position values
+  const positionValueResult = db.prepare(`
+    SELECT COALESCE(SUM(current_value), 0) as total_position_value
+    FROM positions
+    WHERE agent_id = ? AND status = 'open'
+  `).get(agentId) as { total_position_value: number };
+
+  return agent.cash_balance + positionValueResult.total_position_value;
+}
+
 // ============================================================================
 // MARKET QUERIES
 // ============================================================================
@@ -476,8 +511,27 @@ export function getClosedMarkets(): Market[] {
 
 /**
  * Get open positions for an agent
+ * Only returns positions on active markets (markets still accepting trades)
+ * Use this for displaying tradeable positions to users.
  */
 export function getOpenPositions(agentId: string): Position[] {
+  const db = getDb();
+  return db.prepare(`
+    SELECT p.* FROM positions p
+    JOIN markets m ON p.market_id = m.id
+    WHERE p.agent_id = ?
+      AND p.status = 'open'
+      AND m.status = 'active'
+    ORDER BY p.opened_at DESC
+  `).all(agentId) as Position[];
+}
+
+/**
+ * Get ALL open positions for an agent (including those on closed/resolved markets)
+ * Returns positions regardless of market status - used for valuation/accounting.
+ * Use this for portfolio snapshots and P/L calculations.
+ */
+export function getAllOpenPositions(agentId: string): Position[] {
   const db = getDb();
   return db.prepare(`
     SELECT * FROM positions
@@ -509,6 +563,7 @@ export function getCohortCompletionStatus(cohortId: string): { open_positions: n
 
 /**
  * Get positions with market info for an agent
+ * Only returns positions on active markets (markets still accepting trades)
  */
 export function getPositionsWithMarkets(agentId: string): PositionWithMarket[] {
   const db = getDb();
@@ -526,9 +581,96 @@ export function getPositionsWithMarkets(agentId: string): PositionWithMarket[] {
       WHERE trade_type = 'BUY'
       GROUP BY market_id, agent_id, side
     ) t ON p.market_id = t.market_id AND p.agent_id = t.agent_id AND p.side = t.side
-    WHERE p.agent_id = ? AND p.status = 'open'
+    WHERE p.agent_id = ?
+      AND p.status = 'open'
+      AND m.status = 'active'
     ORDER BY p.opened_at DESC
   `).all(agentId) as PositionWithMarket[];
+}
+
+/**
+ * Get closed/settled positions with market info and outcomes for an agent
+ * Returns positions that are either:
+ * 1. Settled (market resolved) - shows win/loss/cancelled outcome
+ * 2. Closed (manually exited before resolution) - shows realized P/L
+ * 3. Open but market is closed (awaiting resolution) - shows pending status
+ */
+export function getClosedPositionsWithMarkets(agentId: string): any[] {
+  const db = getDb();
+  return db.prepare(`
+    SELECT
+      p.id,
+      p.market_id,
+      p.side,
+      p.shares,
+      p.avg_entry_price,
+      p.total_cost,
+      p.status as position_status,
+      p.opened_at,
+      p.closed_at,
+      m.question as market_question,
+      m.status as market_status,
+      m.resolution_outcome,
+      m.resolved_at,
+      -- Calculate outcome
+      CASE
+        -- Position manually closed (sold before resolution)
+        WHEN p.status = 'closed' THEN 'EXITED'
+        -- Position settled on resolved market
+        WHEN p.status = 'settled' AND m.resolution_outcome = 'CANCELLED' THEN 'CANCELLED'
+        WHEN p.status = 'settled' AND UPPER(p.side) = UPPER(m.resolution_outcome) THEN 'WON'
+        WHEN p.status = 'settled' AND UPPER(p.side) != UPPER(m.resolution_outcome) THEN 'LOST'
+        -- Position open but market closed (awaiting resolution)
+        WHEN p.status = 'open' AND m.status = 'closed' THEN 'PENDING'
+        ELSE 'UNKNOWN'
+      END as outcome,
+      -- Calculate settlement/exit value
+      CASE
+        WHEN p.status = 'closed' THEN (
+          -- Sum of SELL trade proceeds for this position
+          SELECT COALESCE(SUM(total_amount), 0)
+          FROM trades
+          WHERE position_id = p.id AND trade_type = 'SELL'
+        )
+        WHEN p.status = 'settled' AND UPPER(p.side) = UPPER(m.resolution_outcome) THEN p.shares * 1.0
+        WHEN p.status = 'settled' THEN 0.0
+        ELSE NULL
+      END as settlement_value,
+      -- Calculate P/L
+      CASE
+        WHEN p.status = 'closed' THEN (
+          SELECT COALESCE(SUM(total_amount), 0) - p.total_cost
+          FROM trades
+          WHERE position_id = p.id AND trade_type = 'SELL'
+        )
+        WHEN p.status = 'settled' AND UPPER(p.side) = UPPER(m.resolution_outcome) THEN (p.shares * 1.0) - p.total_cost
+        WHEN p.status = 'settled' THEN 0.0 - p.total_cost
+        ELSE NULL
+      END as pnl,
+      -- Get opening decision
+      t.decision_id as opening_decision_id
+    FROM positions p
+    JOIN markets m ON p.market_id = m.id
+    LEFT JOIN (
+      SELECT position_id, decision_id, MIN(executed_at) as first_trade
+      FROM trades
+      WHERE trade_type = 'BUY'
+      GROUP BY position_id
+    ) t ON p.id = t.position_id
+    WHERE p.agent_id = ?
+      AND (
+        -- Settled positions (resolved markets)
+        p.status = 'settled'
+        -- OR manually closed positions (exited before resolution)
+        OR p.status = 'closed'
+        -- OR open positions on closed markets (awaiting resolution)
+        OR (p.status = 'open' AND m.status IN ('closed', 'resolved'))
+      )
+    ORDER BY
+      COALESCE(p.closed_at, m.resolved_at, m.close_date) DESC,
+      p.opened_at DESC
+    LIMIT 50
+  `).all(agentId);
 }
 
 /**

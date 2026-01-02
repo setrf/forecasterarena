@@ -15,8 +15,10 @@ import {
   getSnapshotsByAgent,
   getDecisionsByAgent,
   getPositionsWithMarkets,
+  getClosedPositionsWithMarkets,
   getTradesByAgent,
-  getAverageBrierScore
+  getAverageBrierScore,
+  calculateActualPortfolioValue
 } from '@/lib/db/queries';
 import { INITIAL_BALANCE } from '@/lib/constants';
 import { safeErrorMessage } from '@/lib/utils/security';
@@ -80,7 +82,7 @@ export async function GET(
     const latestSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
 
     // Calculate current portfolio value
-    const totalValue = latestSnapshot?.total_value || agent.cash_balance + agent.total_invested;
+    const totalValue = latestSnapshot?.total_value || calculateActualPortfolioValue(agent.id);
     const totalPnl = latestSnapshot?.total_pnl || (totalValue - INITIAL_BALANCE);
     const totalPnlPercent = latestSnapshot?.total_pnl_percent || ((totalPnl / INITIAL_BALANCE) * 100);
 
@@ -93,8 +95,14 @@ export async function GET(
       LEFT JOIN portfolio_snapshots ps1 ON a1.id = ps1.agent_id AND ps1.snapshot_timestamp = (
         SELECT MAX(snapshot_timestamp) FROM portfolio_snapshots WHERE agent_id = a1.id
       )
+      LEFT JOIN (
+        SELECT agent_id, COALESCE(SUM(current_value), 0) as total_position_value
+        FROM positions
+        WHERE status = 'open'
+        GROUP BY agent_id
+      ) p1 ON a1.id = p1.agent_id
       WHERE a1.cohort_id = ?
-        AND COALESCE(ps1.total_value, a1.cash_balance + a1.total_invested) > ?
+        AND COALESCE(ps1.total_value, a1.cash_balance + COALESCE(p1.total_position_value, 0)) > ?
     `).get(cohortId, cohortId, totalValue) as { rank: number; total_agents: number };
 
     // Get Brier score
@@ -139,11 +147,14 @@ export async function GET(
       worst_pnl_percent: number;
     } | undefined;
 
-    // Get position count
+    // Get position count (only active markets)
     const positionCount = db.prepare(`
       SELECT COUNT(*) as count
-      FROM positions
-      WHERE agent_id = ? AND status = 'open'
+      FROM positions p
+      JOIN markets m ON p.market_id = m.id
+      WHERE p.agent_id = ?
+        AND p.status = 'open'
+        AND m.status = 'active'
     `).get(agent.id) as { count: number };
 
     // Get trade count
@@ -196,8 +207,11 @@ export async function GET(
       };
     });
 
-    // Get open positions with market info
+    // Get open positions with market info (only active markets)
     const positions = getPositionsWithMarkets(agent.id);
+
+    // Get closed positions with outcomes (settled, exited, or pending resolution)
+    const closedPositions = getClosedPositionsWithMarkets(agent.id);
 
     // Get trade history with market info
     const trades = db.prepare(`
@@ -261,6 +275,7 @@ export async function GET(
       equity_curve: equityCurve,
       decisions: decisionsWithMarkets,
       positions: positions,
+      closed_positions: closedPositions,
       trades: trades,
       updated_at: new Date().toISOString()
     });

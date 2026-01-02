@@ -134,7 +134,7 @@ All models receive:
 |     +-- 7 agents initialized with $10,000 each               |
 |                                                              |
 |  2. Market Sync                                              |
-|     +-- Fetch top 100 markets from Polymarket by volume      |
+|     +-- Fetch top 500 markets from Polymarket by volume      |
 |                                                              |
 |  3. LLM Decisions (for each model)                           |
 |     +-- Build context: portfolio + markets                   |
@@ -472,11 +472,11 @@ forecasterarena/
 | Method | Endpoint | Schedule | Description |
 |--------|----------|----------|-------------|
 | POST | `/api/cron/sync-markets` | Every 5m | Sync Polymarket data |
-| POST | `/api/cron/start-cohort` | Sunday 00:00 | Start new cohort |
 | POST | `/api/cron/run-decisions` | Sunday 00:00 | Run LLM decisions |
+| POST | `/api/cron/start-cohort` | Sunday 00:05 | Start new cohort (after decisions) |
 | POST | `/api/cron/check-resolutions` | Hourly | Check market resolutions |
 | POST | `/api/cron/take-snapshots` | Every 10m | Portfolio snapshots & MTM |
-| POST | `/api/cron/backup` | Saturday 23:00 | Database backup |
+| POST | `/api/cron/backup` | Daily 02:00 UTC | Database backup |
 
 All cron endpoints require:
 ```
@@ -493,25 +493,25 @@ Set up cron jobs on your server:
 # Edit crontab
 crontab -e
 
-# Add these lines:
+# Add these lines (adjust port 3010 to match your deployment):
 
 # Sync markets every 5 minutes
-*/5 * * * * curl -X POST http://localhost:3000/api/cron/sync-markets -H "Authorization: Bearer $CRON_SECRET"
-
-# Start new cohort every Sunday at 00:00 UTC
-0 0 * * 0 curl -X POST http://localhost:3000/api/cron/start-cohort -H "Authorization: Bearer $CRON_SECRET"
+*/5 * * * * curl -X POST http://localhost:3010/api/cron/sync-markets -H "Authorization: Bearer $CRON_SECRET"
 
 # Run decisions every Sunday at 00:00 UTC
-5 0 * * 0 curl -X POST http://localhost:3000/api/cron/run-decisions -H "Authorization: Bearer $CRON_SECRET"
+0 0 * * 0 curl -X POST http://localhost:3010/api/cron/run-decisions -H "Authorization: Bearer $CRON_SECRET"
+
+# Start new cohort every Sunday at 00:05 UTC (runs after decisions)
+5 0 * * 0 curl -X POST http://localhost:3010/api/cron/start-cohort -H "Authorization: Bearer $CRON_SECRET"
 
 # Check resolutions every hour
-0 * * * * curl -X POST http://localhost:3000/api/cron/check-resolutions -H "Authorization: Bearer $CRON_SECRET"
+0 * * * * curl -X POST http://localhost:3010/api/cron/check-resolutions -H "Authorization: Bearer $CRON_SECRET"
 
 # Take snapshots every 10 minutes (mark-to-market, including closed-but-unresolved markets)
-*/10 * * * * curl -X POST http://localhost:3000/api/cron/take-snapshots -H "Authorization: Bearer $CRON_SECRET"
+*/10 * * * * curl -X POST http://localhost:3010/api/cron/take-snapshots -H "Authorization: Bearer $CRON_SECRET"
 
-# Backup before new cohort (Saturday 23:00 UTC)
-0 23 * * 6 curl -X POST http://localhost:3000/api/cron/backup -H "Authorization: Bearer $CRON_SECRET"
+# Database backup - Daily at 02:00 UTC
+0 2 * * * curl -X POST http://localhost:3010/api/cron/backup -H "Authorization: Bearer $CRON_SECRET"
 ```
 
 ---
@@ -525,7 +525,7 @@ crontab -e
 | Initial Balance | $10,000 | Starting capital per agent |
 | Minimum Bet | $50 | Smallest allowed bet |
 | Maximum Bet | 25% of cash | Largest allowed bet |
-| Markets Shown | 100 | Top markets by volume |
+| Markets Shown | 500 | Top markets by volume |
 
 ### LLM Settings
 

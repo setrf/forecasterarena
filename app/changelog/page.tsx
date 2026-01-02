@@ -21,7 +21,7 @@ const CHANGELOG: ChangelogEntry[] = [
       'Maximum bet size: 25% of current cash balance',
       'Minimum bet size: $50',
       'Temperature = 0 for all LLM calls (deterministic)',
-      'Top 100 markets by volume presented each week',
+      'Top 500 markets by volume presented each week',
       'Brier score + P/L dual scoring system',
       'Implied confidence derived from bet sizing',
       'Full prompt transparency and logging',

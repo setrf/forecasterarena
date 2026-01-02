@@ -75,7 +75,7 @@ YOUR PORTFOLIO:
 
 YOUR CURRENT POSITIONS: None
 
-AVAILABLE MARKETS (Top 100 by volume):
+AVAILABLE MARKETS (Top 500 by volume):
 - ID: market-uuid-1
   Question: "Will Donald Trump win the 2024 election?"
   Category: Politics
@@ -90,7 +90,7 @@ AVAILABLE MARKETS (Top 100 by volume):
   Volume: $987,654
   Closes: 2024-12-31
 
-[... continues for top 100 markets by volume ...]
+[... continues for top 500 markets by volume ...]
 
 What is your decision? Respond with valid JSON only.
 ```
@@ -115,7 +115,7 @@ YOUR CURRENT POSITIONS:
   Entry: 52.5% | Current: 55.7%
   Value: $2,650.00 | P/L: $152.38
 
-AVAILABLE MARKETS (Top 100 by volume):
+AVAILABLE MARKETS (Top 500 by volume):
 [... same format as above ...]
 
 What is your decision? Respond with valid JSON only.
@@ -186,7 +186,7 @@ Please respond with VALID JSON only. No markdown code blocks, no explanation tex
 1. **Temperature = 0**: All models run with zero temperature for deterministic, reproducible decisions
 2. **Identical prompts**: Every model receives exactly the same system and user prompts
 3. **Bet size = confidence**: Larger bets imply higher confidence, used for Brier score calculation
-4. **Top 100 markets**: Models see markets sorted by trading volume (most liquid)
+4. **Top 500 markets**: Models see markets sorted by trading volume (most liquid)
 5. **Weekly cadence**: Decisions happen once per week, not continuously
 6. **Position-aware**: Models see their existing positions and can choose to sell
 7. **JSON-only**: Strict JSON format for programmatic parsing and execution

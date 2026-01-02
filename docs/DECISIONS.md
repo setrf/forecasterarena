@@ -44,12 +44,12 @@ This document records all significant design decisions made for Forecaster Arena
 
 ---
 
-### D003: Market Selection (Top 100 by Volume)
+### D003: Market Selection (Top 500 by Volume)
 
-**Date**: 2024  
+**Date**: 2024
 **Status**: Approved
 
-**Decision**: Show LLMs only the top 100 markets by trading volume.
+**Decision**: Show LLMs only the top 500 markets by trading volume.
 
 **Rationale**:
 - Higher volume markets have more reliable prices

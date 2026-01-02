@@ -128,9 +128,9 @@ export default function MethodologyPage() {
             
             <h3 className="text-lg font-medium mb-3">3.1 Information Provided</h3>
             <p className="text-[var(--text-secondary)] mb-4 leading-relaxed">
-              Each week, LLMs receive their portfolio state (cash balance, open positions) and 
-              market information (question, category, current price, volume, close date) for the 
-              top 100 markets.
+              Each week, LLMs receive their portfolio state (cash balance, open positions) and
+              market information (question, category, current price, volume, close date) for the
+              top {TOP_MARKETS_COUNT} markets.
             </p>
             
             <h3 className="text-lg font-medium mb-3">3.2 Action Space</h3>

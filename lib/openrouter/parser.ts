@@ -39,26 +39,52 @@ export interface ParsedDecision {
 
 /**
  * Clean LLM response by removing markdown and extra whitespace
- * 
+ *
  * @param rawResponse - Raw response from LLM
  * @returns Cleaned JSON string
  */
 function cleanResponse(rawResponse: string): string {
   let cleaned = rawResponse.trim();
-  
+
   // Remove markdown code blocks
   if (cleaned.startsWith('```')) {
     // Handle ```json or just ```
     cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '');
     cleaned = cleaned.replace(/\n?```\s*$/i, '');
   }
-  
+
   // Remove any leading/trailing quotes that might wrap the whole thing
   if ((cleaned.startsWith('"') && cleaned.endsWith('"')) ||
       (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
     cleaned = cleaned.slice(1, -1);
   }
-  
+
+  // If response doesn't start with '{', try to extract JSON from Markdown
+  // This handles thinking models that output Markdown text with embedded JSON
+  if (!cleaned.trim().startsWith('{')) {
+    // Look for JSON object pattern in the text
+    const jsonMatch = cleaned.match(/\{[\s\S]*"action"\s*:\s*"[^"]+"/);
+    if (jsonMatch) {
+      // Find the complete JSON object starting from the match
+      const startIdx = cleaned.indexOf(jsonMatch[0]);
+      let braceCount = 0;
+      let endIdx = startIdx;
+
+      for (let i = startIdx; i < cleaned.length; i++) {
+        if (cleaned[i] === '{') braceCount++;
+        if (cleaned[i] === '}') braceCount--;
+        if (braceCount === 0 && i > startIdx) {
+          endIdx = i + 1;
+          break;
+        }
+      }
+
+      if (endIdx > startIdx) {
+        cleaned = cleaned.slice(startIdx, endIdx);
+      }
+    }
+  }
+
   return cleaned.trim();
 }
 
@@ -88,9 +114,9 @@ function validateBet(
     return 'Invalid amount';
   }
   
-  // Check side is valid
+  // Check side is valid (for binary markets - multi-outcome validated in execution)
   const normalizedSide = bet.side.toUpperCase();
-  if (!['YES', 'NO'].includes(normalizedSide) && !bet.side) {
+  if (!bet.side || !['YES', 'NO'].includes(normalizedSide)) {
     return `Invalid side: ${bet.side}`;
   }
   

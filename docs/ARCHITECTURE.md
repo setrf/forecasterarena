@@ -50,7 +50,7 @@ This document describes the technical architecture of Forecaster Arena.
 - **types.ts**: TypeScript types for API responses
 
 Responsibilities:
-- Fetch top 100 markets by volume
+- Fetch top 500 markets by volume
 - Check market resolution status
 - Transform API data to our schema
 
@@ -121,7 +121,7 @@ Responsibilities:
 2. For each active cohort:
    └── For each agent (LLM):
        ├── Fetch portfolio state
-       ├── Fetch top 100 markets
+       ├── Fetch top 500 markets
        ├── Build prompts
        ├── Call OpenRouter API
        ├── Parse response (retry if needed)
@@ -133,7 +133,7 @@ Responsibilities:
    └── Calculate Brier scores
 ```
 
-### Daily Snapshot Cycle (00:00 UTC)
+### 10-Minute Snapshot Cycle
 
 ```
 1. For each active cohort:
@@ -192,23 +192,23 @@ Responsibilities:
 ## Cron Schedule
 
 ```bash
-# Sync markets every 10 minutes
-*/10 * * * * /api/cron/sync-markets
+# Sync markets from Polymarket - Every 5 minutes
+*/5 * * * * /api/cron/sync-markets
 
-# Start new cohort every Sunday at 00:00 UTC
-0 0 * * 0 /api/cron/start-cohort
-
-# Run decisions every Sunday at 00:00 UTC
+# Run agent decisions every Sunday at 00:00 UTC
 0 0 * * 0 /api/cron/run-decisions
 
-# Check resolutions every 10 minutes
-*/10 * * * * /api/cron/check-resolutions
+# Start new cohort every Sunday at 00:05 UTC (runs after decisions)
+5 0 * * 0 /api/cron/start-cohort
 
-# Take snapshots daily at 00:00 UTC
-0 0 * * * /api/cron/take-snapshots
+# Check market resolutions every hour
+0 * * * * /api/cron/check-resolutions
 
-# Weekly backup Saturday 23:00 UTC
-0 23 * * 6 /api/cron/backup
+# Take portfolio snapshots every 10 minutes
+*/10 * * * * /api/cron/take-snapshots
+
+# Database backup - Daily at 02:00 UTC
+0 2 * * * /api/cron/backup
 ```
 
 ---

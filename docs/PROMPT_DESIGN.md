@@ -88,7 +88,7 @@ YOUR CURRENT POSITIONS:
   Entry: {entry_price}% | Current: {current_price}%
   Value: ${value} | P/L: ${position_pnl}
 
-AVAILABLE MARKETS (Top 100 by volume):
+AVAILABLE MARKETS (Top 500 by volume):
 - ID: {market_id}
   Question: "{question}"
   Category: {category}
@@ -136,7 +136,7 @@ Please respond with VALID JSON only. No markdown code blocks, no explanation tex
 ### Why Limit Market Information?
 
 1. **Context window**: Too much data exceeds limits
-2. **Focus**: Top 100 by volume are most liquid
+2. **Focus**: Top 500 by volume are most liquid
 3. **Fairness**: All models see the same information
 4. **Simplicity**: Reduces noise from irrelevant markets
 

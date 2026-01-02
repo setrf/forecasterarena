@@ -47,22 +47,40 @@ export async function fetchMarkets(
 }
 
 /**
+ * Polymarket API request timeout (15 seconds)
+ */
+const POLYMARKET_TIMEOUT_MS = 15000;
+
+/**
  * Fetch a single market by ID
  */
 export async function fetchMarketById(marketId: string): Promise<PolymarketMarket | null> {
   const url = `${POLYMARKET_GAMMA_API_HOST}/markets/${marketId}`;
 
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), POLYMARKET_TIMEOUT_MS);
 
-  if (response.status === 404) return null;
-  if (!response.ok) {
-    throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: controller.signal,
+    });
+
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json() as PolymarketMarket;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Polymarket API timeout after ${POLYMARKET_TIMEOUT_MS}ms for market ${marketId}`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return await response.json() as PolymarketMarket;
 }
 
 /**

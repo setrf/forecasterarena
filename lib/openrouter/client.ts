@@ -87,12 +87,25 @@ export async function callOpenRouter(
     { role: 'user', content: userPrompt }
   ];
   
-  const requestBody = {
+  // Build request body with model-specific reasoning configuration
+  // Thinking models (Gemini 3 Pro, etc.) need reasoning limits to prevent
+  // exhausting all tokens on internal reasoning before producing output
+  const isThinkingModel = modelId.includes('gemini-3') || modelId.includes('kimi-k2');
+
+  const requestBody: Record<string, unknown> = {
     model: modelId,
     messages,
     temperature: LLM_TEMPERATURE,
     max_tokens: LLM_MAX_TOKENS,
   };
+
+  // Add reasoning limits for thinking models
+  // Using max_tokens to cap reasoning at 4k tokens, leaving room for actual output
+  if (isThinkingModel) {
+    requestBody.reasoning = {
+      max_tokens: 4000,  // Cap reasoning tokens, ensuring output completes
+    };
+  }
   
   console.log(`Calling OpenRouter: ${modelId}`);
   
@@ -128,20 +141,49 @@ export async function callOpenRouter(
   
   // Handle error in response body
   if (data.error) {
+    const errorDetails = JSON.stringify(data.error);
+    console.error(`OpenRouter error for ${modelId}: ${errorDetails}`);
     throw new OpenRouterError(
       data.error.message || 'Unknown OpenRouter error',
-      data.error.code
+      data.error.code,
+      errorDetails
     );
   }
   
   // Extract content from response
+  // Thinking models like Gemini 3 Pro have both 'content' and 'reasoning' fields:
+  // - 'content': The actual response (may be empty if model exhausted tokens on reasoning)
+  // - 'reasoning': Internal thinking (not suitable as a substitute for content)
+  // Only use 'reasoning' as fallback if 'content' is null/undefined (not empty string)
   const choice = data.choices?.[0];
-  if (!choice?.message?.content) {
+  const message = choice?.message;
+
+  // Get content, treating empty string as a valid but empty response
+  let content = message?.content;
+
+  // If content is null/undefined (not just empty), check reasoning as fallback
+  // This handles older models that put output in reasoning field
+  if (content === null || content === undefined) {
+    content = message?.reasoning;
+  }
+
+  // If content is still null/undefined OR is empty string, that's an error
+  if (!content) {
+    // Provide more context about why it failed
+    const hasReasoning = message?.reasoning && message.reasoning.length > 0;
+    const finishReason = choice?.finish_reason;
+
+    if (hasReasoning && finishReason === 'length') {
+      throw new OpenRouterError(
+        'Model exhausted tokens on reasoning before producing output. ' +
+        'Consider increasing max_tokens for thinking models.'
+      );
+    }
     throw new OpenRouterError('No content in OpenRouter response');
   }
-  
+
   return {
-    content: choice.message.content,
+    content: content,
     usage: data.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
     model: data.model || modelId,
     finish_reason: choice.finish_reason || 'unknown',
@@ -163,8 +205,8 @@ export async function callOpenRouterWithRetry(
   modelId: string,
   systemPrompt: string,
   userPrompt: string,
-  retries: number = 2,
-  delayMs: number = 2000
+  retries: number = 4,
+  delayMs: number = 3000
 ): Promise<OpenRouterResponse> {
   let lastError: Error | null = null;
   
@@ -187,7 +229,7 @@ export async function callOpenRouterWithRetry(
       }
       
       if (attempt < retries) {
-        console.log(`OpenRouter call failed, retrying in ${delayMs}ms...`);
+        console.log(`OpenRouter call failed (${(error as Error).message}), retrying in ${delayMs}ms...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         delayMs *= 2; // Exponential backoff
       }
@@ -207,14 +249,13 @@ export async function callOpenRouterWithRetry(
  * @returns Estimated cost in USD
  */
 export function estimateCost(usage: TokenUsage, modelId: string): number {
-  // Very rough estimates - actual pricing varies significantly
-  // These should be updated based on OpenRouter's pricing
+  // Model pricing per million tokens (updated to match constants.ts model IDs)
   const pricingPerMillion: Record<string, { input: number; output: number }> = {
-    'openai/gpt-5.1': { input: 5, output: 15 },
+    'openai/gpt-5.2': { input: 5, output: 15 },
     'anthropic/claude-opus-4.5': { input: 15, output: 75 },
     'google/gemini-3-pro-preview': { input: 2.5, output: 10 },
-    'x-ai/grok-4': { input: 5, output: 15 },
-    'deepseek/deepseek-v3-0324': { input: 0.5, output: 2 },
+    'x-ai/grok-4.1-fast': { input: 5, output: 15 },
+    'deepseek/deepseek-v3.2': { input: 0.5, output: 2 },
     'moonshotai/kimi-k2-thinking': { input: 1, output: 4 },
     'qwen/qwen3-235b-a22b-instruct-2507': { input: 1, output: 4 },
   };
