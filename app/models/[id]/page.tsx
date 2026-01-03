@@ -58,7 +58,7 @@ export default function ModelDetailPage() {
   const [data, setData] = useState<ModelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('1W');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
   useEffect(() => {
     async function fetchData() {

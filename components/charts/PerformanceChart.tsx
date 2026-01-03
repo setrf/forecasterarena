@@ -113,7 +113,7 @@ export default function PerformanceChart({
   height = 520,
   showLegend = true,
   showGrid = true,
-  timeRange = '1W',
+  timeRange = '1M',
 }: PerformanceChartProps) {
   // Filter data based on time range
   const filteredData = useMemo(() => {

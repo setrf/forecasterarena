@@ -138,7 +138,7 @@ export default function AgentCohortDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('1W');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
   useEffect(() => {
     async function fetchData() {

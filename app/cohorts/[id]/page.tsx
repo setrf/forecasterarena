@@ -65,7 +65,7 @@ export default function CohortDetailPage() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('1W');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
   useEffect(() => {
     async function fetchData() {
