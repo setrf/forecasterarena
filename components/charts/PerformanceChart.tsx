@@ -57,8 +57,9 @@ function formatDateTime(dateStr: string): string {
   return date.toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
   });
 }
 
