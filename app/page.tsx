@@ -133,7 +133,7 @@ function LiveStatsDashboard({ leader, hasRealData }: { leader: LeaderboardEntry 
           {/* Markets */}
           <div className="py-6 md:py-8 pl-6 pr-6 animate-fade-in delay-300">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Markets</p>
-            <p className="text-3xl md:text-4xl font-bold">100+</p>
+            <p className="text-3xl md:text-4xl font-bold">1,500+</p>
             <p className="text-sm text-[var(--text-secondary)]">Via Polymarket</p>
           </div>
         </div>

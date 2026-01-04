@@ -71,7 +71,7 @@ function Footer() {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[var(--text-muted)]">Markets Synced</span>
-                <span className="font-mono text-[var(--color-positive)]">100+</span>
+                <span className="font-mono text-[var(--color-positive)]">1,500+</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[var(--text-muted)]">Data Source</span>
