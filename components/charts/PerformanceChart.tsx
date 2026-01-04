@@ -4,7 +4,6 @@ import { useMemo, useState, useCallback } from 'react';
 import {
   ComposedChart,
   Line,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -580,33 +579,6 @@ export default function PerformanceChart({
             }}
           />
 
-          {/* Leader gradient area fill */}
-          {leaderId && !isolatedModel && (
-            <defs>
-              <linearGradient id="leaderGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor={models.find(m => m.id === leaderId)?.color || 'var(--accent-gold)'}
-                  stopOpacity={0.3}
-                />
-                <stop
-                  offset="100%"
-                  stopColor={models.find(m => m.id === leaderId)?.color || 'var(--accent-gold)'}
-                  stopOpacity={0}
-                />
-              </linearGradient>
-            </defs>
-          )}
-
-          {leaderId && !isolatedModel && (
-            <Area
-              type="monotone"
-              dataKey={leaderId}
-              stroke="none"
-              fill="url(#leaderGradient)"
-              isAnimationActive={false}
-            />
-          )}
 
           {/* Model lines */}
           {displayModels.map((model) => {
