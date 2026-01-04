@@ -531,11 +531,12 @@ export default function PerformanceChart({
               opacity={0.3}
               label={i === 0 ? {
                 value: '↓ Decision Days',
-                position: 'top',
+                position: 'insideTop',
                 fill: 'var(--accent-gold)',
                 fontSize: 9,
                 fontFamily: 'JetBrains Mono, monospace',
-                opacity: 0.6
+                opacity: 0.6,
+                offset: 15
               } : undefined}
             />
           ))}
