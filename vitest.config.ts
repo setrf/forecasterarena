@@ -20,6 +20,10 @@ export default defineConfig({
       include: [
         'lib/engine/execution.ts',
         'lib/openrouter/parser.ts',
+        'lib/polymarket/api.ts',
+        'lib/polymarket/aggregates.ts',
+        'lib/polymarket/resolution.ts',
+        'lib/polymarket/transformers.ts',
         'lib/scoring/brier.ts',
         'lib/scoring/pnl.ts',
         'lib/utils/security.ts'
