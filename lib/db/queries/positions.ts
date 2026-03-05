@@ -82,7 +82,7 @@ export function getClosedPositionsWithMarkets(agentId: string): any[] {
       END as settlement_value,
       CASE
         WHEN p.status = 'closed' THEN (
-          SELECT COALESCE(SUM(total_amount), 0) - p.total_cost
+          SELECT COALESCE(SUM(total_amount), 0) - COALESCE(SUM(cost_basis), 0)
           FROM trades
           WHERE position_id = p.id AND trade_type = 'SELL'
         )

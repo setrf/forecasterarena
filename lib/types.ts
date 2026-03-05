@@ -245,7 +245,8 @@ export interface AgentWithModel extends Agent {
  */
 export interface PositionWithMarket extends Position {
   market_question: string;
-  current_price: number;
+  current_price: number | null;
+  opening_decision_id: string | null;
 }
 
 /**
@@ -342,4 +343,3 @@ export interface PolymarketMarket {
   resolving?: boolean;
   resolved?: boolean;
 }
-

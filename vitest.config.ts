@@ -19,6 +19,7 @@ export default defineConfig({
       provider: 'v8',
       include: [
         'lib/engine/execution.ts',
+        'lib/db/queries/*.ts',
         'lib/openrouter/parser.ts',
         'lib/polymarket/api.ts',
         'lib/polymarket/aggregates.ts',

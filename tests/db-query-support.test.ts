@@ -1,0 +1,444 @@
+import { describe, expect, it } from 'vitest';
+import { createIsolatedTestContext } from '@/tests/helpers/test-context';
+
+type DbModule = typeof import('@/lib/db');
+type AgentsModule = typeof import('@/lib/db/queries/agents');
+type BrierScoresModule = typeof import('@/lib/db/queries/brier-scores');
+type CohortsModule = typeof import('@/lib/db/queries/cohorts');
+type CostsModule = typeof import('@/lib/db/queries/costs');
+type LeaderboardModule = typeof import('@/lib/db/queries/leaderboard');
+type LogsModule = typeof import('@/lib/db/queries/logs');
+type MarketsModule = typeof import('@/lib/db/queries/markets');
+type ModelsModule = typeof import('@/lib/db/queries/models');
+type PositionsModule = typeof import('@/lib/db/queries/positions');
+type SnapshotsModule = typeof import('@/lib/db/queries/snapshots');
+type TradesModule = typeof import('@/lib/db/queries/trades');
+
+interface LoadedModules {
+  agents: AgentsModule;
+  brierScores: BrierScoresModule;
+  cohorts: CohortsModule;
+  costs: CostsModule;
+  db: ReturnType<DbModule['getDb']>;
+  leaderboard: LeaderboardModule;
+  logs: LogsModule;
+  markets: MarketsModule;
+  models: ModelsModule;
+  snapshots: SnapshotsModule;
+  positions: PositionsModule;
+  trades: TradesModule;
+}
+
+let sequence = 0;
+
+function uniqueId(prefix: string): string {
+  sequence += 1;
+  return `${prefix}-${sequence}`;
+}
+
+async function withModules(run: (modules: LoadedModules) => Promise<void> | void): Promise<void> {
+  const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+  try {
+    const dbModule = await import('@/lib/db');
+    const [
+      agents,
+      brierScores,
+      cohorts,
+      costs,
+      leaderboard,
+      logs,
+      markets,
+      models,
+      snapshots,
+      positions,
+      trades
+    ] = await Promise.all([
+      import('@/lib/db/queries/agents'),
+      import('@/lib/db/queries/brier-scores'),
+      import('@/lib/db/queries/cohorts'),
+      import('@/lib/db/queries/costs'),
+      import('@/lib/db/queries/leaderboard'),
+      import('@/lib/db/queries/logs'),
+      import('@/lib/db/queries/markets'),
+      import('@/lib/db/queries/models'),
+      import('@/lib/db/queries/snapshots'),
+      import('@/lib/db/queries/positions'),
+      import('@/lib/db/queries/trades')
+    ]);
+
+    await run({
+      agents,
+      brierScores,
+      cohorts,
+      costs,
+      db: dbModule.getDb(),
+      leaderboard,
+      logs,
+      markets,
+      models,
+      snapshots,
+      positions,
+      trades
+    });
+  } finally {
+    await ctx.cleanup();
+  }
+}
+
+function createMarket(markets: MarketsModule, overrides: Partial<Parameters<MarketsModule['upsertMarket']>[0]> = {}) {
+  return markets.upsertMarket({
+    polymarket_id: uniqueId('pm'),
+    question: uniqueId('question'),
+    close_date: '2030-01-01T00:00:00.000Z',
+    status: 'active',
+    current_price: 0.5,
+    volume: 1000,
+    liquidity: 500,
+    ...overrides
+  });
+}
+
+describe('db query modules - support and reporting', () => {
+  it('covers model queries and log filters', async () => {
+    await withModules(({ db, logs, models }) => {
+      const allModels = models.getAllModels();
+      const disabledModel = allModels[0]!;
+
+      db.prepare('UPDATE models SET is_active = 0 WHERE id = ?').run(disabledModel.id);
+
+      expect(models.getModelById(disabledModel.id)?.id).toBe(disabledModel.id);
+      expect(models.getAllModels()).toHaveLength(allModels.length);
+      expect(models.getActiveModels()).toHaveLength(allModels.length - 1);
+      expect(models.getActiveModels().some(model => model.id === disabledModel.id)).toBe(false);
+
+      db.prepare(`
+        INSERT INTO system_logs (id, event_type, event_data, severity, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(uniqueId('log'), 'older-info', '{"ok":true}', 'info', '2025-01-01T00:00:00.000Z');
+      db.prepare(`
+        INSERT INTO system_logs (id, event_type, event_data, severity, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(uniqueId('log'), 'middle-warning', '{"warn":true}', 'warning', '2025-01-01T00:00:01.000Z');
+      db.prepare(`
+        INSERT INTO system_logs (id, event_type, event_data, severity, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(uniqueId('log'), 'latest-error', '{"error":true}', 'error', '2025-01-01T00:00:02.000Z');
+
+      expect(logs.getRecentLogs(2).map(log => log.event_type)).toEqual([
+        'latest-error',
+        'middle-warning'
+      ]);
+      expect(logs.getLogsBySeverity('warning', 1).map(log => log.event_type)).toEqual([
+        'middle-warning'
+      ]);
+      expect(logs.getLogsBySeverity('info').map(log => log.event_type)).toEqual([
+        'older-info'
+      ]);
+    });
+  });
+
+  it('covers brier score creation, deduplication, lookups, and averages', async () => {
+    await withModules(({ agents, brierScores, cohorts, db, markets, positions, trades }) => {
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+
+      const marketOne = createMarket(markets, { question: 'Brier market one' });
+      const marketTwo = createMarket(markets, { question: 'Brier market two' });
+
+      const positionOne = positions.upsertPosition(agent!.id, marketOne.id, 'YES', 10, 0.5, 5);
+      const positionTwo = positions.upsertPosition(agent!.id, marketTwo.id, 'NO', 8, 0.4, 3.2);
+
+      const tradeOne = trades.createTrade({
+        agent_id: agent!.id,
+        market_id: marketOne.id,
+        position_id: positionOne.id,
+        trade_type: 'BUY',
+        side: 'YES',
+        shares: 10,
+        price: 0.5,
+        total_amount: 5
+      });
+      const tradeTwo = trades.createTrade({
+        agent_id: agent!.id,
+        market_id: marketTwo.id,
+        position_id: positionTwo.id,
+        trade_type: 'BUY',
+        side: 'NO',
+        shares: 8,
+        price: 0.4,
+        total_amount: 3.2
+      });
+
+      const firstScore = brierScores.createBrierScore({
+        agent_id: agent!.id,
+        trade_id: tradeOne.id,
+        market_id: marketOne.id,
+        forecast_probability: 0.8,
+        actual_outcome: 1,
+        brier_score: 0.04
+      });
+      const duplicateScore = brierScores.createBrierScore({
+        agent_id: agent!.id,
+        trade_id: tradeOne.id,
+        market_id: marketOne.id,
+        forecast_probability: 0.8,
+        actual_outcome: 1,
+        brier_score: 0.04
+      });
+      const secondScore = brierScores.createBrierScore({
+        agent_id: agent!.id,
+        trade_id: tradeTwo.id,
+        market_id: marketTwo.id,
+        forecast_probability: 0.3,
+        actual_outcome: 0,
+        brier_score: 0.09
+      });
+
+      db.prepare('UPDATE brier_scores SET calculated_at = ? WHERE id = ?').run(
+        '2025-01-01T00:00:00.000Z',
+        firstScore.id
+      );
+      db.prepare('UPDATE brier_scores SET calculated_at = ? WHERE id = ?').run(
+        '2025-01-01T00:00:01.000Z',
+        secondScore.id
+      );
+
+      expect(duplicateScore.id).toBe(firstScore.id);
+      expect(brierScores.getBrierScoresByAgent(agent!.id).map(score => score.id)).toEqual([
+        secondScore.id,
+        firstScore.id
+      ]);
+      expect(brierScores.getAverageBrierScore(agent!.id)).toBeCloseTo(0.065, 10);
+      expect(brierScores.getAverageBrierScore('missing-agent')).toBeNull();
+    });
+  });
+
+  it('covers API cost aggregation by model', async () => {
+    await withModules(({ costs, models }) => {
+      const [modelOne, modelTwo] = models.getActiveModels();
+
+      costs.createApiCost({
+        model_id: modelOne!.id,
+        tokens_input: 100,
+        tokens_output: 50,
+        cost_usd: 0.12
+      });
+      costs.createApiCost({
+        model_id: modelOne!.id,
+        tokens_input: 200,
+        tokens_output: 100,
+        cost_usd: 0.08
+      });
+      costs.createApiCost({
+        model_id: modelTwo!.id,
+        tokens_input: 75,
+        tokens_output: 25,
+        cost_usd: 0.2
+      });
+
+      expect(costs.getTotalCostsByModel()).toEqual({
+        [modelOne!.id]: 0.2,
+        [modelTwo!.id]: 0.2
+      });
+    });
+  });
+
+  it('covers snapshot upserts and query ordering helpers', async () => {
+    await withModules(({ agents, cohorts, snapshots }) => {
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+
+      const first = snapshots.createPortfolioSnapshot({
+        agent_id: agent!.id,
+        snapshot_timestamp: '2025-01-01T00:00:00.000Z',
+        cash_balance: 10000,
+        positions_value: 0,
+        total_value: 10000,
+        total_pnl: 0,
+        total_pnl_percent: 0
+      });
+      const updated = snapshots.createPortfolioSnapshot({
+        agent_id: agent!.id,
+        snapshot_timestamp: '2025-01-01T00:00:00.000Z',
+        cash_balance: 10100,
+        positions_value: 50,
+        total_value: 10150,
+        total_pnl: 150,
+        total_pnl_percent: 1.5,
+        brier_score: 0.2,
+        num_resolved_bets: 2
+      });
+      const latest = snapshots.createPortfolioSnapshot({
+        agent_id: agent!.id,
+        snapshot_timestamp: '2025-01-02T00:00:00.000Z',
+        cash_balance: 10200,
+        positions_value: 75,
+        total_value: 10275,
+        total_pnl: 275,
+        total_pnl_percent: 2.75,
+        brier_score: 0.18,
+        num_resolved_bets: 3
+      });
+
+      expect(first.num_resolved_bets).toBe(0);
+      expect(updated.id).toBe(first.id);
+      expect(updated.cash_balance).toBe(10100);
+      expect(updated.num_resolved_bets).toBe(2);
+
+      expect(snapshots.getSnapshotsByAgent(agent!.id).map(snapshot => snapshot.snapshot_timestamp)).toEqual([
+        '2025-01-01T00:00:00.000Z',
+        '2025-01-02T00:00:00.000Z'
+      ]);
+      expect(snapshots.getSnapshotsByAgent(agent!.id, 1).map(snapshot => snapshot.id)).toEqual([latest.id]);
+      expect(snapshots.getLatestSnapshot(agent!.id)?.id).toBe(latest.id);
+    });
+  });
+
+  it('covers aggregate leaderboard calculations', async () => {
+    await withModules(({ agents, brierScores, cohorts, db, leaderboard, markets, models, positions, snapshots, trades }) => {
+      const activeModels = models.getActiveModels();
+      const allowedIds = activeModels.slice(0, 2).map(model => model.id);
+      db.prepare(
+        `UPDATE models SET is_active = CASE WHEN id IN (?, ?) THEN 1 ELSE 0 END`
+      ).run(allowedIds[0], allowedIds[1]);
+
+      const cohort = cohorts.createCohort();
+      const createdAgents = agents.createAgentsForCohort(cohort.id);
+      const agentOne = createdAgents.find(agent => agent.model_id === allowedIds[0])!;
+      const agentTwo = createdAgents.find(agent => agent.model_id === allowedIds[1])!;
+
+      snapshots.createPortfolioSnapshot({
+        agent_id: agentOne.id,
+        snapshot_timestamp: '2025-01-01T00:00:00.000Z',
+        cash_balance: 10300,
+        positions_value: 0,
+        total_value: 10300,
+        total_pnl: 300,
+        total_pnl_percent: 3,
+        brier_score: 0.04,
+        num_resolved_bets: 2
+      });
+      snapshots.createPortfolioSnapshot({
+        agent_id: agentTwo.id,
+        snapshot_timestamp: '2025-01-01T00:00:00.000Z',
+        cash_balance: 9900,
+        positions_value: 0,
+        total_value: 9900,
+        total_pnl: -100,
+        total_pnl_percent: -1,
+        brier_score: 0.09,
+        num_resolved_bets: 1
+      });
+
+      const marketOne = createMarket(markets, { question: 'Leaderboard winner' });
+      const marketTwo = createMarket(markets, { question: 'Leaderboard also winner' });
+      const positionOne = positions.upsertPosition(agentOne.id, marketOne.id, 'YES', 10, 0.6, 6);
+      const positionTwo = positions.upsertPosition(agentTwo.id, marketTwo.id, 'NO', 10, 0.4, 4);
+
+      const tradeOne = trades.createTrade({
+        agent_id: agentOne.id,
+        market_id: marketOne.id,
+        position_id: positionOne.id,
+        trade_type: 'BUY',
+        side: 'YES',
+        shares: 10,
+        price: 0.6,
+        total_amount: 6
+      });
+      const tradeTwo = trades.createTrade({
+        agent_id: agentTwo.id,
+        market_id: marketTwo.id,
+        position_id: positionTwo.id,
+        trade_type: 'BUY',
+        side: 'NO',
+        shares: 10,
+        price: 0.4,
+        total_amount: 4
+      });
+
+      markets.resolveMarket(marketOne.id, 'YES');
+      markets.resolveMarket(marketTwo.id, 'NO');
+
+      brierScores.createBrierScore({
+        agent_id: agentOne.id,
+        trade_id: tradeOne.id,
+        market_id: marketOne.id,
+        forecast_probability: 0.8,
+        actual_outcome: 1,
+        brier_score: 0.04
+      });
+      brierScores.createBrierScore({
+        agent_id: agentTwo.id,
+        trade_id: tradeTwo.id,
+        market_id: marketTwo.id,
+        forecast_probability: 0.7,
+        actual_outcome: 1,
+        brier_score: 0.09
+      });
+
+      const leaderboardEntries = leaderboard.getAggregateLeaderboard();
+
+      expect(leaderboardEntries).toHaveLength(2);
+      expect(leaderboardEntries[0]).toMatchObject({
+        model_id: allowedIds[0],
+        total_pnl: 300,
+        total_pnl_percent: 3,
+        avg_brier_score: 0.04,
+        num_cohorts: 1,
+        num_resolved_bets: 2,
+        win_rate: 1
+      });
+      expect(leaderboardEntries[1]).toMatchObject({
+        model_id: allowedIds[1],
+        total_pnl: -100,
+        total_pnl_percent: -1,
+        avg_brier_score: 0.09,
+        num_cohorts: 1,
+        num_resolved_bets: 1,
+        win_rate: 1
+      });
+    });
+  });
+
+  it('covers cohort summary aggregation', async () => {
+    await withModules(({ agents, cohorts, db, leaderboard, markets, models, positions, trades }) => {
+      const cohortOne = cohorts.createCohort();
+      const cohortTwo = cohorts.createCohort();
+      const cohortOneAgents = agents.createAgentsForCohort(cohortOne.id);
+      const cohortTwoAgents = agents.createAgentsForCohort(cohortTwo.id);
+
+      db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run('2025-01-01T00:00:00.000Z', cohortOne.id);
+      db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run('2025-01-08T00:00:00.000Z', cohortTwo.id);
+
+      const tradedMarket = createMarket(markets, { question: 'Summary market' });
+      const position = positions.upsertPosition(cohortTwoAgents[0]!.id, tradedMarket.id, 'YES', 5, 0.5, 2.5);
+
+      trades.createTrade({
+        agent_id: cohortTwoAgents[0]!.id,
+        market_id: tradedMarket.id,
+        position_id: position.id,
+        trade_type: 'BUY',
+        side: 'YES',
+        shares: 5,
+        price: 0.5,
+        total_amount: 2.5
+      });
+
+      const summaries = leaderboard.getCohortSummaries();
+
+      expect(summaries[0]).toMatchObject({
+        id: cohortTwo.id,
+        cohort_number: 2,
+        num_agents: models.getActiveModels().length,
+        total_markets_traded: 1
+      });
+      expect(summaries[1]).toMatchObject({
+        id: cohortOne.id,
+        cohort_number: 1,
+        num_agents: cohortOneAgents.length,
+        total_markets_traded: 0
+      });
+    });
+  });
+});
