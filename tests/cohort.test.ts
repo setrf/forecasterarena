@@ -45,4 +45,69 @@ describe('engine/cohort', () => {
       await ctx.cleanup();
     }
   });
+
+  it('reports actual trade count in cohort stats instead of decision count', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+    try {
+      const cohortEngine = await import('@/lib/engine/cohort');
+      const queries = await import('@/lib/db/queries');
+
+      const started = cohortEngine.maybeStartNewCohort(true);
+      const cohort = started.cohort!;
+      const agent = started.agents![0]!;
+
+      const market = queries.upsertMarket({
+        polymarket_id: 'cohort-stats-market',
+        question: 'Will cohort stats count trades?',
+        close_date: '2030-01-01T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.55,
+        volume: 1000
+      });
+
+      const position = queries.upsertPosition(agent.id, market.id, 'YES', 10, 0.5, 5);
+
+      const decisionOne = queries.createDecision({
+        agent_id: agent.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'BET'
+      });
+      const decisionTwo = queries.createDecision({
+        agent_id: agent.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'HOLD'
+      });
+
+      queries.createTrade({
+        agent_id: agent.id,
+        market_id: market.id,
+        position_id: position.id,
+        decision_id: decisionOne.id,
+        trade_type: 'BUY',
+        side: 'YES',
+        shares: 10,
+        price: 0.5,
+        total_amount: 5
+      });
+
+      const stats = cohortEngine.getCohortStats(cohort.id);
+
+      expect(decisionTwo.id).toBeDefined();
+      expect(stats).toMatchObject({
+        cohort_id: cohort.id,
+        num_agents: started.agents!.length,
+        active_agents: started.agents!.length,
+        open_positions: 1,
+        total_trades: 1
+      });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
 });

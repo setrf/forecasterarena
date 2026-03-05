@@ -62,9 +62,9 @@ export async function GET(
       `).get(agent.id) as { count: number }).count;
       
       // Calculate actual portfolio value if no snapshot
-      const totalValue = snapshot?.total_value || calculateActualPortfolioValue(agent.id);
-      const totalPnl = snapshot?.total_pnl || (totalValue - INITIAL_BALANCE);
-      const totalPnlPercent = snapshot?.total_pnl_percent || ((totalPnl / INITIAL_BALANCE) * 100);
+      const totalValue = snapshot?.total_value ?? calculateActualPortfolioValue(agent.id);
+      const totalPnl = snapshot?.total_pnl ?? (totalValue - INITIAL_BALANCE);
+      const totalPnlPercent = snapshot?.total_pnl_percent ?? ((totalPnl / INITIAL_BALANCE) * 100);
 
       return {
         id: agent.id,
@@ -80,7 +80,7 @@ export async function GET(
         brier_score: brierScore,
         position_count: positionCount,
         trade_count: tradeCount,
-        num_resolved_bets: snapshot?.num_resolved_bets || 0
+        num_resolved_bets: snapshot?.num_resolved_bets ?? 0
       };
     });
     
@@ -160,6 +160,5 @@ export async function GET(
     return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }
-
 
 

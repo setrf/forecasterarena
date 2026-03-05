@@ -136,7 +136,9 @@ export default function ModelsPage() {
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Win Rate</p>
                       <p className="text-2xl md:text-3xl font-mono">
-                        {hasRealData && leaderStats?.win_rate ? `${(leaderStats.win_rate * 100).toFixed(0)}%` : 'N/A'}
+                        {hasRealData && leaderStats?.win_rate != null
+                          ? `${(leaderStats.win_rate * 100).toFixed(0)}%`
+                          : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -226,7 +228,11 @@ export default function ModelsPage() {
                   <div>
                     <p className="text-xs text-[var(--text-muted)] mb-1">Win %</p>
                     <p className="font-mono text-sm">
-                      {loading ? '...' : (hasRealData && winRate) ? `${(winRate * 100).toFixed(0)}%` : 'N/A'}
+                      {loading
+                        ? '...'
+                        : (hasRealData && winRate != null)
+                          ? `${(winRate * 100).toFixed(0)}%`
+                          : 'N/A'}
                     </p>
                   </div>
                 </div>

@@ -6,7 +6,7 @@
  * @module engine/cohort
  */
 
-import { logSystemEvent, withTransaction } from '../db';
+import { getDb, logSystemEvent, withTransaction } from '../db';
 import {
   createCohort as dbCreateCohort,
   createAgentsForCohort,
@@ -166,10 +166,17 @@ export function getCohortStats(cohortId: string): {
   const cohort = getCohortById(cohortId);
   if (!cohort) return null;
 
+  const db = getDb();
   const agents = getAgentsByCohort(cohortId);
 
   // Use optimized single-query function instead of N+1 pattern
   const completionStatus = getCohortCompletionStatus(cohortId);
+  const tradeCount = (db.prepare(`
+    SELECT COUNT(*) as count
+    FROM trades t
+    JOIN agents a ON t.agent_id = a.id
+    WHERE a.cohort_id = ?
+  `).get(cohortId) as { count: number }).count;
 
   return {
     cohort_id: cohort.id,
@@ -178,7 +185,7 @@ export function getCohortStats(cohortId: string): {
     active_agents: agents.filter(a => a.status === 'active').length,
     bankrupt_agents: agents.filter(a => a.status === 'bankrupt').length,
     open_positions: completionStatus.open_positions,
-    total_trades: completionStatus.total_decisions
+    total_trades: tradeCount
   };
 }
 
@@ -215,6 +222,5 @@ export function maybeStartNewCohort(force: boolean = false): StartCohortResult {
 
   return startNewCohort();
 }
-
 
 

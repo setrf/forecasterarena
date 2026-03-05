@@ -207,7 +207,9 @@ function LeaderboardPreview({ data, hasRealData }: { data: LeaderboardEntry[]; h
                 </div>
                 <div>
                   <p className="text-xs text-[var(--text-muted)] mb-1">Win Rate</p>
-                  <p className="font-mono text-sm">{entry.win_rate ? `${(entry.win_rate * 100).toFixed(0)}%` : 'N/A'}</p>
+                  <p className="font-mono text-sm">
+                    {entry.win_rate != null ? `${(entry.win_rate * 100).toFixed(0)}%` : 'N/A'}
+                  </p>
                 </div>
               </div>
             </div>

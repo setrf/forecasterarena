@@ -82,9 +82,9 @@ export async function GET(
     const latestSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
 
     // Calculate current portfolio value
-    const totalValue = latestSnapshot?.total_value || calculateActualPortfolioValue(agent.id);
-    const totalPnl = latestSnapshot?.total_pnl || (totalValue - INITIAL_BALANCE);
-    const totalPnlPercent = latestSnapshot?.total_pnl_percent || ((totalPnl / INITIAL_BALANCE) * 100);
+    const totalValue = latestSnapshot?.total_value ?? calculateActualPortfolioValue(agent.id);
+    const totalPnl = latestSnapshot?.total_pnl ?? (totalValue - INITIAL_BALANCE);
+    const totalPnlPercent = latestSnapshot?.total_pnl_percent ?? ((totalPnl / INITIAL_BALANCE) * 100);
 
     // Get agent's rank in cohort
     const rankResult = db.prepare(`
@@ -242,8 +242,8 @@ export async function GET(
         status: cohort.status,
         started_at: cohort.started_at,
         completed_at: cohort.completed_at,
-        current_week: cohortWeek?.week_number || 1,
-        total_markets: cohortMarkets?.count || 0
+        current_week: cohortWeek?.week_number ?? 1,
+        total_markets: cohortMarkets?.count ?? 0
       },
       model: {
         id: model.id,
@@ -260,7 +260,7 @@ export async function GET(
         total_pnl: totalPnl,
         total_pnl_percent: totalPnlPercent,
         brier_score: brierScore,
-        num_resolved_bets: latestSnapshot?.num_resolved_bets || 0,
+        num_resolved_bets: latestSnapshot?.num_resolved_bets ?? 0,
         rank: rankResult.rank,
         total_agents: rankResult.total_agents
       },
@@ -268,9 +268,9 @@ export async function GET(
         position_count: positionCount.count,
         trade_count: tradeCount.count,
         win_rate: winRate,
-        cohort_avg_pnl_percent: cohortStats?.avg_pnl_percent || 0,
-        cohort_best_pnl_percent: cohortStats?.best_pnl_percent || 0,
-        cohort_worst_pnl_percent: cohortStats?.worst_pnl_percent || 0
+        cohort_avg_pnl_percent: cohortStats?.avg_pnl_percent ?? 0,
+        cohort_best_pnl_percent: cohortStats?.best_pnl_percent ?? 0,
+        cohort_worst_pnl_percent: cohortStats?.worst_pnl_percent ?? 0
       },
       equity_curve: equityCurve,
       decisions: decisionsWithMarkets,

@@ -70,9 +70,9 @@ export async function GET(
       const brierScore = getAverageBrierScore(agent.id);
 
       // Calculate current values with proper fallbacks
-      const totalValue = latestSnapshot?.total_value || calculateActualPortfolioValue(agent.id);
-      const totalPnl = latestSnapshot?.total_pnl || (totalValue - INITIAL_BALANCE);
-      const totalPnlPercent = latestSnapshot?.total_pnl_percent || ((totalPnl / INITIAL_BALANCE) * 100);
+      const totalValue = latestSnapshot?.total_value ?? calculateActualPortfolioValue(agent.id);
+      const totalPnl = latestSnapshot?.total_pnl ?? (totalValue - INITIAL_BALANCE);
+      const totalPnlPercent = latestSnapshot?.total_pnl_percent ?? ((totalPnl / INITIAL_BALANCE) * 100);
 
       return {
         cohort_id: agent.cohort_id,
@@ -84,7 +84,7 @@ export async function GET(
         total_pnl: totalPnl,
         total_pnl_percent: totalPnlPercent,
         brier_score: brierScore,
-        num_resolved_bets: latestSnapshot?.num_resolved_bets || 0
+        num_resolved_bets: latestSnapshot?.num_resolved_bets ?? 0
       };
     });
     
@@ -175,4 +175,3 @@ export async function GET(
     );
   }
 }
-

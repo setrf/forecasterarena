@@ -140,11 +140,11 @@ export default function ModelDetailPage() {
   }
 
   // Calculate aggregate stats
-  const totalPnl = data?.total_pnl || 0;
-  const avgPnlPercent = data?.avg_pnl_percent || 0;
+  const totalPnl = data?.total_pnl ?? 0;
+  const avgPnlPercent = data?.avg_pnl_percent ?? 0;
   const avgBrier = data?.avg_brier_score;
   const winRate = data?.win_rate;
-  const numCohorts = data?.num_cohorts || 0;
+  const numCohorts = data?.num_cohorts ?? 0;
 
   return (
     <div className="container-wide mx-auto px-6 py-12">
@@ -198,7 +198,7 @@ export default function ModelDetailPage() {
         </div>
         <div className="stat-card">
           <div className="stat-value">
-            {loading ? '...' : winRate ? `${(winRate * 100).toFixed(1)}%` : 'N/A'}
+            {loading ? '...' : winRate != null ? `${(winRate * 100).toFixed(1)}%` : 'N/A'}
           </div>
           <div className="stat-label">Win Rate</div>
         </div>

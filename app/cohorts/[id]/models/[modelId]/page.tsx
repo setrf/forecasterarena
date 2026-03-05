@@ -337,7 +337,7 @@ export default function AgentCohortDetailPage() {
         </div>
         <div className="stat-card">
           <div className="stat-value">
-            {data.stats.win_rate ? `${(data.stats.win_rate * 100).toFixed(1)}%` : 'N/A'}
+            {data.stats.win_rate != null ? `${(data.stats.win_rate * 100).toFixed(1)}%` : 'N/A'}
           </div>
           <div className="stat-label">Win Rate</div>
         </div>

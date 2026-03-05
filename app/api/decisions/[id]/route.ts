@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { safeErrorMessage } from '@/lib/utils/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +56,7 @@ export async function GET(
     } catch (error) {
         console.error('Error fetching decision:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch decision' },
+            { error: safeErrorMessage(error) },
             { status: 500 }
         );
     }
