@@ -112,7 +112,7 @@ export default function CohortDetailPage() {
       const point: { date: string;[modelId: string]: string | number } = { date };
       Object.entries(equityCurves).forEach(([modelId, curve]) => {
         const dataPoint = curve.find(p => p.date === date);
-        point[modelId] = dataPoint?.value || 10000;
+        point[modelId] = dataPoint?.value ?? 10000;
       });
       return point;
     });
@@ -181,19 +181,19 @@ export default function CohortDetailPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <div className="stat-card">
-          <div className="stat-value">Week {stats?.week_number || 1}</div>
+          <div className="stat-value">Week {stats?.week_number ?? 1}</div>
           <div className="stat-label">Current Week</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats?.total_trades || 0}</div>
+          <div className="stat-value">{stats?.total_trades ?? 0}</div>
           <div className="stat-label">Total Trades</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats?.total_positions_open || 0}</div>
+          <div className="stat-value">{stats?.total_positions_open ?? 0}</div>
           <div className="stat-label">Open Positions</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats?.markets_with_positions || 0}</div>
+          <div className="stat-value">{stats?.markets_with_positions ?? 0}</div>
           <div className="stat-label">Markets</div>
         </div>
         <div className="stat-card">

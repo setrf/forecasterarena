@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, type KeyboardEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
@@ -237,6 +237,14 @@ export default function AgentCohortDetailPage() {
       hour: 'numeric',
       minute: '2-digit'
     });
+  }
+
+  function handleLinkKeyDown(event: KeyboardEvent<HTMLElement>, href?: string): void {
+    if (!href) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      router.push(href);
+    }
   }
 
   return (
@@ -545,22 +553,20 @@ export default function AgentCohortDetailPage() {
                 </thead>
                 <tbody>
                   {data.positions.map((position) => {
-                    const currentValue = position.current_value || position.shares * position.current_price;
-                    const unrealizedPnl = position.unrealized_pnl || (currentValue - position.shares * position.avg_entry_price);
+                    const currentValue = position.current_value ?? position.shares * position.current_price;
+                    const unrealizedPnl = position.unrealized_pnl ?? (currentValue - position.shares * position.avg_entry_price);
+                    const openingDecisionHref = position.opening_decision_id
+                      ? `/decisions/${position.opening_decision_id}`
+                      : undefined;
 
                     return (
                       <tr
                         key={position.id}
-                        onClick={() => position.opening_decision_id && router.push(`/decisions/${position.opening_decision_id}`)}
-                        onKeyDown={(event) => {
-                          if (position.opening_decision_id && (event.key === 'Enter' || event.key === ' ')) {
-                            event.preventDefault();
-                            router.push(`/decisions/${position.opening_decision_id}`);
-                          }
-                        }}
-                        role={position.opening_decision_id ? 'link' : undefined}
-                        tabIndex={position.opening_decision_id ? 0 : undefined}
-                        className={position.opening_decision_id ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
+                        onClick={() => openingDecisionHref && router.push(openingDecisionHref)}
+                        onKeyDown={(event) => handleLinkKeyDown(event, openingDecisionHref)}
+                        role={openingDecisionHref ? 'link' : undefined}
+                        tabIndex={openingDecisionHref ? 0 : undefined}
+                        className={openingDecisionHref ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
                         title={position.opening_decision_id ? 'Click to view opening decision rationale' : undefined}
                       >
                         <td className="max-w-[200px] truncate" title={position.market_question}>
@@ -610,7 +616,10 @@ export default function AgentCohortDetailPage() {
                 </thead>
                 <tbody>
                   {data.closed_positions.map((position) => {
-                    const pnl = position.pnl || 0;
+                    const pnl = position.pnl ?? 0;
+                    const openingDecisionHref = position.opening_decision_id
+                      ? `/decisions/${position.opening_decision_id}`
+                      : undefined;
                     const outcomeColors = {
                       'WON': 'bg-green-500/20 text-green-400',
                       'LOST': 'bg-red-500/20 text-red-400',
@@ -623,16 +632,11 @@ export default function AgentCohortDetailPage() {
                     return (
                       <tr
                         key={position.id}
-                        onClick={() => position.opening_decision_id && router.push(`/decisions/${position.opening_decision_id}`)}
-                        onKeyDown={(event) => {
-                          if (position.opening_decision_id && (event.key === 'Enter' || event.key === ' ')) {
-                            event.preventDefault();
-                            router.push(`/decisions/${position.opening_decision_id}`);
-                          }
-                        }}
-                        role={position.opening_decision_id ? 'link' : undefined}
-                        tabIndex={position.opening_decision_id ? 0 : undefined}
-                        className={position.opening_decision_id ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
+                        onClick={() => openingDecisionHref && router.push(openingDecisionHref)}
+                        onKeyDown={(event) => handleLinkKeyDown(event, openingDecisionHref)}
+                        role={openingDecisionHref ? 'link' : undefined}
+                        tabIndex={openingDecisionHref ? 0 : undefined}
+                        className={openingDecisionHref ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
                         title={position.opening_decision_id ? 'Click to view opening decision rationale' : undefined}
                       >
                         <td className="max-w-[150px] truncate" title={position.market_question}>
@@ -687,40 +691,39 @@ export default function AgentCohortDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.trades.slice(0, 20).map((trade) => (
-                  <tr
-                    key={trade.id}
-                    onClick={() => trade.decision_id && router.push(`/decisions/${trade.decision_id}`)}
-                    onKeyDown={(event) => {
-                      if (trade.decision_id && (event.key === 'Enter' || event.key === ' ')) {
-                        event.preventDefault();
-                        router.push(`/decisions/${trade.decision_id}`);
-                      }
-                    }}
-                    role={trade.decision_id ? 'link' : undefined}
-                    tabIndex={trade.decision_id ? 0 : undefined}
-                    className={trade.decision_id ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
-                    title={trade.decision_id ? 'Click to view decision rationale' : undefined}
-                  >
-                    <td className="text-sm">{formatDate(trade.timestamp)}</td>
-                    <td>
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        trade.trade_type === 'BUY' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
-                      }`}>
-                        {trade.trade_type}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        trade.side === 'YES' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {trade.side}
-                      </span>
-                    </td>
-                    <td className="text-right font-mono">{formatCurrency(trade.total_amount)}</td>
-                    <td className="text-right text-[var(--text-muted)]">{trade.decision_week}</td>
-                  </tr>
-                ))}
+                {data.trades.slice(0, 20).map((trade) => {
+                  const decisionHref = trade.decision_id ? `/decisions/${trade.decision_id}` : undefined;
+
+                  return (
+                    <tr
+                      key={trade.id}
+                      onClick={() => decisionHref && router.push(decisionHref)}
+                      onKeyDown={(event) => handleLinkKeyDown(event, decisionHref)}
+                      role={decisionHref ? 'link' : undefined}
+                      tabIndex={decisionHref ? 0 : undefined}
+                      className={decisionHref ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
+                      title={trade.decision_id ? 'Click to view decision rationale' : undefined}
+                    >
+                      <td className="text-sm">{formatDate(trade.timestamp)}</td>
+                      <td>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          trade.trade_type === 'BUY' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
+                        }`}>
+                          {trade.trade_type}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          trade.side === 'YES' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {trade.side}
+                        </span>
+                      </td>
+                      <td className="text-right font-mono">{formatCurrency(trade.total_amount)}</td>
+                      <td className="text-right text-[var(--text-muted)]">{trade.decision_week}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
