@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { CRON_SECRET, INITIAL_BALANCE } from '@/lib/constants';
+import { INITIAL_BALANCE } from '@/lib/constants';
 import {
   getActiveCohorts,
   getAgentsByCohort,
@@ -22,23 +22,13 @@ import {
 import { calculatePositionValue } from '@/lib/scoring/pnl';
 import { logSystemEvent } from '@/lib/db';
 import { nowTimestamp } from '@/lib/utils';
-import { constantTimeCompare } from '@/lib/utils/security';
+import { cronUnauthorizedResponse, isCronAuthorized } from '@/lib/api/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
-function verifyCronSecret(request: NextRequest): boolean {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) return false;
-  const token = authHeader.replace('Bearer ', '');
-  return constantTimeCompare(token, CRON_SECRET);
-}
-
 export async function POST(request: NextRequest) {
-  if (!verifyCronSecret(request)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorizedResponse();
   }
   
   try {

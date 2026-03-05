@@ -2,42 +2,33 @@
  * Run Decisions Cron Endpoint
  * 
  * Runs weekly LLM decisions for all active cohorts.
- * Schedule: Every Sunday at 00:00 UTC
+ * Schedule: Every Sunday at 00:05 UTC (after start-cohort)
  * 
  * @route POST /api/cron/run-decisions
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { CRON_SECRET } from '@/lib/constants';
 import { runAllDecisions } from '@/lib/engine/decision';
+import { maybeStartNewCohort } from '@/lib/engine/cohort';
 import { logSystemEvent } from '@/lib/db';
-import { constantTimeCompare } from '@/lib/utils/security';
+import { cronUnauthorizedResponse, isCronAuthorized } from '@/lib/api/cron-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 600; // 10 minutes max for LLM calls (7 models × ~1-2 min each)
 
-/**
- * Verify cron secret from request
- */
-function verifyCronSecret(request: NextRequest): boolean {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) return false;
-  const token = authHeader.replace('Bearer ', '');
-  return constantTimeCompare(token, CRON_SECRET);
-}
-
 export async function POST(request: NextRequest) {
-  if (!verifyCronSecret(request)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorizedResponse();
   }
   
   try {
     console.log('Starting weekly decision run...');
     
     const startTime = Date.now();
+
+    // Resilience guard: ensure this week's cohort exists before decision execution.
+    // This keeps the system correct even if cron ordering drifts in deployment.
+    const cohortBootstrap = maybeStartNewCohort(false);
     
     const results = await runAllDecisions();
     
@@ -61,6 +52,12 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
+      cohort_bootstrap: cohortBootstrap.success
+        ? {
+            cohort_id: cohortBootstrap.cohort?.id,
+            cohort_number: cohortBootstrap.cohort?.cohort_number
+          }
+        : null,
       cohorts_processed: results.length,
       total_agents: totalAgents,
       total_errors: totalErrors,
@@ -79,6 +76,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-

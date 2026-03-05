@@ -496,7 +496,7 @@ Or if conditions not met:
 
 Runs weekly LLM decisions for all active cohorts.
 
-**Schedule:** Every Sunday at 00:00 UTC (after start-cohort)
+**Schedule:** Every Sunday at 00:05 UTC (after start-cohort)
 
 **Duration:** May take 2-5 minutes depending on LLM response times.
 
@@ -725,5 +725,4 @@ Not currently implemented. Planned for v2:
 - Market resolution notifications
 - Decision completion notifications
 - Cohort completion notifications
-
 

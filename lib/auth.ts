@@ -6,7 +6,7 @@
 
 import { cookies } from 'next/headers';
 import { createHmac } from 'crypto';
-import { ADMIN_PASSWORD } from '@/lib/constants';
+import { ADMIN_PASSWORD, IS_PRODUCTION } from '@/lib/constants';
 import { constantTimeCompare } from '@/lib/utils/security';
 
 /**
@@ -22,6 +22,10 @@ const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
  */
 export function isAuthenticated(): boolean {
   try {
+    if (IS_PRODUCTION && !ADMIN_PASSWORD) {
+      return false;
+    }
+
     const cookieStore = cookies();
     const tokenCookie = cookieStore.get('forecaster_admin');
 

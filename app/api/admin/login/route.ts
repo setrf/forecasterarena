@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ADMIN_PASSWORD } from '@/lib/constants';
+import { ADMIN_PASSWORD, IS_PRODUCTION } from '@/lib/constants';
 import { logSystemEvent } from '@/lib/db';
 import { verifyAdminPassword } from '@/lib/utils/security';
 
@@ -54,6 +54,13 @@ function clearAttempts(ip: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (IS_PRODUCTION && !ADMIN_PASSWORD) {
+      return NextResponse.json(
+        { error: 'Admin authentication is not configured' },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
     const { password } = body;
     const ip = getClientIp(request);
@@ -126,5 +133,4 @@ export async function DELETE(request: NextRequest) {
 
   return response;
 }
-
 

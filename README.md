@@ -472,8 +472,8 @@ forecasterarena/
 | Method | Endpoint | Schedule | Description |
 |--------|----------|----------|-------------|
 | POST | `/api/cron/sync-markets` | Every 5m | Sync Polymarket data |
-| POST | `/api/cron/run-decisions` | Sunday 00:00 | Run LLM decisions |
-| POST | `/api/cron/start-cohort` | Sunday 00:05 | Start new cohort (after decisions) |
+| POST | `/api/cron/start-cohort` | Sunday 00:00 | Start new cohort |
+| POST | `/api/cron/run-decisions` | Sunday 00:05 | Run LLM decisions |
 | POST | `/api/cron/check-resolutions` | Hourly | Check market resolutions |
 | POST | `/api/cron/take-snapshots` | Every 10m | Portfolio snapshots & MTM |
 | POST | `/api/cron/backup` | Daily 02:00 UTC | Database backup |
@@ -498,11 +498,11 @@ crontab -e
 # Sync markets every 5 minutes
 */5 * * * * curl -X POST http://localhost:3010/api/cron/sync-markets -H "Authorization: Bearer $CRON_SECRET"
 
-# Run decisions every Sunday at 00:00 UTC
-0 0 * * 0 curl -X POST http://localhost:3010/api/cron/run-decisions -H "Authorization: Bearer $CRON_SECRET"
+# Start new cohort every Sunday at 00:00 UTC
+0 0 * * 0 curl -X POST http://localhost:3010/api/cron/start-cohort -H "Authorization: Bearer $CRON_SECRET"
 
-# Start new cohort every Sunday at 00:05 UTC (runs after decisions)
-5 0 * * 0 curl -X POST http://localhost:3010/api/cron/start-cohort -H "Authorization: Bearer $CRON_SECRET"
+# Run decisions every Sunday at 00:05 UTC (runs after start-cohort)
+5 0 * * 0 curl -X POST http://localhost:3010/api/cron/run-decisions -H "Authorization: Bearer $CRON_SECRET"
 
 # Check resolutions every hour
 0 * * * * curl -X POST http://localhost:3010/api/cron/check-resolutions -H "Authorization: Bearer $CRON_SECRET"

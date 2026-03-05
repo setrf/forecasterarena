@@ -205,7 +205,7 @@ export default function MarketDetailPage() {
               </div>
               <div className="text-center">
                 <p className="text-3xl font-bold text-[var(--accent-rose)]">
-                  {formatPrice(market.current_price ? 1 - market.current_price : null)}
+                  {formatPrice(market.current_price === null ? null : 1 - market.current_price)}
                 </p>
                 <p className="text-sm text-[var(--text-muted)]">NO</p>
               </div>
@@ -213,7 +213,7 @@ export default function MarketDetailPage() {
             <div className="h-4 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-[var(--accent-emerald)] to-[var(--accent-blue)]"
-                style={{ width: `${(market.current_price || 0.5) * 100}%` }}
+                style={{ width: `${(market.current_price ?? 0.5) * 100}%` }}
               />
             </div>
           </>
@@ -418,4 +418,3 @@ export default function MarketDetailPage() {
     </div>
   );
 }
-

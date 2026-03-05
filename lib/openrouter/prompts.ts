@@ -150,7 +150,7 @@ YOUR PORTFOLIO:
 `;
 
     if (isBinary) {
-      const yesPrice = market.current_price || 0.5;
+      const yesPrice = market.current_price ?? 0.5;
       const noPrice = 1 - yesPrice;
       prompt += `  Prices: ${(yesPrice * 100).toFixed(1)}% YES / ${(noPrice * 100).toFixed(1)}% NO\n`;
     } else {
@@ -210,6 +210,5 @@ export function getShortModelName(modelId: string): string {
   const parts = modelId.split('/');
   return parts[parts.length - 1];
 }
-
 
 

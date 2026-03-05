@@ -966,6 +966,25 @@ export function createDecision(decision: {
 }
 
 /**
+ * Get the latest decision for an agent/cohort/week
+ */
+export function getDecisionByAgentWeek(
+  agentId: string,
+  cohortId: string,
+  decisionWeek: number
+): Decision | undefined {
+  const db = getDb();
+  return db.prepare(`
+    SELECT * FROM decisions
+    WHERE agent_id = ?
+      AND cohort_id = ?
+      AND decision_week = ?
+    ORDER BY decision_timestamp DESC
+    LIMIT 1
+  `).get(agentId, cohortId, decisionWeek) as Decision | undefined;
+}
+
+/**
  * Get decisions for an agent
  */
 export function getDecisionsByAgent(agentId: string, limit?: number): Decision[] {
@@ -1117,6 +1136,16 @@ export function createBrierScore(score: {
   brier_score: number;
 }): BrierScoreRecord {
   const db = getDb();
+  const existing = db.prepare(`
+    SELECT * FROM brier_scores
+    WHERE trade_id = ?
+    LIMIT 1
+  `).get(score.trade_id) as BrierScoreRecord | undefined;
+
+  if (existing) {
+    return existing;
+  }
+
   const id = generateId();
 
   db.prepare(`
@@ -1344,5 +1373,4 @@ export function getLogsBySeverity(severity: 'info' | 'warning' | 'error', limit:
     LIMIT ?
   `).all(severity, limit) as SystemLog[];
 }
-
 

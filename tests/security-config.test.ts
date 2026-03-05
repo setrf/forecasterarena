@@ -1,0 +1,103 @@
+import { describe, expect, it } from 'vitest';
+import { createIsolatedTestContext } from '@/tests/helpers/test-context';
+
+describe('security and config behavior', () => {
+  it('fails closed for admin/cron secrets in production when env vars are missing', async () => {
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'production',
+      env: {
+        CRON_SECRET: undefined,
+        ADMIN_PASSWORD: undefined,
+        OPENROUTER_API_KEY: undefined
+      }
+    });
+
+    try {
+      const constants = await import('@/lib/constants');
+      expect(constants.IS_PRODUCTION).toBe(true);
+      expect(constants.CRON_SECRET).toBe('');
+      expect(constants.ADMIN_PASSWORD).toBe('');
+      expect(constants.OPENROUTER_API_KEY).toBeUndefined();
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('uses development defaults when not in production', async () => {
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'development',
+      env: {
+        CRON_SECRET: undefined,
+        ADMIN_PASSWORD: undefined,
+        OPENROUTER_API_KEY: undefined
+      }
+    });
+
+    try {
+      const constants = await import('@/lib/constants');
+      expect(constants.IS_PRODUCTION).toBe(false);
+      expect(constants.CRON_SECRET).toBe('dev-secret');
+      expect(constants.ADMIN_PASSWORD).toBe('admin');
+      expect(constants.OPENROUTER_API_KEY).toBeUndefined();
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('returns 503 from admin login when production password is not configured', async () => {
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'production',
+      env: {
+        ADMIN_PASSWORD: undefined
+      }
+    });
+
+    try {
+      const route = await import('@/app/api/admin/login/route');
+      const request = new Request('http://localhost/api/admin/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password: 'irrelevant' })
+      });
+
+      const response = await route.POST(request as any);
+      expect(response.status).toBe(503);
+      const body = await response.json();
+      expect(body).toEqual({ error: 'Admin authentication is not configured' });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('rejects all cron endpoints when production cron secret is not configured', async () => {
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'production',
+      env: {
+        CRON_SECRET: undefined
+      }
+    });
+
+    const routeLoaders = [
+      () => import('@/app/api/cron/sync-markets/route'),
+      () => import('@/app/api/cron/start-cohort/route'),
+      () => import('@/app/api/cron/run-decisions/route'),
+      () => import('@/app/api/cron/check-resolutions/route'),
+      () => import('@/app/api/cron/take-snapshots/route'),
+      () => import('@/app/api/cron/backup/route')
+    ];
+
+    try {
+      for (const loadRoute of routeLoaders) {
+        const route = await loadRoute();
+        const request = new Request('http://localhost/cron', {
+          method: 'POST'
+        });
+
+        const response = await route.POST(request as any);
+        expect(response.status).toBe(401);
+      }
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+});

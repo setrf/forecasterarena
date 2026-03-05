@@ -7,7 +7,7 @@
  * @module engine/execution
  */
 
-import { generateId, withTransaction } from '../db';
+import { withTransaction } from '../db';
 import {
   getAgentById,
   updateAgentBalance,
@@ -19,6 +19,7 @@ import {
 } from '../db/queries';
 import { logSystemEvent } from '../db';
 import { MAX_BET_PERCENT } from '../constants';
+import type { Agent, Market, Position } from '../types';
 import type { BetInstruction, SellInstruction } from '../openrouter/parser';
 
 /**
@@ -43,6 +44,324 @@ export interface SellResult {
   error?: string;
 }
 
+type ExecResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: string };
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function fail<T>(error: string): ExecResult<T> {
+  return { ok: false, error };
+}
+
+function getBetExecutionContextOrError(
+  agentId: string,
+  bet: BetInstruction
+): ExecResult<{ agent: Agent; market: Market; maxBet: number }> {
+  const agent = getAgentById(agentId);
+  if (!agent) {
+    return fail('Agent not found');
+  }
+
+  if (agent.status === 'bankrupt') {
+    return fail('Agent is bankrupt');
+  }
+
+  const market = getMarketById(bet.market_id);
+  if (!market) {
+    return fail('Market not found');
+  }
+
+  if (market.status !== 'active') {
+    return fail(`Market is ${market.status}`);
+  }
+
+  if (bet.amount <= 0) {
+    return fail('Bet amount must be positive');
+  }
+
+  const maxBet = agent.cash_balance * MAX_BET_PERCENT;
+  if (bet.amount > maxBet) {
+    return fail(`Bet exceeds max (${maxBet.toFixed(2)})`);
+  }
+
+  if (bet.amount > agent.cash_balance) {
+    return fail('Insufficient balance');
+  }
+
+  return {
+    ok: true,
+    value: { agent, market, maxBet }
+  };
+}
+
+function resolveBetPriceAndSideOrError(
+  market: Market,
+  requestedSide: string
+): ExecResult<{ sideForStorage: string; price: number }> {
+  const isBinary = market.market_type === 'binary';
+
+  if (isBinary) {
+    const normalizedSide = requestedSide.toUpperCase();
+    if (normalizedSide !== 'YES' && normalizedSide !== 'NO') {
+      return fail(
+        `Invalid side "${requestedSide}" for binary market (must be YES or NO)`
+      );
+    }
+
+    const yesPrice = market.current_price ?? 0.5;
+    const price = normalizedSide === 'YES'
+      ? yesPrice
+      : (1 - yesPrice);
+
+    if (!Number.isFinite(price) || price <= 0 || price > 1) {
+      return fail(`Invalid executable price ${price} for side "${normalizedSide}"`);
+    }
+
+    return {
+      ok: true,
+      value: {
+        sideForStorage: normalizedSide,
+        price
+      }
+    };
+  }
+
+  try {
+    const prices = JSON.parse(market.current_prices || '{}') as Record<string, unknown>;
+    const outcomePrice = prices[requestedSide];
+
+    if (outcomePrice === undefined || outcomePrice === null) {
+      return fail(`No price available for outcome "${requestedSide}" in multi-outcome market`);
+    }
+
+    const price = parseFloat(String(outcomePrice));
+
+    if (isNaN(price) || price <= 0 || price > 1) {
+      return fail(`Invalid price ${outcomePrice} for outcome "${requestedSide}"`);
+    }
+
+    return {
+      ok: true,
+      value: {
+        sideForStorage: requestedSide,
+        price
+      }
+    };
+  } catch (error) {
+    return fail(`Failed to parse multi-outcome prices: ${toErrorMessage(error)}`);
+  }
+}
+
+function commitBetTrade(args: {
+  agentId: string;
+  agent: Agent;
+  market: Market;
+  decisionId?: string;
+  sideForStorage: string;
+  shares: number;
+  price: number;
+  amount: number;
+  impliedConfidence: number;
+}): { tradeId: string; positionId: string } {
+  const result = withTransaction(() => {
+    const position = upsertPosition(
+      args.agentId,
+      args.market.id,
+      args.sideForStorage,
+      args.shares,
+      args.price,
+      args.amount
+    );
+
+    const trade = createTrade({
+      agent_id: args.agentId,
+      market_id: args.market.id,
+      position_id: position.id,
+      decision_id: args.decisionId,
+      trade_type: 'BUY',
+      side: args.sideForStorage,
+      shares: args.shares,
+      price: args.price,
+      total_amount: args.amount,
+      implied_confidence: args.impliedConfidence
+    });
+
+    const newCashBalance = args.agent.cash_balance - args.amount;
+    const newTotalInvested = args.agent.total_invested + args.amount;
+    updateAgentBalance(args.agentId, newCashBalance, newTotalInvested);
+
+    return { position, trade };
+  });
+
+  return {
+    tradeId: result.trade.id,
+    positionId: result.position.id
+  };
+}
+
+function getSellExecutionContextOrError(
+  agentId: string,
+  sell: SellInstruction
+): ExecResult<{ agent: Agent; position: Position; market: Market; sharesToSell: number }> {
+  const agent = getAgentById(agentId);
+  if (!agent) {
+    return fail('Agent not found');
+  }
+
+  const position = getPositionById(sell.position_id);
+  if (!position) {
+    return fail('Position not found');
+  }
+
+  if (position.agent_id !== agentId) {
+    return fail('Position does not belong to agent');
+  }
+
+  if (position.status !== 'open') {
+    return fail(`Position is ${position.status}`);
+  }
+
+  if (sell.percentage <= 0) {
+    return fail('Sell percentage must be positive');
+  }
+
+  if (sell.percentage > 100) {
+    return fail('Sell percentage cannot exceed 100%');
+  }
+
+  const market = getMarketById(position.market_id);
+  if (!market) {
+    return fail('Market not found');
+  }
+
+  if (market.status !== 'active') {
+    return fail(`Market is ${market.status}`);
+  }
+
+  const sharesToSell = (sell.percentage / 100) * position.shares;
+  if (sharesToSell <= 0) {
+    return fail('No shares to sell');
+  }
+
+  return {
+    ok: true,
+    value: {
+      agent,
+      position,
+      market,
+      sharesToSell
+    }
+  };
+}
+
+function resolveSellCurrentPriceOrError(
+  market: Market,
+  positionSide: string
+): ExecResult<{ currentPrice: number }> {
+  const isBinary = market.market_type === 'binary';
+
+  if (isBinary) {
+    const normalizedSide = positionSide.toUpperCase();
+    if (normalizedSide !== 'YES' && normalizedSide !== 'NO') {
+      return fail(`Invalid side "${positionSide}" for binary market position`);
+    }
+
+    const yesPrice = market.current_price ?? 0.5;
+    const currentPrice = normalizedSide === 'YES'
+      ? yesPrice
+      : (1 - yesPrice);
+
+    if (!Number.isFinite(currentPrice) || currentPrice < 0 || currentPrice > 1) {
+      return fail(`Invalid current price ${currentPrice} for side "${normalizedSide}"`);
+    }
+
+    return {
+      ok: true,
+      value: { currentPrice }
+    };
+  }
+
+  try {
+    const prices = JSON.parse(market.current_prices || '{}') as Record<string, unknown>;
+    const outcomePrice = prices[positionSide];
+
+    if (outcomePrice === undefined || outcomePrice === null) {
+      return fail(`No current price available for outcome "${positionSide}"`);
+    }
+
+    const currentPrice = parseFloat(String(outcomePrice));
+
+    if (isNaN(currentPrice) || currentPrice < 0 || currentPrice > 1) {
+      return fail(`Invalid current price ${outcomePrice} for outcome "${positionSide}"`);
+    }
+
+    return {
+      ok: true,
+      value: { currentPrice }
+    };
+  } catch (error) {
+    return fail(`Failed to parse multi-outcome prices: ${toErrorMessage(error)}`);
+  }
+}
+
+function calculateSellEconomics(
+  position: Position,
+  sharesToSell: number,
+  currentPrice: number
+): { proceeds: number; costBasisSold: number; realizedPnL: number } {
+  const proceeds = sharesToSell * currentPrice;
+  const costBasisSold = (sharesToSell / position.shares) * position.total_cost;
+  const realizedPnL = proceeds - costBasisSold;
+
+  return {
+    proceeds,
+    costBasisSold,
+    realizedPnL
+  };
+}
+
+function commitSellTrade(args: {
+  agentId: string;
+  agent: Agent;
+  market: Market;
+  position: Position;
+  decisionId?: string;
+  sharesToSell: number;
+  currentPrice: number;
+  proceeds: number;
+  costBasisSold: number;
+  realizedPnL: number;
+}): { tradeId: string } {
+  const trade = withTransaction(() => {
+    const tradeRecord = createTrade({
+      agent_id: args.agentId,
+      market_id: args.market.id,
+      position_id: args.position.id,
+      decision_id: args.decisionId,
+      trade_type: 'SELL',
+      side: args.position.side,
+      shares: args.sharesToSell,
+      price: args.currentPrice,
+      total_amount: args.proceeds,
+      cost_basis: args.costBasisSold,
+      realized_pnl: args.realizedPnL
+    });
+
+    reducePosition(args.position.id, args.sharesToSell);
+
+    const newCashBalance = args.agent.cash_balance + args.proceeds;
+    const newTotalInvested = args.agent.total_invested - args.costBasisSold;
+    updateAgentBalance(args.agentId, newCashBalance, Math.max(0, newTotalInvested));
+
+    return tradeRecord;
+  });
+
+  return { tradeId: trade.id };
+}
+
 /**
  * Execute a single bet
  *
@@ -60,126 +379,40 @@ export function executeBet(
   decisionId?: string
 ): BetResult {
   try {
-    const agent = getAgentById(agentId);
-    if (!agent) {
-      return { success: false, error: 'Agent not found' };
+    const context = getBetExecutionContextOrError(agentId, bet);
+    if (!context.ok) {
+      return { success: false, error: context.error };
     }
 
-    if (agent.status === 'bankrupt') {
-      return { success: false, error: 'Agent is bankrupt' };
+    const { agent, market, maxBet } = context.value;
+
+    const resolved = resolveBetPriceAndSideOrError(market, bet.side);
+    if (!resolved.ok) {
+      return { success: false, error: resolved.error };
     }
 
-    const market = getMarketById(bet.market_id);
-    if (!market) {
-      return { success: false, error: 'Market not found' };
-    }
-
-    if (market.status !== 'active') {
-      return { success: false, error: `Market is ${market.status}` };
-    }
-
-    // Validate bet amount - must be positive
-    if (bet.amount <= 0) {
-      return { success: false, error: 'Bet amount must be positive' };
-    }
-
-    // Validate bet amount against max
-    const maxBet = agent.cash_balance * MAX_BET_PERCENT;
-    if (bet.amount > maxBet) {
-      return { success: false, error: `Bet exceeds max (${maxBet.toFixed(2)})` };
-    }
-
-    if (bet.amount > agent.cash_balance) {
-      return { success: false, error: 'Insufficient balance' };
-    }
-
-    // Get current price for the side
-    const isBinary = market.market_type === 'binary';
-    let price: number;
-
-    if (isBinary) {
-      // Normalize binary market sides to uppercase for case-insensitive comparison
-      const normalizedSide = bet.side.toUpperCase();
-      price = normalizedSide === 'YES'
-        ? (market.current_price || 0.5)
-        : (1 - (market.current_price || 0.5));
-    } else {
-      // Multi-outcome: parse prices from JSON
-      // IMPORTANT: Don't default to 0.5 - reject if price is missing
-      try {
-        const prices = JSON.parse(market.current_prices || '{}');
-        const outcomePrice = prices[bet.side];
-
-        if (outcomePrice === undefined || outcomePrice === null) {
-          return {
-            success: false,
-            error: `No price available for outcome "${bet.side}" in multi-outcome market`
-          };
-        }
-
-        price = parseFloat(outcomePrice);
-
-        if (isNaN(price) || price < 0 || price > 1) {
-          return {
-            success: false,
-            error: `Invalid price ${outcomePrice} for outcome "${bet.side}"`
-          };
-        }
-      } catch (e) {
-        return {
-          success: false,
-          error: `Failed to parse multi-outcome prices: ${e instanceof Error ? e.message : String(e)}`
-        };
-      }
-    }
-
-    // Calculate shares (amount / price)
+    const { sideForStorage, price } = resolved.value;
     const shares = bet.amount / price;
-
-    // Calculate implied confidence for Brier scoring
     const impliedConfidence = bet.amount / maxBet;
 
-    // Execute all database operations in a transaction for atomicity
-    const result = withTransaction(() => {
-      // Create or update position
-      const position = upsertPosition(
-        agentId,
-        market.id,
-        bet.side,
-        shares,
-        price,
-        bet.amount
-      );
-
-      // Record trade
-      const trade = createTrade({
-        agent_id: agentId,
-        market_id: market.id,
-        position_id: position.id,
-        decision_id: decisionId,
-        trade_type: 'BUY',
-        side: bet.side,
-        shares,
-        price,
-        total_amount: bet.amount,
-        implied_confidence: impliedConfidence
-      });
-
-      // Update agent balance
-      const newCashBalance = agent.cash_balance - bet.amount;
-      const newTotalInvested = agent.total_invested + bet.amount;
-      updateAgentBalance(agentId, newCashBalance, newTotalInvested);
-
-      return { position, trade };
+    const committed = commitBetTrade({
+      agentId,
+      agent,
+      market,
+      decisionId,
+      sideForStorage,
+      shares,
+      price,
+      amount: bet.amount,
+      impliedConfidence
     });
 
-    // Log after successful transaction (outside transaction to avoid rollback on log failure)
     logSystemEvent('trade_executed', {
       agent_id: agentId,
-      trade_id: result.trade.id,
+      trade_id: committed.tradeId,
       type: 'BUY',
       market_id: market.id,
-      side: bet.side,
+      side: sideForStorage,
       amount: bet.amount,
       shares,
       price
@@ -187,13 +420,12 @@ export function executeBet(
 
     return {
       success: true,
-      trade_id: result.trade.id,
-      position_id: result.position.id,
+      trade_id: committed.tradeId,
+      position_id: committed.positionId,
       shares
     };
-
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logSystemEvent('trade_error', { agent_id: agentId, error: message }, 'error');
     return { success: false, error: message };
   }
@@ -216,125 +448,41 @@ export function executeSell(
   decisionId?: string
 ): SellResult {
   try {
-    const agent = getAgentById(agentId);
-    if (!agent) {
-      return { success: false, error: 'Agent not found' };
+    const context = getSellExecutionContextOrError(agentId, sell);
+    if (!context.ok) {
+      return { success: false, error: context.error };
     }
 
-    const position = getPositionById(sell.position_id);
-    if (!position) {
-      return { success: false, error: 'Position not found' };
+    const { agent, position, market, sharesToSell } = context.value;
+
+    const resolved = resolveSellCurrentPriceOrError(market, position.side);
+    if (!resolved.ok) {
+      return { success: false, error: resolved.error };
     }
 
-    if (position.agent_id !== agentId) {
-      return { success: false, error: 'Position does not belong to agent' };
-    }
+    const { currentPrice } = resolved.value;
+    const { proceeds, costBasisSold, realizedPnL } = calculateSellEconomics(
+      position,
+      sharesToSell,
+      currentPrice
+    );
 
-    if (position.status !== 'open') {
-      return { success: false, error: `Position is ${position.status}` };
-    }
-
-    // Validate sell percentage - must be positive
-    if (sell.percentage <= 0) {
-      return { success: false, error: 'Sell percentage must be positive' };
-    }
-
-    if (sell.percentage > 100) {
-      return { success: false, error: 'Sell percentage cannot exceed 100%' };
-    }
-
-    const market = getMarketById(position.market_id);
-    if (!market) {
-      return { success: false, error: 'Market not found' };
-    }
-
-    // Calculate shares to sell
-    const sharesToSell = (sell.percentage / 100) * position.shares;
-
-    // Validate shares to sell
-    if (sharesToSell <= 0) {
-      return { success: false, error: 'No shares to sell' };
-    }
-
-    // Get current price
-    const isBinary = market.market_type === 'binary';
-    let currentPrice: number;
-
-    if (isBinary) {
-      currentPrice = position.side === 'YES'
-        ? (market.current_price || 0.5)
-        : (1 - (market.current_price || 0.5));
-    } else {
-      // Multi-outcome: parse prices from JSON
-      try {
-        const prices = JSON.parse(market.current_prices || '{}');
-        const outcomePrice = prices[position.side];
-
-        if (outcomePrice === undefined || outcomePrice === null) {
-          return {
-            success: false,
-            error: `No current price available for outcome "${position.side}"`
-          };
-        }
-
-        currentPrice = parseFloat(outcomePrice);
-
-        if (isNaN(currentPrice) || currentPrice < 0 || currentPrice > 1) {
-          return {
-            success: false,
-            error: `Invalid current price ${outcomePrice} for outcome "${position.side}"`
-          };
-        }
-      } catch (e) {
-        return {
-          success: false,
-          error: `Failed to parse multi-outcome prices: ${e instanceof Error ? e.message : String(e)}`
-        };
-      }
-    }
-
-    // Calculate proceeds and cost basis
-    const proceeds = sharesToSell * currentPrice;
-
-    // Guard against division by zero (should never happen due to earlier validation)
-    if (position.shares <= 0) {
-      return { success: false, error: `Invalid position: shares is ${position.shares}` };
-    }
-    const costBasisSold = (sharesToSell / position.shares) * position.total_cost;
-    const realizedPnL = proceeds - costBasisSold;
-
-    // Execute all database operations in a transaction for atomicity
-    const trade = withTransaction(() => {
-      // Record trade with P/L tracking
-      const tradeRecord = createTrade({
-        agent_id: agentId,
-        market_id: market.id,
-        position_id: position.id,
-        decision_id: decisionId,
-        trade_type: 'SELL',
-        side: position.side,
-        shares: sharesToSell,
-        price: currentPrice,
-        total_amount: proceeds,
-        cost_basis: costBasisSold,
-        realized_pnl: realizedPnL
-      });
-
-      // Reduce position
-      reducePosition(position.id, sharesToSell);
-
-      // Update agent balance
-      const newCashBalance = agent.cash_balance + proceeds;
-      const newTotalInvested = agent.total_invested - costBasisSold;
-      updateAgentBalance(agentId, newCashBalance, Math.max(0, newTotalInvested));
-
-      return tradeRecord;
+    const committed = commitSellTrade({
+      agentId,
+      agent,
+      market,
+      position,
+      decisionId,
+      sharesToSell,
+      currentPrice,
+      proceeds,
+      costBasisSold,
+      realizedPnL
     });
 
-    // Log after successful transaction (outside transaction to avoid rollback on log failure)
     logSystemEvent('trade_executed', {
       agent_id: agentId,
-      trade_id: trade.id,
+      trade_id: committed.tradeId,
       type: 'SELL',
       market_id: market.id,
       side: position.side,
@@ -347,13 +495,12 @@ export function executeSell(
 
     return {
       success: true,
-      trade_id: trade.id,
+      trade_id: committed.tradeId,
       proceeds,
       shares_sold: sharesToSell
     };
-
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logSystemEvent('trade_error', { agent_id: agentId, error: message }, 'error');
     return { success: false, error: message };
   }
@@ -372,14 +519,7 @@ export function executeBets(
   bets: BetInstruction[],
   decisionId?: string
 ): BetResult[] {
-  const results: BetResult[] = [];
-  
-  for (const bet of bets) {
-    const result = executeBet(agentId, bet, decisionId);
-    results.push(result);
-  }
-  
-  return results;
+  return bets.map((bet) => executeBet(agentId, bet, decisionId));
 }
 
 /**
@@ -395,14 +535,5 @@ export function executeSells(
   sells: SellInstruction[],
   decisionId?: string
 ): SellResult[] {
-  const results: SellResult[] = [];
-  
-  for (const sell of sells) {
-    const result = executeSell(agentId, sell, decisionId);
-    results.push(result);
-  }
-  
-  return results;
+  return sells.map((sell) => executeSell(agentId, sell, decisionId));
 }
-
-

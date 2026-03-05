@@ -8,30 +8,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { CRON_SECRET } from '@/lib/constants';
 import { syncMarkets } from '@/lib/engine/market';
-import { logSystemEvent } from '@/lib/db';
-import { constantTimeCompare } from '@/lib/utils/security';
+import { cronUnauthorizedResponse, isCronAuthorized } from '@/lib/api/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Verify cron secret from request
- */
-function verifyCronSecret(request: NextRequest): boolean {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) return false;
-  const token = authHeader.replace('Bearer ', '');
-  return constantTimeCompare(token, CRON_SECRET);
-}
-
 export async function POST(request: NextRequest) {
   // Verify authentication
-  if (!verifyCronSecret(request)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorizedResponse();
   }
 
   try {
@@ -48,6 +33,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-

@@ -14,6 +14,7 @@ import {
   getTopMarketsByVolume,
   getPositionsWithMarkets,
   createDecision,
+  getDecisionByAgentWeek,
   getModelById
 } from '../db/queries';
 import { callOpenRouterWithRetry, estimateCost } from '../openrouter/client';
@@ -88,6 +89,16 @@ async function processAgentDecision(
       result.success = true;
       return result;
     }
+
+    // Idempotency guard: avoid duplicate decisions for rerun cron executions.
+    // If last attempt for this week was an ERROR, allow a retry.
+    const existingDecision = getDecisionByAgentWeek(agent.id, cohortId, weekNumber);
+    if (existingDecision && existingDecision.action !== 'ERROR') {
+      result.decision_id = existingDecision.id;
+      result.action = 'SKIPPED';
+      result.success = true;
+      return result;
+    }
     
     console.log(`Processing decision for ${agent.model.display_name}...`);
     
@@ -109,16 +120,24 @@ async function processAgentDecision(
         status: agent.status,
         created_at: ''
       },
-      positions.map(p => ({
-        id: p.id,
-        market_question: p.market_question,
-        side: p.side,
-        shares: p.shares,
-        avg_entry_price: p.avg_entry_price,
-        current_price: p.current_price || 0.5,
-        current_value: p.current_value || 0,
-        unrealized_pnl: p.unrealized_pnl || 0
-      })),
+      positions.map(p => {
+        // For binary positions, markets.current_price is the YES price.
+        // Convert NO positions to side-correct price for the model prompt.
+        const normalizedSide = p.side.toUpperCase();
+        const yesPrice = p.current_price ?? 0.5;
+        const currentPriceForPrompt = normalizedSide === 'NO' ? (1 - yesPrice) : yesPrice;
+
+        return {
+          id: p.id,
+          market_question: p.market_question,
+          side: p.side,
+          shares: p.shares,
+          avg_entry_price: p.avg_entry_price,
+          current_price: currentPriceForPrompt,
+          current_value: p.current_value || 0,
+          unrealized_pnl: p.unrealized_pnl || 0
+        };
+      }),
       markets,
       weekNumber
     );
@@ -133,8 +152,8 @@ async function processAgentDecision(
     let parsed = parseDecision(response.content, agent.cash_balance);
     let retryCount = 0;
     
-    // Retry if malformed
-    if (!isValidDecision(parsed) && retryCount < LLM_MAX_RETRIES) {
+    // Retry malformed responses up to configured max.
+    while (!isValidDecision(parsed) && retryCount < LLM_MAX_RETRIES) {
       console.log(`Retrying ${agent.model.display_name} due to invalid response...`);
       
       const retryPrompt = buildRetryPrompt(
@@ -317,6 +336,3 @@ export async function runAllDecisions(): Promise<CohortDecisionResult[]> {
   
   return results;
 }
-
-
-

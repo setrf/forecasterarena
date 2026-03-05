@@ -165,31 +165,47 @@ export type ModelId = typeof MODELS[number]['id'];
 export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 /**
- * Cron job authentication secret
- * Defaults to 'dev-secret' for development - CHANGE IN PRODUCTION
+ * Runtime environment
  */
-export const CRON_SECRET = process.env.CRON_SECRET || 'dev-secret';
+export const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+/**
+ * Cron job authentication secret
+ * Defaults to 'dev-secret' only in development.
+ * In production, missing secret resolves to empty string to fail closed.
+ */
+export const CRON_SECRET = process.env.CRON_SECRET || (IS_PRODUCTION ? '' : 'dev-secret');
 
 /**
  * Admin dashboard password
- * Defaults to 'admin' for development - CHANGE IN PRODUCTION
+ * Defaults to 'admin' only in development.
+ * In production, missing password resolves to empty string to fail closed.
  */
-export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (IS_PRODUCTION ? '' : 'admin');
 
 // Production security warnings
-if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
-  if (!process.env.CRON_SECRET || CRON_SECRET === 'dev-secret') {
-    console.error('SECURITY WARNING: CRON_SECRET is not set or using default value!');
-    console.error('Set CRON_SECRET environment variable in production.');
-  }
+if (typeof window === 'undefined' && IS_PRODUCTION) {
+  // Avoid duplicate warning spam during build/runtime module evaluation.
+  const warningFlag = '__forecaster_security_warnings_logged__';
+  const globalRef = globalThis as typeof globalThis & { [warningFlag]?: boolean };
 
-  if (!process.env.ADMIN_PASSWORD || ADMIN_PASSWORD === 'admin') {
-    console.error('SECURITY WARNING: ADMIN_PASSWORD is not set or using default value!');
-    console.error('Set ADMIN_PASSWORD environment variable in production.');
-  }
+  if (!globalRef[warningFlag]) {
+    if (!process.env.CRON_SECRET) {
+      console.error('SECURITY WARNING: CRON_SECRET is not set in production.');
+      console.error('Cron routes will reject all requests until this is configured.');
+    }
 
-  if (!OPENROUTER_API_KEY) {
-    throw new Error('OPENROUTER_API_KEY is required in production');
+    if (!process.env.ADMIN_PASSWORD) {
+      console.error('SECURITY WARNING: ADMIN_PASSWORD is not set in production.');
+      console.error('Admin login/session verification will be disabled until this is configured.');
+    }
+
+    if (!OPENROUTER_API_KEY) {
+      console.error('SECURITY WARNING: OPENROUTER_API_KEY is not set in production.');
+      console.error('OpenRouter-dependent routes will fail until this is configured.');
+    }
+
+    globalRef[warningFlag] = true;
   }
 }
 

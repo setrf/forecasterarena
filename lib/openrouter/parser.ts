@@ -37,6 +37,83 @@ export interface ParsedDecision {
   error?: string;
 }
 
+type SupportedAction = 'BET' | 'SELL' | 'HOLD';
+
+type Envelope = {
+  action: SupportedAction;
+  reasoning: string;
+};
+
+/**
+ * Build a standard parser error response.
+ */
+function mkError(error: string, reasoning: string = ''): ParsedDecision {
+  return {
+    action: 'ERROR',
+    reasoning,
+    error
+  };
+}
+
+/**
+ * Remove markdown fences around a JSON payload.
+ */
+function stripCodeFences(input: string): string {
+  let cleaned = input;
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '');
+    cleaned = cleaned.replace(/\n?```\s*$/i, '');
+  }
+  return cleaned;
+}
+
+/**
+ * Remove outer quote wrapper when the whole response is wrapped.
+ */
+function stripOuterQuotes(input: string): string {
+  if (
+    (input.startsWith('"') && input.endsWith('"')) ||
+    (input.startsWith("'") && input.endsWith("'"))
+  ) {
+    return input.slice(1, -1);
+  }
+
+  return input;
+}
+
+/**
+ * Extract a JSON object containing an "action" field from prose-heavy output.
+ */
+function extractEmbeddedJsonWithAction(input: string): string {
+  if (input.trim().startsWith('{')) {
+    return input;
+  }
+
+  const jsonMatch = input.match(/\{[\s\S]*"action"\s*:\s*"[^"]+"/);
+  if (!jsonMatch) {
+    return input;
+  }
+
+  const startIdx = input.indexOf(jsonMatch[0]);
+  let braceCount = 0;
+  let endIdx = startIdx;
+
+  for (let i = startIdx; i < input.length; i++) {
+    if (input[i] === '{') braceCount++;
+    if (input[i] === '}') braceCount--;
+    if (braceCount === 0 && i > startIdx) {
+      endIdx = i + 1;
+      break;
+    }
+  }
+
+  if (endIdx > startIdx) {
+    return input.slice(startIdx, endIdx);
+  }
+
+  return input;
+}
+
 /**
  * Clean LLM response by removing markdown and extra whitespace
  *
@@ -45,46 +122,9 @@ export interface ParsedDecision {
  */
 function cleanResponse(rawResponse: string): string {
   let cleaned = rawResponse.trim();
-
-  // Remove markdown code blocks
-  if (cleaned.startsWith('```')) {
-    // Handle ```json or just ```
-    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '');
-    cleaned = cleaned.replace(/\n?```\s*$/i, '');
-  }
-
-  // Remove any leading/trailing quotes that might wrap the whole thing
-  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) ||
-      (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-    cleaned = cleaned.slice(1, -1);
-  }
-
-  // If response doesn't start with '{', try to extract JSON from Markdown
-  // This handles thinking models that output Markdown text with embedded JSON
-  if (!cleaned.trim().startsWith('{')) {
-    // Look for JSON object pattern in the text
-    const jsonMatch = cleaned.match(/\{[\s\S]*"action"\s*:\s*"[^"]+"/);
-    if (jsonMatch) {
-      // Find the complete JSON object starting from the match
-      const startIdx = cleaned.indexOf(jsonMatch[0]);
-      let braceCount = 0;
-      let endIdx = startIdx;
-
-      for (let i = startIdx; i < cleaned.length; i++) {
-        if (cleaned[i] === '{') braceCount++;
-        if (cleaned[i] === '}') braceCount--;
-        if (braceCount === 0 && i > startIdx) {
-          endIdx = i + 1;
-          break;
-        }
-      }
-
-      if (endIdx > startIdx) {
-        cleaned = cleaned.slice(startIdx, endIdx);
-      }
-    }
-  }
-
+  cleaned = stripCodeFences(cleaned);
+  cleaned = stripOuterQuotes(cleaned);
+  cleaned = extractEmbeddedJsonWithAction(cleaned);
   return cleaned.trim();
 }
 
@@ -156,6 +196,60 @@ function validateSell(sell: SellInstruction): string | null {
   return null;
 }
 
+function validateEnvelope(parsed: any): Envelope | ParsedDecision {
+  if (!parsed.action) {
+    return mkError('Missing action field');
+  }
+
+  if (!parsed.reasoning || typeof parsed.reasoning !== 'string') {
+    return mkError('Missing or invalid reasoning field');
+  }
+
+  const action = parsed.action.toUpperCase();
+  if (!['BET', 'SELL', 'HOLD'].includes(action)) {
+    return mkError(`Invalid action: ${parsed.action}`, parsed.reasoning);
+  }
+
+  return {
+    action: action as SupportedAction,
+    reasoning: parsed.reasoning
+  };
+}
+
+function parseActionItems<TInput, TOutput>(args: {
+  rawItems: unknown;
+  emptyError: string;
+  invalidPrefix: 'bet' | 'sell';
+  reasoning: string;
+  validate: (item: TInput) => string | null;
+  mapItem: (item: TInput) => TOutput;
+}): TOutput[] | ParsedDecision {
+  if (!Array.isArray(args.rawItems) || args.rawItems.length === 0) {
+    return mkError(args.emptyError, args.reasoning);
+  }
+
+  const parsedItems: TOutput[] = [];
+  for (const rawItem of args.rawItems as TInput[]) {
+    const error = args.validate(rawItem);
+    if (error) {
+      return mkError(`Invalid ${args.invalidPrefix}: ${error}`, args.reasoning);
+    }
+
+    parsedItems.push(args.mapItem(rawItem));
+  }
+
+  return parsedItems;
+}
+
+function isErrorDecision(value: unknown): value is ParsedDecision {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      'action' in value &&
+      (value as ParsedDecision).action === 'ERROR'
+  );
+}
+
 /**
  * Parse LLM response into a decision
  * 
@@ -168,122 +262,69 @@ export function parseDecision(
   agentBalance: number = Infinity  // Default to no validation
 ): ParsedDecision {
   try {
-    // Clean the response
     const cleaned = cleanResponse(rawResponse);
-    
-    // Try to parse as JSON
     const parsed = JSON.parse(cleaned);
-    
-    // Validate required fields
-    if (!parsed.action) {
-      return {
-        action: 'ERROR',
-        reasoning: '',
-        error: 'Missing action field'
-      };
+
+    const envelope = validateEnvelope(parsed);
+    if (isErrorDecision(envelope)) {
+      return envelope;
     }
-    
-    if (!parsed.reasoning || typeof parsed.reasoning !== 'string') {
-      return {
-        action: 'ERROR',
-        reasoning: '',
-        error: 'Missing or invalid reasoning field'
-      };
-    }
-    
-    // Normalize action
-    const action = parsed.action.toUpperCase();
-    
-    if (!['BET', 'SELL', 'HOLD'].includes(action)) {
-      return {
-        action: 'ERROR',
-        reasoning: parsed.reasoning || '',
-        error: `Invalid action: ${parsed.action}`
-      };
-    }
-    
-    // Handle BET action
-    if (action === 'BET') {
-      if (!Array.isArray(parsed.bets) || parsed.bets.length === 0) {
-        return {
-          action: 'ERROR',
-          reasoning: parsed.reasoning,
-          error: 'BET action requires non-empty bets array'
-        };
-      }
-      
-      // Validate each bet
-      const bets: BetInstruction[] = [];
-      for (const bet of parsed.bets) {
-        const error = validateBet(bet, agentBalance);
-        if (error) {
-          return {
-            action: 'ERROR',
-            reasoning: parsed.reasoning,
-            error: `Invalid bet: ${error}`
-          };
-        }
-        bets.push({
+
+    if (envelope.action === 'BET') {
+      const bets = parseActionItems<BetInstruction, BetInstruction>({
+        rawItems: parsed.bets,
+        emptyError: 'BET action requires non-empty bets array',
+        invalidPrefix: 'bet',
+        reasoning: envelope.reasoning,
+        validate: (bet) => validateBet(bet, agentBalance),
+        mapItem: (bet) => ({
           market_id: bet.market_id,
-          side: bet.side,  // Preserve original case for multi-outcome markets
+          side: bet.side,
           amount: bet.amount
-        });
+        })
+      });
+
+      if (isErrorDecision(bets)) {
+        return bets;
       }
-      
+
       return {
         action: 'BET',
         bets,
-        reasoning: parsed.reasoning
+        reasoning: envelope.reasoning
       };
     }
-    
-    // Handle SELL action
-    if (action === 'SELL') {
-      if (!Array.isArray(parsed.sells) || parsed.sells.length === 0) {
-        return {
-          action: 'ERROR',
-          reasoning: parsed.reasoning,
-          error: 'SELL action requires non-empty sells array'
-        };
-      }
-      
-      // Validate each sell
-      const sells: SellInstruction[] = [];
-      for (const sell of parsed.sells) {
-        const error = validateSell(sell);
-        if (error) {
-          return {
-            action: 'ERROR',
-            reasoning: parsed.reasoning,
-            error: `Invalid sell: ${error}`
-          };
-        }
-        sells.push({
+
+    if (envelope.action === 'SELL') {
+      const sells = parseActionItems<SellInstruction, SellInstruction>({
+        rawItems: parsed.sells,
+        emptyError: 'SELL action requires non-empty sells array',
+        invalidPrefix: 'sell',
+        reasoning: envelope.reasoning,
+        validate: validateSell,
+        mapItem: (sell) => ({
           position_id: sell.position_id,
           percentage: sell.percentage
-        });
+        })
+      });
+
+      if (isErrorDecision(sells)) {
+        return sells;
       }
-      
+
       return {
         action: 'SELL',
         sells,
-        reasoning: parsed.reasoning
+        reasoning: envelope.reasoning
       };
     }
-    
-    // Handle HOLD action
+
     return {
       action: 'HOLD',
-      reasoning: parsed.reasoning
+      reasoning: envelope.reasoning
     };
-    
-  } catch (e) {
-    const error = e instanceof Error ? e.message : String(e);
-    return {
-      action: 'ERROR',
-      reasoning: '',
-      error: `JSON parse error: ${error}`
-    };
+  } catch (error) {
+    return mkError(`JSON parse error: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -309,6 +350,3 @@ export function getDefaultHoldDecision(reason: string): ParsedDecision {
     reasoning: `[SYSTEM DEFAULT] ${reason}`
   };
 }
-
-
-

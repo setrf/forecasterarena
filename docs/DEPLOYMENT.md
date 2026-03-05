@@ -220,11 +220,11 @@ Add these entries:
 # Sync markets from Polymarket - Every 5 minutes
 */5 * * * * curl -s -X POST http://localhost:3010/api/cron/sync-markets -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/sync.log 2>&1
 
-# Run agent decisions every Sunday at 00:00 UTC
-0 0 * * 0 curl -s -X POST http://localhost:3010/api/cron/run-decisions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/decisions.log 2>&1
+# Start new cohort every Sunday at 00:00 UTC
+0 0 * * 0 curl -s -X POST http://localhost:3010/api/cron/start-cohort -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/cohort.log 2>&1
 
-# Start new cohort every Sunday at 00:05 UTC (runs after decisions)
-5 0 * * 0 curl -s -X POST http://localhost:3010/api/cron/start-cohort -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/cohort.log 2>&1
+# Run agent decisions every Sunday at 00:05 UTC (runs after start-cohort)
+5 0 * * 0 curl -s -X POST http://localhost:3010/api/cron/run-decisions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/decisions.log 2>&1
 
 # Check market resolutions every hour
 0 * * * * curl -s -X POST http://localhost:3010/api/cron/check-resolutions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/resolutions.log 2>&1
@@ -321,6 +321,5 @@ Verify app is running:
 pm2 status
 curl http://localhost:3010
 ```
-
 
 

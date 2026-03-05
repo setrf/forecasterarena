@@ -23,14 +23,6 @@ interface AggregateStats {
   categories_count: number;
 }
 
-
-interface AggregateStats {
-  total_markets: number;
-  active_markets: number;
-  markets_with_positions: number;
-  categories_count: number;
-}
-
 type SortOption = 'volume' | 'close_date' | 'created';
 type StatusOption = 'active' | 'closed' | 'resolved' | 'all';
 
@@ -81,7 +73,6 @@ export default function MarketsPage() {
         setHasMore(data.has_more);
         if (data.categories) setCategories(data.categories);
         if (data.stats) setStats(data.stats);
-        if (data.stats) setStats(data.stats);
       }
     } catch {
       console.log('Error fetching markets');
@@ -89,53 +80,6 @@ export default function MarketsPage() {
       setLoading(false);
     }
   }, [status, category, search, sort, cohortBets, offset]);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

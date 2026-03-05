@@ -195,11 +195,11 @@ Responsibilities:
 # Sync markets from Polymarket - Every 5 minutes
 */5 * * * * /api/cron/sync-markets
 
-# Run agent decisions every Sunday at 00:00 UTC
-0 0 * * 0 /api/cron/run-decisions
+# Start new cohort every Sunday at 00:00 UTC
+0 0 * * 0 /api/cron/start-cohort
 
-# Start new cohort every Sunday at 00:05 UTC (runs after decisions)
-5 0 * * 0 /api/cron/start-cohort
+# Run agent decisions every Sunday at 00:05 UTC (runs after start-cohort)
+5 0 * * 0 /api/cron/run-decisions
 
 # Check market resolutions every hour
 0 * * * * /api/cron/check-resolutions
@@ -301,6 +301,5 @@ forecasterarena/
 - OpenRouter handles rate limiting
 - Polymarket API has generous limits
 - We add delays between API calls
-
 
 
