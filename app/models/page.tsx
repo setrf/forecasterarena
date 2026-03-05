@@ -19,36 +19,41 @@ export default function ModelsPage() {
   const [stats, setStats] = useState<Map<string, ModelStats>>(new Map(Object.entries(emptyStats)));
   const [loading, setLoading] = useState(true);
   const [hasRealData, setHasRealData] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchStats() {
       try {
         const res = await fetch('/api/leaderboard');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.leaderboard && data.leaderboard.length > 0) {
-            const statsMap = new Map<string, ModelStats>();
-            let foundRealData = false;
-            for (const entry of data.leaderboard) {
-              if (entry.total_pnl !== 0 || entry.num_resolved_bets > 0) {
-                foundRealData = true;
-              }
-              statsMap.set(entry.model_id, {
-                model_id: entry.model_id,
-                total_pnl: entry.total_pnl,
-                avg_brier_score: entry.avg_brier_score,
-                win_rate: entry.win_rate,
-                num_resolved_bets: entry.num_resolved_bets
-              });
+        if (!res.ok) {
+          setError('Failed to load model rankings.');
+          return;
+        }
+
+        const data = await res.json();
+        if (data.leaderboard && data.leaderboard.length > 0) {
+          const statsMap = new Map<string, ModelStats>();
+          let foundRealData = false;
+          for (const entry of data.leaderboard) {
+            if (entry.total_pnl !== 0 || entry.num_resolved_bets > 0) {
+              foundRealData = true;
             }
-            if (foundRealData) {
-              setStats(statsMap);
-              setHasRealData(true);
-            }
+            statsMap.set(entry.model_id, {
+              model_id: entry.model_id,
+              total_pnl: entry.total_pnl,
+              avg_brier_score: entry.avg_brier_score,
+              win_rate: entry.win_rate,
+              num_resolved_bets: entry.num_resolved_bets
+            });
+          }
+          if (foundRealData) {
+            setStats(statsMap);
+            setHasRealData(true);
           }
         }
+        setError(null);
       } catch {
-        console.log('No data available yet');
+        setError('Failed to load model rankings.');
       } finally {
         setLoading(false);
       }
@@ -92,8 +97,14 @@ export default function ModelsPage() {
             </p>
           </div>
 
+          {error && (
+            <div className="card p-4 border-[rgba(251,113,133,0.3)] bg-[rgba(251,113,133,0.08)]" role="status" aria-live="polite">
+              <p className="text-sm text-[var(--accent-rose)]">{error}</p>
+            </div>
+          )}
+
           {/* Current Leader Feature */}
-          {leader && (
+          {hasRealData && leader ? (
             <Link 
               href={`/models/${leader.id}`}
               className="block mt-10 group"
@@ -150,9 +161,27 @@ export default function ModelsPage() {
                 </div>
               </div>
             </Link>
+          ) : (
+            <div className="block mt-10">
+              <div className="card p-8 md:p-10">
+                <p className="text-xs font-mono text-[var(--accent-gold)] mb-3">LEADERBOARD PENDING</p>
+                <h2 className="text-2xl mb-3">Competition data has not started yet</h2>
+                <p className="text-[var(--text-secondary)] max-w-2xl">
+                  Model profiles are live, but ranking, Brier score, and win-rate stats will appear after the first cohort executes and markets begin resolving.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </section>
+
+      {error && (
+        <section className="container-wide mx-auto px-6 pt-8">
+          <div className="rounded-xl border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] px-4 py-3 text-sm text-[var(--accent-rose)]">
+            {error}
+          </div>
+        </section>
+      )}
 
       {/* Other Models Grid */}
       <section className="container-wide mx-auto px-6 py-10">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatRelativeTime } from '@/lib/utils';
 
 interface Decision {
   id: string;
@@ -63,31 +64,8 @@ export default function DecisionFeed({
     }
   }, [limit, autoRefresh, initialDecisions]);
 
-  /**
-   * Parse UTC timestamp from DB format (YYYY-MM-DD HH:MM:SS) or ISO 8601
-   */
-  function parseUTCTimestamp(dateStr: string): Date {
-    if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
-      return new Date(dateStr);
-    }
-    return new Date(dateStr.replace(' ', 'T') + 'Z');
-  }
-
-  function formatTime(dateStr: string): string {
-    const date = parseUTCTimestamp(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  function toggleExpanded(id: string): void {
+    setExpandedId(current => current === id ? null : id);
   }
 
   function getActionStyle(action: string): { bg: string; text: string } {
@@ -134,12 +112,24 @@ export default function DecisionFeed({
         const actionStyle = getActionStyle(decision.action);
         const isExpanded = expandedId === decision.id;
         const hasReasoning = decision.reasoning && decision.reasoning.trim().length > 0;
+        const reasoningId = `decision-reasoning-${decision.id}`;
 
         return (
           <div
             key={decision.id}
             className={`p-4 bg-[var(--bg-tertiary)] rounded-lg transition-colors ${hasReasoning ? 'cursor-pointer hover:bg-[var(--bg-secondary)]' : ''}`}
-            onClick={() => hasReasoning && setExpandedId(isExpanded ? null : decision.id)}
+            onClick={() => hasReasoning && toggleExpanded(decision.id)}
+            onKeyDown={(event) => {
+              if (!hasReasoning) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleExpanded(decision.id);
+              }
+            }}
+            role={hasReasoning ? 'button' : undefined}
+            tabIndex={hasReasoning ? 0 : undefined}
+            aria-expanded={hasReasoning ? isExpanded : undefined}
+            aria-controls={hasReasoning ? reasoningId : undefined}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
@@ -155,7 +145,7 @@ export default function DecisionFeed({
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-[var(--text-muted)]">
-                  {formatTime(decision.decision_timestamp)}
+                  {formatRelativeTime(decision.decision_timestamp)}
                 </span>
                 {hasReasoning && (
                   <svg
@@ -186,7 +176,10 @@ export default function DecisionFeed({
                     {decision.reasoning}
                   </p>
                 ) : (
-                  <div className="bg-[var(--bg-primary)] rounded-lg p-3 border border-[var(--border-subtle)]">
+                  <div
+                    id={reasoningId}
+                    className="bg-[var(--bg-primary)] rounded-lg p-3 border border-[var(--border-subtle)]"
+                  >
                     <div className="flex items-center gap-2 mb-2">
                       <svg className="w-4 h-4 text-[var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -211,6 +204,5 @@ export default function DecisionFeed({
     </div>
   );
 }
-
 
 

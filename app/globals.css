@@ -27,6 +27,7 @@
   --accent-violet: #a855f7;
   --accent-amber: #fbbf24;
   --accent-rose: #fb7185;
+  --accent-rose-dim: rgba(251, 113, 133, 0.15);
   --accent-pink: #f472b6;
   --accent-cyan: #22d3ee;
   
@@ -40,6 +41,7 @@
   --border-medium: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.12);
   --border-accent: rgba(212, 168, 83, 0.3);
+  --border-primary: var(--border-subtle);
   
   /* Refined gradients */
   --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212, 168, 83, 0.15), transparent);

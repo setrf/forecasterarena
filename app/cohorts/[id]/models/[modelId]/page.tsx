@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { formatDisplayDate, formatDisplayDateTime } from '@/lib/utils';
 
 interface Cohort {
   id: string;
@@ -131,6 +133,7 @@ interface AgentCohortData {
 
 export default function AgentCohortDetailPage() {
   const params = useParams<{ id: string; modelId: string }>();
+  const router = useRouter();
   const cohortId = params.id;
   const modelId = params.modelId;
 
@@ -197,9 +200,9 @@ export default function AgentCohortDetailPage() {
             ? 'This model was not active in this cohort.'
             : 'The page you are looking for does not exist.'}
         </p>
-        <a href="/cohorts" className="btn btn-primary">
+        <Link href="/cohorts" className="btn btn-primary">
           Back to Cohorts
-        </a>
+        </Link>
       </div>
     );
   }
@@ -218,18 +221,8 @@ export default function AgentCohortDetailPage() {
     return `${sign}${value.toFixed(2)}%`;
   }
 
-  /**
-   * Parse UTC timestamp from DB format (YYYY-MM-DD HH:MM:SS) or ISO 8601
-   */
-  function parseUTCTimestamp(dateStr: string): Date {
-    if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
-      return new Date(dateStr);
-    }
-    return new Date(dateStr.replace(' ', 'T') + 'Z');
-  }
-
   function formatDate(dateStr: string): string {
-    return parseUTCTimestamp(dateStr).toLocaleDateString('en-US', {
+    return formatDisplayDate(dateStr, {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -237,7 +230,7 @@ export default function AgentCohortDetailPage() {
   }
 
   function formatDateTime(dateStr: string): string {
-    return parseUTCTimestamp(dateStr).toLocaleString('en-US', {
+    return formatDisplayDateTime(dateStr, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -250,13 +243,13 @@ export default function AgentCohortDetailPage() {
     <div className="container-wide mx-auto px-6 py-12">
       {/* Breadcrumb Navigation */}
       <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)] mb-6">
-        <a href="/cohorts" className="hover:text-[var(--text-primary)] transition-colors">
+        <Link href="/cohorts" className="hover:text-[var(--text-primary)] transition-colors">
           Cohorts
-        </a>
+        </Link>
         <span>›</span>
-        <a href={`/cohorts/${cohortId}`} className="hover:text-[var(--text-primary)] transition-colors">
+        <Link href={`/cohorts/${cohortId}`} className="hover:text-[var(--text-primary)] transition-colors">
           Cohort #{data.cohort.cohort_number}
-        </a>
+        </Link>
         <span>›</span>
         <span className="text-[var(--text-primary)]">{data.model.display_name}</span>
       </div>
@@ -558,7 +551,15 @@ export default function AgentCohortDetailPage() {
                     return (
                       <tr
                         key={position.id}
-                        onClick={() => position.opening_decision_id && (window.location.href = `/decisions/${position.opening_decision_id}`)}
+                        onClick={() => position.opening_decision_id && router.push(`/decisions/${position.opening_decision_id}`)}
+                        onKeyDown={(event) => {
+                          if (position.opening_decision_id && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            router.push(`/decisions/${position.opening_decision_id}`);
+                          }
+                        }}
+                        role={position.opening_decision_id ? 'link' : undefined}
+                        tabIndex={position.opening_decision_id ? 0 : undefined}
                         className={position.opening_decision_id ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
                         title={position.opening_decision_id ? 'Click to view opening decision rationale' : undefined}
                       >
@@ -622,7 +623,15 @@ export default function AgentCohortDetailPage() {
                     return (
                       <tr
                         key={position.id}
-                        onClick={() => position.opening_decision_id && (window.location.href = `/decisions/${position.opening_decision_id}`)}
+                        onClick={() => position.opening_decision_id && router.push(`/decisions/${position.opening_decision_id}`)}
+                        onKeyDown={(event) => {
+                          if (position.opening_decision_id && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            router.push(`/decisions/${position.opening_decision_id}`);
+                          }
+                        }}
+                        role={position.opening_decision_id ? 'link' : undefined}
+                        tabIndex={position.opening_decision_id ? 0 : undefined}
                         className={position.opening_decision_id ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
                         title={position.opening_decision_id ? 'Click to view opening decision rationale' : undefined}
                       >
@@ -681,7 +690,15 @@ export default function AgentCohortDetailPage() {
                 {data.trades.slice(0, 20).map((trade) => (
                   <tr
                     key={trade.id}
-                    onClick={() => trade.decision_id && (window.location.href = `/decisions/${trade.decision_id}`)}
+                    onClick={() => trade.decision_id && router.push(`/decisions/${trade.decision_id}`)}
+                    onKeyDown={(event) => {
+                      if (trade.decision_id && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault();
+                        router.push(`/decisions/${trade.decision_id}`);
+                      }
+                    }}
+                    role={trade.decision_id ? 'link' : undefined}
+                    tabIndex={trade.decision_id ? 0 : undefined}
                     className={trade.decision_id ? 'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors' : ''}
                     title={trade.decision_id ? 'Click to view decision rationale' : undefined}
                   >

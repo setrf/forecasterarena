@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { formatRelativeTime } from '@/lib/utils';
 
 interface LogEntry {
   id: string;
@@ -65,26 +66,6 @@ export default function AdminLogsPage() {
         dot: 'bg-[var(--accent-emerald)]'
       };
     }
-  }
-
-  function formatTime(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   }
 
   function formatEventData(data: string | null): object | null {
@@ -177,6 +158,15 @@ export default function AdminLogsPage() {
                 key={log.id} 
                 className="p-4 hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
                 onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setExpandedId(isExpanded ? null : log.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -196,7 +186,7 @@ export default function AdminLogsPage() {
                     <span className="font-medium">{log.event_type}</span>
                   </div>
                   <span className="text-sm text-[var(--text-muted)]">
-                    {formatTime(log.created_at)}
+                    {formatRelativeTime(log.created_at)}
                   </span>
                 </div>
                 
@@ -223,6 +213,5 @@ export default function AdminLogsPage() {
     </div>
   );
 }
-
 
 

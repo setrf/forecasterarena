@@ -11,6 +11,7 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
+import { formatDisplayDateTime, parseUTCTimestamp } from '@/lib/utils';
 
 interface ModelConfig {
   id: string;
@@ -50,19 +51,8 @@ function formatPercentAxis(value: number): string {
   return `${sign}${pct.toFixed(0)}%`;
 }
 
-/**
- * Parse UTC timestamp from DB format (YYYY-MM-DD HH:MM:SS) or ISO 8601
- */
-function parseUTCTimestamp(dateStr: string): Date {
-  if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
-    return new Date(dateStr);
-  }
-  return new Date(dateStr.replace(' ', 'T') + 'Z');
-}
-
 function formatDateTime(dateStr: string): string {
-  const date = parseUTCTimestamp(dateStr);
-  return date.toLocaleString('en-US', {
+  return formatDisplayDateTime(dateStr, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',

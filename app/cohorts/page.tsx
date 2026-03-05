@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { formatDisplayDate } from '@/lib/utils';
 
 interface CohortSummary {
   id: string;
@@ -16,17 +17,21 @@ interface CohortSummary {
 export default function CohortsPage() {
   const [cohorts, setCohorts] = useState<CohortSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchCohorts() {
       try {
         const res = await fetch('/api/leaderboard');
-        if (res.ok) {
-          const data = await res.json();
-          setCohorts(data.cohorts || []);
+        if (!res.ok) {
+          setError('Failed to load cohorts.');
+          return;
         }
+        const data = await res.json();
+        setCohorts(data.cohorts || []);
+        setError(null);
       } catch {
-        console.log('Error fetching cohorts');
+        setError('Failed to load cohorts.');
       } finally {
         setLoading(false);
       }
@@ -36,24 +41,6 @@ export default function CohortsPage() {
 
   const activeCohorts = cohorts.filter(c => c.status === 'active');
   const completedCohorts = cohorts.filter(c => c.status === 'completed');
-
-  /**
-   * Parse UTC timestamp from DB format (YYYY-MM-DD HH:MM:SS) or ISO 8601
-   */
-  function parseUTCTimestamp(dateStr: string): Date {
-    if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
-      return new Date(dateStr);
-    }
-    return new Date(dateStr.replace(' ', 'T') + 'Z');
-  }
-
-  function formatDate(dateStr: string): string {
-    return parseUTCTimestamp(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  }
 
   // Calculate next Sunday
   function getNextSunday(): string {
@@ -99,6 +86,12 @@ export default function CohortsPage() {
 
       {/* Main Content */}
       <section className="container-wide mx-auto px-6 py-12">
+        {error && (
+          <div className="mb-8 rounded-xl border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] px-4 py-3 text-sm text-[var(--accent-rose)]">
+            {error}
+          </div>
+        )}
+
         {/* Active Cohorts */}
         <div className="mb-16">
           <div className="flex items-center gap-3 mb-6">
@@ -145,7 +138,7 @@ export default function CohortsPage() {
                   <div className="grid grid-cols-3 gap-6">
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Started</p>
-                      <p className="font-semibold">{formatDate(cohort.started_at)}</p>
+                      <p className="font-semibold">{formatDisplayDate(cohort.started_at)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Models</p>
@@ -199,7 +192,7 @@ export default function CohortsPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-[var(--text-muted)]">Started</p>
-                      <p>{formatDate(cohort.started_at)}</p>
+                      <p>{formatDisplayDate(cohort.started_at)}</p>
                     </div>
                     <div>
                       <p className="text-[var(--text-muted)]">Markets</p>

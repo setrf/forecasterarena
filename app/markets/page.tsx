@@ -29,6 +29,7 @@ type StatusOption = 'active' | 'closed' | 'resolved' | 'all';
 export default function MarketsPage() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -50,6 +51,7 @@ export default function MarketsPage() {
   const fetchMarkets = useCallback(async (reset = false) => {
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams();
       params.set('status', status);
       if (category) params.set('category', category);
@@ -73,9 +75,11 @@ export default function MarketsPage() {
         setHasMore(data.has_more);
         if (data.categories) setCategories(data.categories);
         if (data.stats) setStats(data.stats);
+      } else {
+        setError('Failed to load markets. Please try again.');
       }
     } catch {
-      console.log('Error fetching markets');
+      setError('Failed to load markets. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -190,6 +194,7 @@ export default function MarketsPage() {
                 placeholder="Search markets..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                aria-label="Search markets"
                 className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:border-[var(--accent-gold)] focus:outline-none transition-colors"
               />
             </div>
@@ -201,6 +206,7 @@ export default function MarketsPage() {
                   type="checkbox"
                   checked={cohortBets}
                   onChange={(e) => setCohortBets(e.target.checked)}
+                  aria-label="Only show current cohort markets"
                   className="w-4 h-4 rounded border-[var(--border-subtle)] text-[var(--accent-gold)] focus:ring-[var(--accent-gold)] focus:ring-offset-0"
                 />
                 <span>Current Cohort</span>
@@ -210,6 +216,7 @@ export default function MarketsPage() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as StatusOption)}
+                aria-label="Filter markets by status"
                 className="px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none cursor-pointer"
               >
                 <option value="active">Active</option>
@@ -222,6 +229,7 @@ export default function MarketsPage() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                aria-label="Filter markets by category"
                 className="px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none cursor-pointer"
               >
                 <option value="">All Categories</option>
@@ -234,6 +242,7 @@ export default function MarketsPage() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortOption)}
+                aria-label="Sort markets"
                 className="px-4 py-2.5 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg text-sm focus:outline-none cursor-pointer"
               >
                 <option value="volume">Volume</option>
@@ -247,7 +256,20 @@ export default function MarketsPage() {
 
       {/* Markets Grid */}
       <section className="container-wide mx-auto px-6 py-10">
-        {loading && markets.length === 0 ? (
+        {error && markets.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--bg-tertiary)] flex items-center justify-center">
+              <svg className="w-8 h-8 text-[var(--accent-rose)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-7.938 4h15.876c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L2.33 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="text-xl font-medium mb-2">Markets unavailable</p>
+            <p className="text-[var(--text-muted)] mb-6">{error}</p>
+            <button onClick={() => fetchMarkets(true)} className="btn btn-primary">
+              Retry
+            </button>
+          </div>
+        ) : loading && markets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-[var(--accent-gold)] border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-[var(--text-muted)]">Loading markets...</p>

@@ -96,6 +96,69 @@ export function formatDateTime(date: Date | string): string {
 }
 
 /**
+ * Format a UTC timestamp for user-facing date display.
+ *
+ * @param dateStr - Date string from the database or ISO format
+ * @param options - Optional Intl formatting overrides
+ * @returns Formatted date string
+ */
+export function formatDisplayDate(
+  dateStr: string,
+  options: Intl.DateTimeFormatOptions = {}
+): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    ...options
+  }).format(parseUTCTimestamp(dateStr));
+}
+
+/**
+ * Format a UTC timestamp for user-facing date and time display.
+ *
+ * @param dateStr - Date string from the database or ISO format
+ * @param options - Optional Intl formatting overrides
+ * @returns Formatted date/time string
+ */
+export function formatDisplayDateTime(
+  dateStr: string,
+  options: Intl.DateTimeFormatOptions = {}
+): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    ...options
+  }).format(parseUTCTimestamp(dateStr));
+}
+
+/**
+ * Format a UTC timestamp relative to now for activity feeds.
+ *
+ * @param dateStr - Date string from the database or ISO format
+ * @param now - Comparison point, defaults to current time
+ * @returns Relative display string
+ */
+export function formatRelativeTime(dateStr: string, now: Date = new Date()): string {
+  const date = parseUTCTimestamp(dateStr);
+  const diff = now.getTime() - date.getTime();
+
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+
+  return formatDisplayDate(dateStr, { month: 'short', day: 'numeric' });
+}
+
+/**
  * Calculate time until next Sunday at midnight UTC
  * 
  * @returns Object with days, hours, minutes, seconds
@@ -367,6 +430,5 @@ export function sortBy<T>(
   
   return descending ? sorted.reverse() : sorted;
 }
-
 
 

@@ -254,20 +254,22 @@ function LeaderboardPreview({ data, hasRealData }: { data: LeaderboardEntry[]; h
 function PerformanceChartSection() {
   const [chartData, setChartData] = useState<Array<{ date: string; [key: string]: number | string }>>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchChartData() {
       try {
         const res = await fetch('/api/performance-data');
-        if (res.ok) {
-          const json = await res.json();
-          setChartData(json.data || []);
+        if (!res.ok) {
+          setError('Performance data is temporarily unavailable.');
+          return;
         }
+
+        const json = await res.json();
+        setChartData(json.data || []);
+        setError(null);
       } catch {
-        console.log('Error fetching chart data');
-      } finally {
-        setLoading(false);
+        setError('Performance data is temporarily unavailable.');
       }
     }
     fetchChartData();
@@ -289,6 +291,12 @@ function PerformanceChartSection() {
           </div>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </div>
+
+        {error && (
+          <div className="mb-4 rounded-xl border border-[rgba(251,113,133,0.3)] bg-[rgba(251,113,133,0.08)] px-4 py-3" role="status" aria-live="polite">
+            <p className="text-sm text-[var(--accent-rose)]">{error}</p>
+          </div>
+        )}
 
         <PerformanceChartComponent
           data={chartData}
@@ -419,26 +427,31 @@ function CTASection() {
 export default function Home() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(emptyLeaderboard);
   const [hasRealData, setHasRealData] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
         const res = await fetch('/api/leaderboard');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.leaderboard && data.leaderboard.length > 0) {
-            // Check if we have actual competition data (non-zero P/L or resolved bets)
-            const hasActualData = data.leaderboard.some(
-              (entry: LeaderboardEntry) => entry.total_pnl !== 0 || entry.num_resolved_bets > 0
-            );
-            if (hasActualData) {
-              setLeaderboard(data.leaderboard);
-              setHasRealData(true);
-            }
+        if (!res.ok) {
+          setLeaderboardError('Leaderboard data is temporarily unavailable.');
+          return;
+        }
+
+        const data = await res.json();
+        if (data.leaderboard && data.leaderboard.length > 0) {
+          // Check if we have actual competition data (non-zero P/L or resolved bets)
+          const hasActualData = data.leaderboard.some(
+            (entry: LeaderboardEntry) => entry.total_pnl !== 0 || entry.num_resolved_bets > 0
+          );
+          if (hasActualData) {
+            setLeaderboard(data.leaderboard);
+            setHasRealData(true);
           }
         }
+        setLeaderboardError(null);
       } catch {
-        console.log('No data available yet');
+        setLeaderboardError('Leaderboard data is temporarily unavailable.');
       }
     }
     fetchData();
@@ -447,6 +460,13 @@ export default function Home() {
   return (
     <main>
       <HeroSection />
+      {leaderboardError && (
+        <section className="container-wide mx-auto px-6 pt-6">
+          <div className="rounded-xl border border-[rgba(251,113,133,0.3)] bg-[rgba(251,113,133,0.08)] px-4 py-3" role="status" aria-live="polite">
+            <p className="text-sm text-[var(--accent-rose)]">{leaderboardError}</p>
+          </div>
+        </section>
+      )}
       <LiveStatsDashboard leader={leaderboard[0] || null} hasRealData={hasRealData} />
       <PerformanceChartSection />
       <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />

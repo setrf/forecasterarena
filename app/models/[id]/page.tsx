@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState, useMemo, use } from 'react';
-import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { useEffect, useState, useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { MODELS } from '@/lib/constants';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { formatDisplayDate } from '@/lib/utils';
 
 interface CohortPerformance {
   cohort_id: string;
@@ -53,6 +55,7 @@ interface ModelData {
 
 export default function ModelDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = params.id;
   const model = MODELS.find(m => m.id === id);
   const [data, setData] = useState<ModelData | null>(null);
@@ -100,9 +103,9 @@ export default function ModelDetailPage() {
         <p className="text-[var(--text-secondary)] mb-6">
           The model you&apos;re looking for doesn&apos;t exist.
         </p>
-        <a href="/models" className="btn btn-primary">
+        <Link href="/models" className="btn btn-primary">
           View All Models
-        </a>
+        </Link>
       </div>
     );
   }
@@ -121,24 +124,6 @@ export default function ModelDetailPage() {
     return `${sign}${value.toFixed(2)}%`;
   }
 
-  /**
-   * Parse UTC timestamp from DB format (YYYY-MM-DD HH:MM:SS) or ISO 8601
-   */
-  function parseUTCTimestamp(dateStr: string): Date {
-    if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
-      return new Date(dateStr);
-    }
-    return new Date(dateStr.replace(' ', 'T') + 'Z');
-  }
-
-  function formatDate(dateStr: string): string {
-    return parseUTCTimestamp(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  }
-
   // Calculate aggregate stats
   const totalPnl = data?.total_pnl ?? 0;
   const avgPnlPercent = data?.avg_pnl_percent ?? 0;
@@ -149,12 +134,12 @@ export default function ModelDetailPage() {
   return (
     <div className="container-wide mx-auto px-6 py-12">
       {/* Back link at top */}
-      <a href="/models" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6">
+      <Link href="/models" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         Back to all models
-      </a>
+      </Link>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start gap-6 mb-10">
@@ -241,7 +226,15 @@ export default function ModelDetailPage() {
               {data.cohort_performance.map((cohort) => (
                 <div
                   key={cohort.cohort_number}
-                  onClick={() => window.location.href = `/cohorts/${cohort.cohort_id}/models/${id}`}
+                  onClick={() => router.push(`/cohorts/${cohort.cohort_id}/models/${id}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      router.push(`/cohorts/${cohort.cohort_id}/models/${id}`);
+                    }
+                  }}
+                  role="link"
+                  tabIndex={0}
                   className="p-4 bg-[var(--bg-tertiary)] rounded-lg cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors"
                   title={`View detailed performance in Cohort #${cohort.cohort_number}`}
                 >
@@ -306,7 +299,7 @@ export default function ModelDetailPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-[var(--text-muted)]">
-                        {formatDate(decision.decision_timestamp)}
+                        {formatDisplayDate(decision.decision_timestamp)}
                       </span>
                       <svg className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -359,7 +352,7 @@ export default function ModelDetailPage() {
                 </button>
               </div>
               <p className="text-sm text-[var(--text-muted)] mt-2">
-                {formatDate(selectedDecision.decision_timestamp)}
+                {formatDisplayDate(selectedDecision.decision_timestamp)}
               </p>
             </div>
             

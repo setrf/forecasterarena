@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import DecisionFeed from '@/components/DecisionFeed';
 import { MODELS } from '@/lib/constants';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { formatDisplayDate } from '@/lib/utils';
 
 interface Cohort {
   id: string;
@@ -57,6 +59,7 @@ interface Decision {
 
 export default function CohortDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = params.id;
   const [cohort, setCohort] = useState<Cohort | null>(null);
   const [agents, setAgents] = useState<AgentStats[]>([]);
@@ -133,29 +136,11 @@ export default function CohortDetailPage() {
     return (
       <div className="container-wide mx-auto px-6 py-20 text-center">
         <h1 className="text-2xl font-bold mb-4">{error || 'Cohort Not Found'}</h1>
-        <a href="/cohorts" className="btn btn-primary">
+        <Link href="/cohorts" className="btn btn-primary">
           Back to Cohorts
-        </a>
+        </Link>
       </div>
     );
-  }
-
-  /**
-   * Parse UTC timestamp from DB format (YYYY-MM-DD HH:MM:SS) or ISO 8601
-   */
-  function parseUTCTimestamp(dateStr: string): Date {
-    if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
-      return new Date(dateStr);
-    }
-    return new Date(dateStr.replace(' ', 'T') + 'Z');
-  }
-
-  function formatDate(dateStr: string): string {
-    return parseUTCTimestamp(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
   }
 
   function formatCurrency(value: number): string {
@@ -175,12 +160,12 @@ export default function CohortDetailPage() {
   return (
     <div className="container-wide mx-auto px-6 py-12">
       {/* Back link */}
-      <a href="/cohorts" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6">
+      <Link href="/cohorts" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         Back to cohorts
-      </a>
+      </Link>
 
       {/* Header */}
       <div className="flex flex-wrap items-center gap-4 mb-8">
@@ -256,7 +241,15 @@ export default function CohortDetailPage() {
               {agents.map((agent, i) => (
                 <tr
                   key={agent.id}
-                  onClick={() => window.location.href = `/cohorts/${id}/models/${agent.model_id}`}
+                  onClick={() => router.push(`/cohorts/${id}/models/${agent.model_id}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      router.push(`/cohorts/${id}/models/${agent.model_id}`);
+                    }
+                  }}
+                  role="link"
+                  tabIndex={0}
                   className="cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors"
                   title={`View ${agent.model_display_name}'s performance in this cohort`}
                 >
@@ -313,10 +306,9 @@ export default function CohortDetailPage() {
 
       {/* Info */}
       <div className="mt-8 text-center text-sm text-[var(--text-muted)]">
-        Started {formatDate(cohort.started_at)}
-        {cohort.completed_at && ` • Completed ${formatDate(cohort.completed_at)}`}
+        Started {formatDisplayDate(cohort.started_at)}
+        {cohort.completed_at && ` • Completed ${formatDisplayDate(cohort.completed_at)}`}
       </div>
     </div>
   );
 }
-

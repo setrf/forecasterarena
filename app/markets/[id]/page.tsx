@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { formatDisplayDate, formatDisplayDateTime } from '@/lib/utils';
 
 interface Market {
   id: string;
@@ -108,9 +110,9 @@ export default function MarketDetailPage() {
     return (
       <div className="container-wide mx-auto px-6 py-20 text-center">
         <h1 className="text-2xl font-bold mb-4">{error || 'Market Not Found'}</h1>
-        <a href="/markets" className="btn btn-primary">
+        <Link href="/markets" className="btn btn-primary">
           Back to Markets
-        </a>
+        </Link>
       </div>
     );
   }
@@ -123,26 +125,6 @@ export default function MarketDetailPage() {
   function formatCurrency(value: number | null): string {
     if (value === null) return 'N/A';
     return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  }
-
-  /**
-   * Parse UTC timestamp from DB format (YYYY-MM-DD HH:MM:SS) or ISO 8601
-   */
-  function parseUTCTimestamp(dateStr: string): Date {
-    if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
-      return new Date(dateStr);
-    }
-    return new Date(dateStr.replace(' ', 'T') + 'Z');
-  }
-
-  function formatDate(dateStr: string): string {
-    return parseUTCTimestamp(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   }
 
   function getStatusBadge(status: string): { class: string; label: string } {
@@ -159,12 +141,12 @@ export default function MarketDetailPage() {
   return (
     <div className="container-wide mx-auto px-6 py-12">
       {/* Back link */}
-      <a href="/markets" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6">
+      <Link href="/markets" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         Back to markets
-      </a>
+      </Link>
 
       {/* Header */}
       <div className="mb-8">
@@ -190,7 +172,7 @@ export default function MarketDetailPage() {
             </p>
             {market.resolved_at && (
               <p className="text-sm text-[var(--text-muted)] mt-2">
-                Resolved on {formatDate(market.resolved_at)}
+                Resolved on {formatDisplayDateTime(market.resolved_at)}
               </p>
             )}
           </div>
@@ -231,7 +213,7 @@ export default function MarketDetailPage() {
           <div className="stat-label">Liquidity</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{formatDate(market.close_date).split(',')[0]}</div>
+          <div className="stat-value">{formatDisplayDate(market.close_date, { month: 'short', day: 'numeric' })}</div>
           <div className="stat-label">Close Date</div>
         </div>
         <div className="stat-card">
@@ -371,7 +353,7 @@ export default function MarketDetailPage() {
                     onClick={() => trade.decision_id && window.location.assign(`/decisions/${trade.decision_id}`)}
                   >
                     <td className="text-[var(--text-muted)] text-sm">
-                      {formatDate(trade.executed_at)}
+                      {formatDisplayDateTime(trade.executed_at)}
                     </td>
                     <td>
                       <div className="flex items-center gap-2">

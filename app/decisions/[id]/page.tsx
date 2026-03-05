@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { formatDisplayDateTime } from '@/lib/utils';
 
 interface Decision {
     id: string;
@@ -57,26 +59,6 @@ export default function DecisionPage() {
         fetchData();
     }, [id]);
 
-    /**
-     * Parse UTC timestamp from DB format (YYYY-MM-DD HH:MM:SS) or ISO 8601
-     */
-    function parseUTCTimestamp(dateStr: string): Date {
-        if (dateStr.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr)) {
-            return new Date(dateStr);
-        }
-        return new Date(dateStr.replace(' ', 'T') + 'Z');
-    }
-
-    function formatDateTime(dateStr: string): string {
-        return parseUTCTimestamp(dateStr).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-        });
-    }
-
     if (loading) {
         return (
             <div className="container-wide mx-auto px-6 py-20 text-center text-[var(--text-muted)]">
@@ -89,9 +71,9 @@ export default function DecisionPage() {
         return (
             <div className="container-wide mx-auto px-6 py-20 text-center">
                 <h1 className="text-2xl font-bold mb-4">{error || 'Decision Not Found'}</h1>
-                <a href="/markets" className="btn btn-primary">
+                <Link href="/markets" className="btn btn-primary">
                     Back to Markets
-                </a>
+                </Link>
             </div>
         );
     }
@@ -111,7 +93,7 @@ export default function DecisionPage() {
     return (
         <div className="container-wide mx-auto px-6 py-12">
             {/* Back link */}
-            <a
+            <Link
                 href={trades.length > 0 ? `/markets/${trades[0].market_id}` : '/markets'}
                 className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6"
             >
@@ -119,7 +101,7 @@ export default function DecisionPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to Market
-            </a>
+            </Link>
 
             {/* Header */}
             <div className="mb-8">
@@ -135,7 +117,7 @@ export default function DecisionPage() {
                         <p className="text-sm text-[var(--text-muted)]">{decision.model_provider}</p>
                     </div>
                     <div className="ml-auto text-sm text-[var(--text-muted)]">
-                        {formatDateTime(decision.created_at)}
+                        {formatDisplayDateTime(decision.created_at)}
                     </div>
                 </div>
 
