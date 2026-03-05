@@ -11,16 +11,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { maybeStartNewCohort } from '@/lib/engine/cohort';
 import { syncMarkets } from '@/lib/engine/market';
 import { logSystemEvent } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
+import { ensureAdminAuthenticated } from '@/lib/api/admin-route';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-    if (!isAuthenticated()) {
-        return NextResponse.json(
-            { error: 'Unauthorized' },
-            { status: 401 }
-        );
+    const authResponse = ensureAdminAuthenticated();
+    if (authResponse) {
+        return authResponse;
     }
 
     try {

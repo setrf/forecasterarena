@@ -6,16 +6,21 @@
  * @route GET /api/admin/logs
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
-import { safeErrorMessage, parseIntParam } from '@/lib/utils/security';
+import { parseIntParam } from '@/lib/utils/security';
+import {
+  adminNoStoreJson,
+  adminSafeErrorJson,
+  ensureAdminAuthenticated
+} from '@/lib/api/admin-route';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  if (!isAuthenticated()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResponse = ensureAdminAuthenticated();
+  if (authResponse) {
+    return authResponse;
   }
 
   try {
@@ -38,19 +43,14 @@ export async function GET(request: NextRequest) {
     
     const logs = db.prepare(query).all(...params);
     
-    const response = NextResponse.json({
+    return adminNoStoreJson({
       logs,
       updated_at: new Date().toISOString()
     });
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    return response;
 
   } catch (error) {
     console.error('Admin logs API error:', error);
-    return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
+    return adminSafeErrorJson(error);
   }
 }
-
-
 

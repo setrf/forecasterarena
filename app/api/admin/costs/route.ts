@@ -6,17 +6,21 @@
  * @route GET /api/admin/costs
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { MODELS } from '@/lib/constants';
-import { isAuthenticated } from '@/lib/auth';
-import { safeErrorMessage } from '@/lib/utils/security';
+import {
+  adminNoStoreJson,
+  adminSafeErrorJson,
+  ensureAdminAuthenticated
+} from '@/lib/api/admin-route';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  if (!isAuthenticated()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResponse = ensureAdminAuthenticated();
+  if (authResponse) {
+    return authResponse;
   }
 
   try {
@@ -67,7 +71,7 @@ export async function GET(request: NextRequest) {
     const totalOutputTokens = costsByModel.reduce((sum, m) => sum + m.total_output_tokens, 0);
     const totalDecisions = costsByModel.reduce((sum, m) => sum + m.decision_count, 0);
     
-    const response = NextResponse.json({
+    return adminNoStoreJson({
       costs_by_model: costsByModel,
       summary: {
         total_cost: totalCost,
@@ -78,14 +82,9 @@ export async function GET(request: NextRequest) {
       },
       updated_at: new Date().toISOString()
     });
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    return response;
 
   } catch (error) {
     console.error('Admin costs API error:', error);
-    return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
+    return adminSafeErrorJson(error);
   }
 }
-
-

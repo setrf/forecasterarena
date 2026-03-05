@@ -14,13 +14,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isAuthenticated } from '@/lib/auth';
 import { logSystemEvent } from '@/lib/db';
 import { getDb } from '@/lib/db';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { execSync } from 'child_process';
+import { ensureAdminAuthenticated } from '@/lib/api/admin-route';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,10 +30,7 @@ const DEFAULT_TABLES = ['cohorts', 'agents', 'models', 'markets', 'decisions', '
 const EXPORTS_DIR = path.join(process.cwd(), 'backups', 'exports');
 
 function ensureAuth() {
-  if (!isAuthenticated()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return null;
+  return ensureAdminAuthenticated();
 }
 
 function parseDateInput(input: string, label: string): Date | null {

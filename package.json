@@ -9,7 +9,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run test:coverage && npm run lint && npm run build && npm run typecheck"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0",
