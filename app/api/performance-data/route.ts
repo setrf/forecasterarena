@@ -10,29 +10,52 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { MODELS } from '@/lib/constants';
 import { safeErrorMessage } from '@/lib/utils/security';
+import type { TimeRange } from '@/components/charts/TimeRangeSelector';
 
 export const dynamic = 'force-dynamic';
+
+function getRangeStart(range: TimeRange, now: Date): string {
+  const start = new Date(now);
+
+  switch (range) {
+    case '10M':
+      start.setMinutes(start.getMinutes() - 10);
+      break;
+    case '1H':
+      start.setHours(start.getHours() - 1);
+      break;
+    case '1D':
+      start.setDate(start.getDate() - 1);
+      break;
+    case '1W':
+      start.setDate(start.getDate() - 7);
+      break;
+    case '1M':
+      start.setMonth(start.getMonth() - 1);
+      break;
+    case '3M':
+      start.setMonth(start.getMonth() - 3);
+      break;
+    case 'ALL':
+      start.setFullYear(start.getFullYear() - 10);
+      break;
+    default:
+      start.setMonth(start.getMonth() - 1);
+      break;
+  }
+
+  return start.toISOString();
+}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const range = searchParams.get('range') || '1M';
+    const rawRange = searchParams.get('range');
+    const range = (rawRange || '1M') as TimeRange;
     const cohortId = searchParams.get('cohort_id');
     
     const db = getDb();
-    
-    // Calculate date range
-    let daysBack = 30;
-    switch (range) {
-      case '1W': daysBack = 7; break;
-      case '1M': daysBack = 30; break;
-      case '3M': daysBack = 90; break;
-      case 'ALL': daysBack = 365 * 10; break;
-    }
-    
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - daysBack);
-    const startDateStr = startDate.toISOString().split('T')[0];
+    const startDateStr = getRangeStart(range, new Date());
     
     // Build query for snapshots
     let query = `
@@ -121,6 +144,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }
-
 
 

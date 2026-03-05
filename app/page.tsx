@@ -259,7 +259,7 @@ function PerformanceChartSection() {
   useEffect(() => {
     async function fetchChartData() {
       try {
-        const res = await fetch('/api/performance-data');
+        const res = await fetch(`/api/performance-data?range=${timeRange}`);
         if (!res.ok) {
           setError('Performance data is temporarily unavailable.');
           return;
@@ -273,7 +273,7 @@ function PerformanceChartSection() {
       }
     }
     fetchChartData();
-  }, []);
+  }, [timeRange]);
 
   const modelConfigs = MODELS.map(m => ({
     id: m.id,
