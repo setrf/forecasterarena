@@ -39,10 +39,25 @@ export async function GET(
         m.id as model_id,
         m.display_name as model_display_name,
         m.color as model_color,
-        (
-          SELECT decision_id FROM trades t
-          WHERE t.agent_id = p.agent_id AND t.market_id = p.market_id 
-          ORDER BY t.executed_at DESC LIMIT 1
+        COALESCE(
+          (
+            SELECT decision_id FROM trades t
+            WHERE t.position_id = p.id
+              AND t.trade_type = 'BUY'
+              AND t.decision_id IS NOT NULL
+            ORDER BY t.executed_at ASC
+            LIMIT 1
+          ),
+          (
+            SELECT decision_id FROM trades t
+            WHERE t.agent_id = p.agent_id
+              AND t.market_id = p.market_id
+              AND t.side = p.side
+              AND t.trade_type = 'BUY'
+              AND t.decision_id IS NOT NULL
+            ORDER BY t.executed_at ASC
+            LIMIT 1
+          )
         ) as decision_id
       FROM positions p
       JOIN agents a ON p.agent_id = a.id
@@ -97,6 +112,5 @@ export async function GET(
     return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }
-
 
 
