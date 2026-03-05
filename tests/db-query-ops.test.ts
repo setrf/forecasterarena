@@ -501,8 +501,8 @@ describe('db query modules - operations', () => {
       });
       expect(byQuestion['Cancelled market']).toMatchObject({
         outcome: 'CANCELLED',
-        settlement_value: 0,
-        pnl: -0.9
+        settlement_value: 0.9,
+        pnl: 0
       });
       expect(byQuestion['Won market']).toMatchObject({
         outcome: 'WON',

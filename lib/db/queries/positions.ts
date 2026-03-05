@@ -76,6 +76,7 @@ export function getClosedPositionsWithMarkets(agentId: string): any[] {
           FROM trades
           WHERE position_id = p.id AND trade_type = 'SELL'
         )
+        WHEN p.status = 'settled' AND m.resolution_outcome = 'CANCELLED' THEN p.total_cost
         WHEN p.status = 'settled' AND UPPER(p.side) = UPPER(m.resolution_outcome) THEN p.shares * 1.0
         WHEN p.status = 'settled' THEN 0.0
         ELSE NULL
@@ -86,6 +87,7 @@ export function getClosedPositionsWithMarkets(agentId: string): any[] {
           FROM trades
           WHERE position_id = p.id AND trade_type = 'SELL'
         )
+        WHEN p.status = 'settled' AND m.resolution_outcome = 'CANCELLED' THEN 0.0
         WHEN p.status = 'settled' AND UPPER(p.side) = UPPER(m.resolution_outcome) THEN (p.shares * 1.0) - p.total_cost
         WHEN p.status = 'settled' THEN 0.0 - p.total_cost
         ELSE NULL

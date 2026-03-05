@@ -9,6 +9,7 @@
 import { logSystemEvent, withTransaction } from '../db';
 import {
   getClosedMarkets,
+  getMarketById,
   getMarketByPolymarketId,
   resolveMarket,
   getPositionsByMarket,
@@ -250,19 +251,28 @@ async function checkMarketResolution(market: Market): Promise<MarketResolutionRe
       };
     }
 
-    // Handle UNKNOWN winner case - log for manual review, skip settlement
+    // Handle UNKNOWN winner case conservatively by refunding positions.
     if (!resolution.winner || resolution.winner === 'UNKNOWN') {
+      const refundCount = handleCancelledMarket(market.id);
+
       logSystemEvent('resolution_unknown_winner', {
         market_id: market.id,
         polymarket_id: market.polymarket_id,
         question: market.question.slice(0, 100),
-        error: resolution.error || 'Winner could not be determined'
+        error: resolution.error || 'Winner could not be determined',
+        fallback_outcome: 'CANCELLED',
+        positions_refunded: refundCount
       }, 'error');
-      console.error(`Market ${market.id} resolved but winner could not be determined - requires manual review`);
+
+      console.error(
+        `Market ${market.id} resolved but winner could not be determined - refunded as CANCELLED`
+      );
       return {
-        resolved: false,
-        positions_settled: 0,
-        errors: [resolution.error || 'Winner could not be determined']
+        resolved: true,
+        positions_settled: refundCount,
+        errors: [
+          resolution.error || 'Winner could not be determined; market refunded as CANCELLED'
+        ]
       };
     }
 
@@ -365,13 +375,17 @@ export async function checkAllResolutions(): Promise<ResolutionCheckResult> {
  * All database operations are wrapped in a transaction to ensure atomicity.
  * Either all refunds succeed or all are rolled back.
  *
- * @param marketId - Market that was cancelled
+ * Accepts either the internal market id or the Polymarket id.
+ *
+ * @param marketRef - Internal market id or Polymarket id for the cancelled market
+ * @returns Number of refunded positions
  */
-export function handleCancelledMarket(marketId: string): void {
-  const market = getMarketByPolymarketId(marketId);
-  if (!market) return;
+export function handleCancelledMarket(marketRef: string): number {
+  const market = getMarketById(marketRef) ?? getMarketByPolymarketId(marketRef);
+  if (!market) return 0;
 
   const positions = getPositionsByMarket(market.id);
+  let refundedCount = 0;
 
   // Execute all refunds in a single transaction for atomicity
   withTransaction(() => {
@@ -386,6 +400,7 @@ export function handleCancelledMarket(marketId: string): void {
 
       // Close position (no settlement value)
       settlePosition(position.id);
+      refundedCount++;
     }
 
     // Update market status
@@ -404,6 +419,8 @@ export function handleCancelledMarket(marketId: string): void {
 
   logSystemEvent('market_cancelled', {
     market_id: market.id,
-    positions_refunded: positions.length
+    positions_refunded: refundedCount
   });
+
+  return refundedCount;
 }
