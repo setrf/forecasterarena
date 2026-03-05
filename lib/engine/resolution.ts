@@ -33,6 +33,12 @@ export interface ResolutionCheckResult {
   errors: string[];
 }
 
+interface MarketResolutionResult {
+  resolved: boolean;
+  positions_settled: number;
+  errors: string[];
+}
+
 /**
  * Settle a single position after market resolution
  *
@@ -174,41 +180,50 @@ function recordBrierScoresForMarket(
 function processResolvedMarket(
   market: Market,
   winningOutcome: string
-): number {
+): { positions_settled: number; errors: string[] } {
   // Get all open positions on this market
   const positions = getPositionsByMarket(market.id);
+  const errors: string[] = [];
   
   if (positions.length === 0) {
     console.log(`No positions to settle for market ${market.id}`);
-    return 0;
+    return { positions_settled: 0, errors };
   }
   
   console.log(`Settling ${positions.length} position(s) for market "${market.question.slice(0, 50)}..."`);
   
   // Settle each position
+  let positionsSettled = 0;
   for (const position of positions) {
     try {
       settlePositionForMarket(position, market, winningOutcome);
+      positionsSettled++;
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       console.error(`Error settling position ${position.id}:`, error);
+      errors.push(`Position ${position.id}: ${message}`);
     }
   }
   
   // Record Brier scores
   recordBrierScoresForMarket(market, winningOutcome);
   
-  return positions.length;
+  return { positions_settled: positionsSettled, errors };
 }
 
 /**
  * Check a single market for resolution
  * 
  * @param market - Market to check
- * @returns True if market was resolved
+ * @returns Resolution outcome including settled position count and surfaced errors
  */
-async function checkMarketResolution(market: Market): Promise<boolean> {
+async function checkMarketResolution(market: Market): Promise<MarketResolutionResult> {
   if (!market.polymarket_id) {
-    return false;
+    return {
+      resolved: false,
+      positions_settled: 0,
+      errors: []
+    };
   }
   
   try {
@@ -217,14 +232,22 @@ async function checkMarketResolution(market: Market): Promise<boolean> {
     
     if (!polymarketData) {
       console.log(`Market ${market.polymarket_id} not found on Polymarket`);
-      return false;
+      return {
+        resolved: false,
+        positions_settled: 0,
+        errors: [`Polymarket market ${market.polymarket_id} not found`]
+      };
     }
     
     // Check if resolved
     const resolution = checkResolution(polymarketData);
 
     if (!resolution.resolved) {
-      return false;
+      return {
+        resolved: false,
+        positions_settled: 0,
+        errors: []
+      };
     }
 
     // Handle UNKNOWN winner case - log for manual review, skip settlement
@@ -236,7 +259,11 @@ async function checkMarketResolution(market: Market): Promise<boolean> {
         error: resolution.error || 'Winner could not be determined'
       }, 'error');
       console.error(`Market ${market.id} resolved but winner could not be determined - requires manual review`);
-      return false;
+      return {
+        resolved: false,
+        positions_settled: 0,
+        errors: [resolution.error || 'Winner could not be determined']
+      };
     }
 
     // Update market in our database
@@ -245,20 +272,29 @@ async function checkMarketResolution(market: Market): Promise<boolean> {
     console.log(`Market resolved: "${market.question.slice(0, 50)}..." → ${resolution.winner}`);
     
     // Settle positions
-    const settledCount = processResolvedMarket(market, resolution.winner);
+    const settled = processResolvedMarket(market, resolution.winner);
     
     logSystemEvent('market_resolved', {
       market_id: market.id,
       polymarket_id: market.polymarket_id,
       winning_outcome: resolution.winner,
-      positions_settled: settledCount
+      positions_settled: settled.positions_settled
     });
     
-    return true;
+    return {
+      resolved: true,
+      positions_settled: settled.positions_settled,
+      errors: settled.errors
+    };
     
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error(`Error checking resolution for market ${market.id}:`, error);
-    return false;
+    return {
+      resolved: false,
+      positions_settled: 0,
+      errors: [message]
+    };
   }
 }
 
@@ -288,13 +324,16 @@ export async function checkAllResolutions(): Promise<ResolutionCheckResult> {
     try {
       result.markets_checked++;
       
-      const resolved = await checkMarketResolution(market);
+      const marketResult = await checkMarketResolution(market);
       
-      if (resolved) {
+      if (marketResult.resolved) {
         result.markets_resolved++;
-        // Count would need to come from the function
-        // For now, we don't track this precisely
       }
+
+      result.positions_settled += marketResult.positions_settled;
+      result.errors.push(
+        ...marketResult.errors.map(error => `Market ${market.id}: ${error}`)
+      );
       
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -313,6 +352,7 @@ export async function checkAllResolutions(): Promise<ResolutionCheckResult> {
   logSystemEvent('resolution_check_complete', {
     markets_checked: result.markets_checked,
     markets_resolved: result.markets_resolved,
+    positions_settled: result.positions_settled,
     errors: result.errors.length
   });
   
@@ -367,5 +407,3 @@ export function handleCancelledMarket(marketId: string): void {
     positions_refunded: positions.length
   });
 }
-
-

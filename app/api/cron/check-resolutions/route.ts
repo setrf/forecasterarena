@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       success: true,
       markets_checked: result.markets_checked,
       markets_resolved: result.markets_resolved,
+      positions_settled: result.positions_settled,
       cohorts_completed: cohortsCompleted,
       errors: result.errors.length,
       duration_ms: duration
@@ -59,4 +60,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
