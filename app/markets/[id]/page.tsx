@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { formatDisplayDate, formatDisplayDateTime } from '@/lib/utils';
 
 interface Market {
@@ -64,6 +64,7 @@ interface BrierScore {
 
 export default function MarketDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = params.id;
   const [market, setMarket] = useState<Market | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -248,7 +249,16 @@ export default function MarketDetailPage() {
                   <tr
                     key={pos.id}
                     className={`border-b border-[var(--border-subtle)] last:border-0 ${pos.decision_id && pos.decision_id.length > 5 ? 'cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors' : ''}`}
-                    onClick={() => pos.decision_id && window.location.assign(`/decisions/${pos.decision_id}`)}
+                    onClick={() => pos.decision_id && router.push(`/decisions/${pos.decision_id}`)}
+                    onKeyDown={(event) => {
+                      if (!pos.decision_id) return;
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        router.push(`/decisions/${pos.decision_id}`);
+                      }
+                    }}
+                    role={pos.decision_id ? 'link' : undefined}
+                    tabIndex={pos.decision_id ? 0 : undefined}
                   >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -269,7 +279,7 @@ export default function MarketDetailPage() {
                     <td className="text-right font-mono py-3 px-4">{formatCurrency(pos.total_cost)}</td>
                     <td className="text-right font-mono py-3 px-4">{formatCurrency(pos.current_value)}</td>
                     <td className="text-right font-mono py-3 px-4">
-                      <span className={(pos.unrealized_pnl || 0) >= 0 ? 'text-positive' : 'text-negative'}>
+                      <span className={(pos.unrealized_pnl ?? 0) >= 0 ? 'text-positive' : 'text-negative'}>
                         {pos.unrealized_pnl !== null ? `${pos.unrealized_pnl >= 0 ? '+' : ''}${formatCurrency(pos.unrealized_pnl)}` : 'N/A'}
                       </span>
                     </td>
@@ -350,7 +360,16 @@ export default function MarketDetailPage() {
                   <tr
                     key={trade.id}
                     className={`border-b border-[var(--border-subtle)] last:border-0 ${trade.decision_id ? 'cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors' : ''}`}
-                    onClick={() => trade.decision_id && window.location.assign(`/decisions/${trade.decision_id}`)}
+                    onClick={() => trade.decision_id && router.push(`/decisions/${trade.decision_id}`)}
+                    onKeyDown={(event) => {
+                      if (!trade.decision_id) return;
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        router.push(`/decisions/${trade.decision_id}`);
+                      }
+                    }}
+                    role={trade.decision_id ? 'link' : undefined}
+                    tabIndex={trade.decision_id ? 0 : undefined}
                   >
                     <td className="text-[var(--text-muted)] text-sm">
                       {formatDisplayDateTime(trade.executed_at)}
