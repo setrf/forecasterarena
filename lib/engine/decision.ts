@@ -15,14 +15,15 @@ import {
   getPositionsWithMarkets,
   createDecision,
   getDecisionByAgentWeek,
-  getModelById
+  getTradesByDecision
 } from '../db/queries';
 import { callOpenRouterWithRetry, estimateCost } from '../openrouter/client';
 import { SYSTEM_PROMPT, buildUserPrompt, buildRetryPrompt } from '../openrouter/prompts';
-import { parseDecision, isValidDecision, getDefaultHoldDecision, ParsedDecision } from '../openrouter/parser';
+import { parseDecision, isValidDecision, getDefaultHoldDecision } from '../openrouter/parser';
 import { executeBets, executeSells } from './execution';
 import { TOP_MARKETS_COUNT, LLM_MAX_RETRIES } from '../constants';
 import { calculateWeekNumber } from '../utils';
+import type { AgentWithModel, Market } from '../types';
 
 /**
  * Result of processing a single agent's decision
@@ -58,21 +59,10 @@ interface CohortDecisionResult {
  * @returns Decision result
  */
 async function processAgentDecision(
-  agent: {
-    id: string;
-    cohort_id: string;
-    model_id: string;
-    cash_balance: number;
-    total_invested: number;
-    status: 'active' | 'bankrupt';
-    model: {
-      id: string;
-      openrouter_id: string;
-      display_name: string;
-    };
-  },
+  agent: AgentWithModel,
   cohortId: string,
-  weekNumber: number
+  weekNumber: number,
+  markets: Market[]
 ): Promise<AgentDecisionResult> {
   const result: AgentDecisionResult = {
     agent_id: agent.id,
@@ -92,21 +82,28 @@ async function processAgentDecision(
 
     // Idempotency guard: avoid duplicate decisions for rerun cron executions.
     // If last attempt for this week was an ERROR, allow a retry.
+    // BET/SELL decisions that produced no trades are also retryable.
     const existingDecision = getDecisionByAgentWeek(agent.id, cohortId, weekNumber);
     if (existingDecision && existingDecision.action !== 'ERROR') {
+      const shouldRetryWithoutTrades = (
+        existingDecision.action === 'BET' || existingDecision.action === 'SELL'
+      ) && getTradesByDecision(existingDecision.id).length === 0;
+
+      if (!shouldRetryWithoutTrades) {
+        result.decision_id = existingDecision.id;
+        result.action = 'SKIPPED';
+        result.success = true;
+        return result;
+      }
+
       result.decision_id = existingDecision.id;
-      result.action = 'SKIPPED';
-      result.success = true;
-      return result;
+      result.error = 'Retrying decision because no trades were recorded';
     }
     
     console.log(`Processing decision for ${agent.model.display_name}...`);
     
     // Get portfolio state
     const positions = getPositionsWithMarkets(agent.id);
-    
-    // Get top markets
-    const markets = getTopMarketsByVolume(TOP_MARKETS_COUNT);
     
     // Build prompts
     const systemPrompt = SYSTEM_PROMPT;
@@ -204,16 +201,46 @@ async function processAgentDecision(
     
     // Execute trades
     let tradesExecuted = 0;
+    let executionErrors: string[] = [];
+    let attemptedTrades = 0;
     
     if (parsed.action === 'BET' && parsed.bets) {
       const betResults = executeBets(agent.id, parsed.bets, decision.id);
+      attemptedTrades = parsed.bets.length;
       tradesExecuted = betResults.filter(r => r.success).length;
+      executionErrors = betResults
+        .filter(r => !r.success && r.error)
+        .map(r => r.error as string);
     } else if (parsed.action === 'SELL' && parsed.sells) {
       const sellResults = executeSells(agent.id, parsed.sells, decision.id);
+      attemptedTrades = parsed.sells.length;
       tradesExecuted = sellResults.filter(r => r.success).length;
+      executionErrors = sellResults
+        .filter(r => !r.success && r.error)
+        .map(r => r.error as string);
     }
     
     result.trades_executed = tradesExecuted;
+
+    if (
+      (parsed.action === 'BET' || parsed.action === 'SELL') &&
+      attemptedTrades > 0 &&
+      tradesExecuted === 0
+    ) {
+      result.success = false;
+      result.error = executionErrors.join('; ') || `All ${parsed.action.toLowerCase()} executions failed`;
+
+      logSystemEvent('agent_decision_execution_failed', {
+        agent_id: agent.id,
+        decision_id: decision.id,
+        action: parsed.action,
+        errors: executionErrors
+      }, 'error');
+
+      console.log(`${agent.model.display_name}: ${parsed.action} (0 trades, retryable failure)`);
+      return result;
+    }
+
     result.success = true;
     
     console.log(`${agent.model.display_name}: ${parsed.action} (${tradesExecuted} trades)`);
@@ -269,13 +296,18 @@ export async function runCohortDecisions(cohortId: string): Promise<CohortDecisi
   
   // Get all agents for this cohort
   const agents = getAgentsWithModelsByCohort(cohortId);
+  const markets = getTopMarketsByVolume(TOP_MARKETS_COUNT);
   
   // Process each agent sequentially to avoid rate limits
   for (const agent of agents) {
     try {
-      const decisionResult = await processAgentDecision(agent, cohortId, weekNumber);
+      const decisionResult = await processAgentDecision(agent, cohortId, weekNumber, markets);
       result.decisions.push(decisionResult);
       result.agents_processed++;
+
+      if (!decisionResult.success && decisionResult.error) {
+        result.errors.push(`${agent.model.display_name}: ${decisionResult.error}`);
+      }
       
       // Small delay between agents to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 1000));

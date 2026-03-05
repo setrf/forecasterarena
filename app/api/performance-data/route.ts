@@ -10,9 +10,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { MODELS } from '@/lib/constants';
 import { safeErrorMessage } from '@/lib/utils/security';
-import type { TimeRange } from '@/components/charts/TimeRangeSelector';
 
 export const dynamic = 'force-dynamic';
+
+type TimeRange = '10M' | '1H' | '1D' | '1W' | '1M' | '3M' | 'ALL';
 
 function getRangeStart(range: TimeRange, now: Date): string {
   const start = new Date(now);
@@ -144,5 +145,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }
-
 
