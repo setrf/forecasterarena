@@ -1,5 +1,9 @@
 # Pre-Deployment Audit Summary
 
+> Historical document: this summary reflects the December 1, 2025 audit state.
+> For current behavior and operational guidance, use `README.md` and the
+> current-reference docs listed in `docs/README.md`.
+
 **Date**: December 1, 2025  
 **Status**: Critical items completed, ready for deployment with monitoring
 
@@ -139,4 +143,3 @@ All critical security, database, and configuration items are complete. The appli
 - Backup endpoint requires `CRON_SECRET` authentication
 - All cron endpoints require `Authorization: Bearer {CRON_SECRET}` header
 - Admin endpoints require valid session cookie
-

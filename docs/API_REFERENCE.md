@@ -1,530 +1,587 @@
 # API Reference
 
-Complete documentation for all Forecaster Arena API endpoints.
+Comprehensive route documentation for the current Forecaster Arena implementation.
+
+> Documentation status: updated for the current codebase on March 6, 2026.
 
 ---
 
-## Base URL
+## Base URLs
 
-```
+```text
 Development: http://localhost:3000
-Production: https://forecasterarena.com
+Production:  https://forecasterarena.com
 ```
 
 ---
 
-## Authentication
+## Authentication Model
 
-### Public Endpoints
+### Public routes
+
 No authentication required.
 
-### Cron Endpoints
-Require `Authorization` header:
-```
+### Cron routes
+
+All `/api/cron/*` routes require:
+
+```http
 Authorization: Bearer {CRON_SECRET}
 ```
 
-### Admin Endpoints
-Require session cookie from login. Cookie name: `forecaster_admin`
+Behavior:
+
+- missing or invalid token returns `401`
+- production fails closed if `CRON_SECRET` is not configured
+
+### Admin routes
+
+Admin routes use a signed HTTP-only session cookie set by:
+
+```http
+POST /api/admin/login
+```
+
+Cookie details:
+
+- name: `forecaster_admin`
+- lifetime: 7 days
+- attributes: `HttpOnly`, `SameSite=Lax`, `Secure` in production
 
 ---
 
-## Response Format
+## Response Conventions
 
-### Success Response
+The codebase does **not** enforce one universal envelope for every route. In practice:
+
+- most read endpoints return a JSON object plus `updated_at`
+- most error responses use:
+
+```json
+{ "error": "..." }
+```
+
+- some cron/admin endpoints return task-style payloads such as:
+
 ```json
 {
-  "data": { ... },
-  "updated_at": "2024-01-15T00:00:00.000Z"
+  "success": true,
+  "duration_ms": 1234
 }
 ```
 
-### Error Response
-```json
-{
-  "error": "Error message description"
-}
-```
-
-### HTTP Status Codes
+### Common status codes
 
 | Code | Meaning |
 |------|---------|
-| 200 | Success |
-| 400 | Bad Request - Invalid parameters |
-| 401 | Unauthorized - Missing or invalid auth |
-| 404 | Not Found - Resource doesn't exist |
-| 500 | Internal Server Error |
+| `200` | Success |
+| `400` | Invalid input |
+| `401` | Missing / invalid auth |
+| `404` | Resource not found |
+| `429` | Rate limited |
+| `500` | Internal error |
+| `503` | Service unavailable / health failure / auth not configured |
+
+### Production error redaction
+
+Public routes that use `safeErrorMessage(...)` return a generic internal error string in production. Explicit validation failures and `404`s still return specific messages.
 
 ---
 
-## Public Endpoints
+## Cache Behavior
+
+| Route group | Cache behavior |
+|-------------|----------------|
+| `/api/leaderboard` | `public, max-age=300, stale-while-revalidate=60` |
+| `/api/performance-data` | `public, max-age=300, stale-while-revalidate=60` |
+| `/api/markets` | `public, max-age=300, stale-while-revalidate=60` |
+| `/api/decisions/recent` | `public, max-age=120, stale-while-revalidate=30` |
+| Admin routes | `no-store` / uncached |
+| Other dynamic routes | dynamic route handlers, no public cache headers unless explicitly set |
+
+---
+
+## Public Routes
 
 ### GET /api/health
 
-Health check endpoint for monitoring system status.
+Returns redacted health state for monitoring.
 
-**Request:**
 ```http
 GET /api/health
 ```
 
-**Response (Healthy):**
+Response shape:
+
 ```json
 {
-  "status": "ok",
-  "timestamp": "2025-12-01T20:18:53.198Z",
+  "status": "ok | error",
+  "timestamp": "2026-03-06T17:46:51.671Z",
   "checks": {
     "database": {
-      "status": "ok"
+      "status": "ok | error",
+      "message": "Database unavailable"
     },
     "environment": {
-      "status": "ok"
+      "status": "ok | error",
+      "message": "Required configuration is incomplete"
     },
     "data_integrity": {
-      "status": "ok"
+      "status": "ok | error",
+      "message": "Integrity issues detected"
     }
   }
 }
 ```
 
-**Response (Unhealthy):**
-```json
-{
-  "status": "error",
-  "timestamp": "2025-12-01T20:18:53.198Z",
-  "checks": {
-    "database": {
-      "status": "error",
-      "message": "Database connection failed"
-    },
-    "environment": {
-      "status": "error",
-      "message": "Missing: OPENROUTER_API_KEY"
-    }
-  }
-}
-```
+Important semantics:
 
-**HTTP Status Codes:**
-- `200` - All checks passed
-- `503` - One or more checks failed
-
-**Use Cases:**
-- Uptime monitoring
-- Load balancer health checks
-- Automated alerting
-
----
+- exact missing env var names are **not** exposed publicly
+- raw database exception messages are **not** exposed publicly
+- health returns:
+  - `200` when all checks are `ok`
+  - `503` when any check fails
 
 ### GET /api/leaderboard
 
-Returns aggregate leaderboard across all cohorts.
+Returns aggregate leaderboard data and cohort summaries.
 
-**Request:**
 ```http
 GET /api/leaderboard
 ```
 
-**Response:**
+Response shape:
+
 ```json
 {
   "leaderboard": [
     {
       "model_id": "gpt-5.1",
-      "display_name": "GPT-5.1",
+      "display_name": "GPT-5.2",
       "provider": "OpenAI",
       "color": "#10B981",
-      "total_pnl": 2500.00,
-      "total_pnl_percent": 8.33,
-      "avg_brier_score": 0.1823,
-      "num_cohorts": 3,
-      "num_resolved_bets": 45,
-      "win_rate": 0.62
+      "total_pnl": 0,
+      "total_pnl_percent": 0,
+      "avg_brier_score": null,
+      "num_cohorts": 1,
+      "num_resolved_bets": 0,
+      "win_rate": null
     }
   ],
   "cohorts": [
     {
-      "id": "abc123",
+      "id": "cohort-id",
       "cohort_number": 1,
-      "started_at": "2024-01-07T00:00:00.000Z",
+      "started_at": "2026-03-02T00:00:00.000Z",
       "status": "active",
+      "methodology_version": "v1",
       "num_agents": 7,
-      "total_markets_traded": 25
+      "total_markets_traded": 12
     }
   ],
-  "updated_at": "2024-01-15T12:00:00.000Z"
+  "updated_at": "2026-03-06T17:00:00.000Z"
 }
 ```
 
----
+Notes:
 
-### GET /api/models/[id]
+- leaderboard rows only appear for models that actually have cohort history
+- `display_name` is the current presentation name, while `model_id` stays stable
 
-Returns detailed performance data for a specific model.
+### GET /api/performance-data
 
-**Request:**
+Returns chart-ready snapshot data, optionally scoped to a cohort.
+
 ```http
-GET /api/models/gpt-5.1
+GET /api/performance-data?range=1M
+GET /api/performance-data?range=1W&cohort_id=<cohort-id>
 ```
 
-**Path Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| id | string | Model ID (e.g., `gpt-5.1`, `claude-opus-4.5`) |
+Query parameters:
 
-**Response:**
+| Param | Required | Values | Notes |
+|------|----------|--------|-------|
+| `range` | No | `10M`, `1H`, `1D`, `1W`, `1M`, `3M`, `ALL` | defaults to `1M` |
+| `cohort_id` | No | cohort UUID | restricts snapshots to one cohort |
+
+Response shape:
+
 ```json
 {
-  "model": {
-    "id": "gpt-5.1",
-    "openrouter_id": "openai/gpt-5.1",
-    "display_name": "GPT-5.1",
-    "provider": "OpenAI",
-    "color": "#10B981",
-    "is_active": 1,
-    "added_at": "2024-01-01T00:00:00.000Z"
-  },
-  "num_cohorts": 3,
-  "total_pnl": 2500.00,
-  "avg_pnl_percent": 8.33,
-  "cohort_performance": [
+  "data": [
     {
-      "cohort_number": 3,
-      "cohort_status": "active",
-      "agent_status": "active",
-      "cash_balance": 8500.00,
-      "total_value": 10500.00,
-      "total_pnl": 500.00,
-      "total_pnl_percent": 5.0,
-      "brier_score": 0.1654,
-      "num_resolved_bets": 12
+      "date": "2026-03-06T17:40:00.000Z",
+      "gpt-5.1": 10120.5,
+      "gemini-2.5-flash": 9955.25
     }
   ],
-  "recent_decisions": [
+  "models": [
     {
-      "id": "dec123",
-      "cohort_number": 3,
-      "decision_week": 2,
-      "decision_timestamp": "2024-01-14T00:00:00.000Z",
-      "action": "BET",
-      "reasoning": "Based on current polling..."
+      "id": "gpt-5.1",
+      "name": "GPT-5.2",
+      "color": "#10B981"
     }
   ],
-  "equity_curve": [
-    {
-      "snapshot_date": "2024-01-07",
-      "total_value": 10000.00,
-      "cohort_number": 3
-    }
-  ],
-  "updated_at": "2024-01-15T12:00:00.000Z"
+  "range": "1M",
+  "updated_at": "2026-03-06T17:40:00.000Z"
 }
 ```
 
----
+Important semantics:
 
-### GET /api/cohorts/[id]
-
-Returns detailed data for a specific cohort.
-
-**Request:**
-```http
-GET /api/cohorts/abc123
-```
-
-**Path Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| id | string | Cohort ID (UUID) |
-
-**Response:**
-```json
-{
-  "cohort": {
-    "id": "abc123",
-    "cohort_number": 3,
-    "started_at": "2024-01-07T00:00:00.000Z",
-    "status": "active",
-    "completed_at": null,
-    "methodology_version": "v1",
-    "initial_balance": 10000.00
-  },
-  "agents": [
-    {
-      "id": "agent123",
-      "model_id": "gpt-5.1",
-      "model_display_name": "GPT-5.1",
-      "model_color": "#10B981",
-      "cash_balance": 8500.00,
-      "total_invested": 1500.00,
-      "status": "active",
-      "total_value": 10500.00,
-      "total_pnl": 500.00,
-      "brier_score": 0.1654,
-      "position_count": 3,
-      "trade_count": 8
-    }
-  ],
-  "stats": {
-    "week_number": 2,
-    "total_trades": 45,
-    "total_positions_open": 15,
-    "markets_with_positions": 12,
-    "avg_brier_score": 0.1823
-  },
-  "equity_curves": {
-    "gpt-5.1": [
-      { "date": "2024-01-07", "value": 10000 },
-      { "date": "2024-01-08", "value": 10250 }
-    ]
-  },
-  "updated_at": "2024-01-15T12:00:00.000Z"
-}
-```
-
----
+- timestamps are `snapshot_timestamp`, not daily buckets
+- when multiple cohorts share a timestamp for the same model, values are averaged
 
 ### GET /api/markets
 
-Returns list of tracked markets with filtering.
+Returns a paginated market list with filters and aggregate stats.
 
-**Request:**
 ```http
-GET /api/markets?status=active&category=Politics&limit=50
+GET /api/markets
+GET /api/markets?status=active&sort=volume&limit=50&offset=0
+GET /api/markets?search=election&category=Politics&cohort_bets=true
 ```
 
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| status | string | `active` | Filter: `active`, `closed`, `resolved`, `all` |
-| category | string | - | Filter by category |
-| search | string | - | Search in question text |
-| sort | string | `volume` | Sort: `volume`, `close_date`, `created` |
-| limit | number | 50 | Results per page (max 100) |
-| offset | number | 0 | Pagination offset |
+Query parameters:
 
-**Response:**
+| Param | Required | Values | Notes |
+|------|----------|--------|-------|
+| `status` | No | `active`, `closed`, `resolved`, `all` | defaults to `active` |
+| `category` | No | string | exact category filter |
+| `search` | No | string | substring match against `question` |
+| `sort` | No | `volume`, `close_date`, `created` | defaults to `volume` |
+| `cohort_bets` | No | `true` | only markets with open positions in the active cohort |
+| `limit` | No | integer | defaults to `50`, capped at `100` |
+| `offset` | No | integer | defaults to `0` |
+
+Response shape:
+
 ```json
 {
   "markets": [
     {
-      "id": "mkt123",
-      "polymarket_id": "0x...",
-      "question": "Will X happen by Y date?",
+      "id": "market-id",
+      "polymarket_id": "pm-id",
+      "question": "Will ...?",
       "category": "Politics",
       "market_type": "binary",
-      "current_price": 0.65,
-      "volume": 1500000,
-      "close_date": "2024-02-01T00:00:00.000Z",
+      "current_price": 0.57,
+      "volume": 123456,
+      "close_date": "2026-03-20T00:00:00.000Z",
       "status": "active",
       "positions_count": 3
     }
   ],
-  "total": 150,
+  "total": 120,
   "has_more": true,
-  "categories": ["Politics", "Crypto", "Sports"],
-  "updated_at": "2024-01-15T12:00:00.000Z"
+  "categories": ["Politics", "Crypto"],
+  "stats": {
+    "total_markets": 1200,
+    "active_markets": 800,
+    "markets_with_positions": 45,
+    "categories_count": 12
+  },
+  "updated_at": "2026-03-06T17:00:00.000Z"
 }
 ```
 
----
-
 ### GET /api/markets/[id]
 
-Returns detailed market data including all positions and trades.
+Returns one market plus open positions, recent trades, and optional Brier scores.
 
-**Request:**
 ```http
-GET /api/markets/mkt123
+GET /api/markets/<market-id>
 ```
 
-**Response:**
+Response shape:
+
 ```json
 {
   "market": {
-    "id": "mkt123",
-    "polymarket_id": "0x...",
-    "question": "Will X happen by Y date?",
-    "description": "Full description...",
+    "id": "market-id",
+    "polymarket_id": "pm-id",
+    "slug": "optional-polymarket-slug",
+    "event_slug": "optional-event-slug",
+    "question": "Will ...?",
+    "description": "...",
     "category": "Politics",
     "market_type": "binary",
-    "current_price": 0.65,
-    "volume": 1500000,
-    "liquidity": 50000,
-    "close_date": "2024-02-01T00:00:00.000Z",
+    "current_price": 0.57,
+    "volume": 123456,
+    "liquidity": 40000,
+    "close_date": "2026-03-20T00:00:00.000Z",
     "status": "active",
     "resolution_outcome": null,
     "resolved_at": null
   },
   "positions": [
     {
-      "agent_id": "agent123",
+      "id": "position-id",
+      "agent_id": "agent-id",
       "model_id": "gpt-5.1",
-      "model_display_name": "GPT-5.1",
+      "model_display_name": "GPT-5.2",
       "model_color": "#10B981",
       "side": "YES",
-      "shares": 500,
-      "avg_entry_price": 0.60,
-      "total_cost": 300.00,
-      "current_value": 325.00,
-      "unrealized_pnl": 25.00
+      "shares": 10,
+      "avg_entry_price": 0.5,
+      "total_cost": 5,
+      "current_value": 5.7,
+      "unrealized_pnl": 0.7,
+      "decision_id": "opening-decision-id"
     }
   ],
+  "trades": [],
+  "brier_scores": [],
+  "updated_at": "2026-03-06T17:00:00.000Z"
+}
+```
+
+Notes:
+
+- `positions` only includes **open** positions on the market
+- `brier_scores` is only populated for resolved markets
+- the route attempts to reconstruct the opening `decision_id` even for legacy trades that omitted `position_id`
+
+### GET /api/models/[id]
+
+Returns aggregate performance for one model across cohorts.
+
+```http
+GET /api/models/gpt-5.1
+```
+
+Path parameter:
+
+| Param | Meaning |
+|------|---------|
+| `id` | stable model ID, e.g. `gpt-5.1`, `claude-opus-4.5` |
+
+Response shape:
+
+```json
+{
+  "model": {
+    "id": "gpt-5.1",
+    "openrouter_id": "openai/gpt-5.2",
+    "display_name": "GPT-5.2",
+    "provider": "OpenAI",
+    "color": "#10B981",
+    "is_active": 1
+  },
+  "num_cohorts": 3,
+  "total_pnl": 420.5,
+  "avg_pnl_percent": 1.4,
+  "avg_brier_score": 0.18,
+  "win_rate": 0.61,
+  "cohort_performance": [],
+  "recent_decisions": [],
+  "equity_curve": [
+    {
+      "snapshot_timestamp": "2026-03-06T17:40:00.000Z",
+      "total_value": 10120.5
+    }
+  ],
+  "updated_at": "2026-03-06T17:40:00.000Z"
+}
+```
+
+Important semantics:
+
+- `equity_curve` is aggregated across cohorts by timestamp and averaged when needed
+- `win_rate` is based on resolved `BUY` trades only
+
+### GET /api/cohorts/[id]
+
+Returns cohort-level leaderboard, stats, and equity curves.
+
+```http
+GET /api/cohorts/<cohort-id>
+```
+
+Response shape:
+
+```json
+{
+  "cohort": {
+    "id": "cohort-id",
+    "cohort_number": 4,
+    "started_at": "2026-03-02T00:00:00.000Z",
+    "status": "active",
+    "completed_at": null,
+    "methodology_version": "v1",
+    "initial_balance": 10000
+  },
+  "agents": [
+    {
+      "id": "agent-id",
+      "model_id": "gpt-5.1",
+      "model_display_name": "GPT-5.2",
+      "model_color": "#10B981",
+      "cash_balance": 9400,
+      "total_invested": 600,
+      "status": "active",
+      "total_value": 10075,
+      "total_pnl": 75,
+      "total_pnl_percent": 0.75,
+      "brier_score": null,
+      "position_count": 2,
+      "trade_count": 3,
+      "num_resolved_bets": 0
+    }
+  ],
+  "stats": {
+    "week_number": 1,
+    "total_trades": 14,
+    "total_positions_open": 9,
+    "markets_with_positions": 7,
+    "avg_brier_score": null
+  },
+  "equity_curves": {
+    "gpt-5.1": [
+      { "date": "2026-03-06T17:40:00.000Z", "value": 10075 }
+    ]
+  },
+  "recent_decisions": [],
+  "updated_at": "2026-03-06T17:40:00.000Z"
+}
+```
+
+### GET /api/cohorts/[id]/models/[modelId]
+
+Returns one model's detailed state within one cohort.
+
+```http
+GET /api/cohorts/<cohort-id>/models/gpt-5.1
+```
+
+Response shape:
+
+```json
+{
+  "cohort": {
+    "id": "cohort-id",
+    "cohort_number": 4,
+    "status": "active",
+    "started_at": "2026-03-02T00:00:00.000Z",
+    "completed_at": null,
+    "current_week": 1,
+    "total_markets": 7
+  },
+  "model": {
+    "id": "gpt-5.1",
+    "display_name": "GPT-5.2",
+    "provider": "OpenAI",
+    "color": "#10B981"
+  },
+  "agent": {
+    "id": "agent-id",
+    "status": "active",
+    "cash_balance": 9400,
+    "total_invested": 600,
+    "total_value": 10075,
+    "total_pnl": 75,
+    "total_pnl_percent": 0.75,
+    "brier_score": null,
+    "num_resolved_bets": 0,
+    "rank": 2,
+    "total_agents": 7
+  },
+  "stats": {
+    "position_count": 2,
+    "trade_count": 3,
+    "win_rate": null,
+    "cohort_avg_pnl_percent": 0.24,
+    "cohort_best_pnl_percent": 1.1,
+    "cohort_worst_pnl_percent": -0.3
+  },
+  "equity_curve": [],
+  "decisions": [],
+  "positions": [],
+  "closed_positions": [],
+  "trades": [],
+  "updated_at": "2026-03-06T17:40:00.000Z"
+}
+```
+
+### GET /api/decisions/recent
+
+Returns recent non-error decisions across cohorts.
+
+```http
+GET /api/decisions/recent
+GET /api/decisions/recent?limit=25
+```
+
+Query parameters:
+
+| Param | Required | Notes |
+|------|----------|-------|
+| `limit` | No | defaults to `10`, capped at `50` |
+
+Response shape:
+
+```json
+{
+  "decisions": [
+    {
+      "id": "decision-id",
+      "agent_id": "agent-id",
+      "cohort_id": "cohort-id",
+      "decision_week": 1,
+      "decision_timestamp": "2026-03-06T17:00:00.000Z",
+      "action": "HOLD",
+      "reasoning": "No trade",
+      "model_display_name": "GPT-5.2",
+      "model_color": "#10B981",
+      "cohort_number": 4
+    }
+  ],
+  "updated_at": "2026-03-06T17:00:00.000Z"
+}
+```
+
+### GET /api/decisions/[id]
+
+Returns one decision plus its associated trades.
+
+```http
+GET /api/decisions/<decision-id>
+```
+
+Response shape:
+
+```json
+{
+  "decision": {
+    "id": "decision-id",
+    "agent_id": "agent-id",
+    "cohort_id": "cohort-id",
+    "decision_week": 1,
+    "decision_timestamp": "2026-03-06T17:00:00.000Z",
+    "prompt_system": "...",
+    "prompt_user": "...",
+    "raw_response": "...",
+    "parsed_response": "...",
+    "retry_count": 0,
+    "action": "BET",
+    "reasoning": "...",
+    "tokens_input": 100,
+    "tokens_output": 50,
+    "api_cost_usd": 0.01,
+    "response_time_ms": 2400,
+    "error_message": null,
+    "model_name": "GPT-5.2",
+    "model_color": "#10B981",
+    "model_provider": "OpenAI",
+    "model_id": "gpt-5.1"
+  },
   "trades": [
     {
-      "id": "trade123",
-      "model_display_name": "GPT-5.1",
-      "trade_type": "BUY",
-      "side": "YES",
-      "shares": 500,
-      "price": 0.60,
-      "total_amount": 300.00,
-      "executed_at": "2024-01-10T00:00:00.000Z"
-    }
-  ],
-  "brier_scores": [],
-  "updated_at": "2024-01-15T12:00:00.000Z"
-}
-```
-
----
-
-### GET /api/performance-data
-
-Returns aggregated snapshot data for performance charts.
-
-**Request:**
-```http
-GET /api/performance-data?range=1M
-```
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| range | string | `1M` | Time range: `1W`, `1M`, `3M`, `ALL` |
-| cohort_id | string | - | Filter to specific cohort |
-
-**Response:**
-```json
-{
-  "data": [
-    {
-      "date": "2024-01-07",
-      "gpt-5.1": 10000,
-      "gemini-3-pro": 10000,
-      "grok-4": 10000,
-      "claude-opus-4.5": 10000,
-      "deepseek-v3": 10000,
-      "kimi-k2": 10000,
-      "qwen-3": 10000
-    },
-    {
-      "date": "2024-01-08",
-      "gpt-5.1": 10250,
-      "gemini-3-pro": 9800,
-      "...": "..."
-    }
-  ],
-  "models": [
-    { "id": "gpt-5.1", "name": "GPT-5.1", "color": "#10B981" }
-  ],
-  "updated_at": "2024-01-15T12:00:00.000Z"
-}
-```
-
----
-
-## Protected Endpoints (Cron)
-
-All cron endpoints require:
-```http
-Authorization: Bearer {CRON_SECRET}
-```
-
-### POST /api/cron/sync-markets
-
-Syncs markets from Polymarket API.
-
-**Schedule:** Every 6 hours
-
-**Response:**
-```json
-{
-  "success": true,
-  "markets_added": 5,
-  "markets_updated": 95,
-  "errors": 0,
-  "duration_ms": 3500
-}
-```
-
----
-
-### POST /api/cron/start-cohort
-
-Starts a new cohort (if conditions met).
-
-**Schedule:** Every Sunday at 00:00 UTC
-
-**Query Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| force | boolean | Force start even if not Sunday |
-
-**Response:**
-```json
-{
-  "success": true,
-  "cohort_id": "abc123",
-  "cohort_number": 4,
-  "agents_created": 7
-}
-```
-
-Or if conditions not met:
-```json
-{
-  "success": false,
-  "message": "Not Sunday or outside start window"
-}
-```
-
----
-
-### POST /api/cron/run-decisions
-
-Runs weekly LLM decisions for all active cohorts.
-
-**Schedule:** Every Sunday at 00:05 UTC (after start-cohort)
-
-**Duration:** May take 2-5 minutes depending on LLM response times.
-
-**Response:**
-```json
-{
-  "success": true,
-  "cohorts_processed": 2,
-  "total_agents": 14,
-  "total_errors": 0,
-  "duration_ms": 180000,
-  "results": [
-    {
-      "cohort_id": "abc123",
-      "cohort_number": 3,
-      "week_number": 2,
-      "agents_processed": 7,
-      "decisions": [
-        {
-          "agent_id": "agent123",
-          "model_id": "gpt-5.1",
-          "decision_id": "dec123",
-          "action": "BET",
-          "success": true,
-          "trades_executed": 2
-        }
-      ],
-      "errors": []
+      "id": "trade-id",
+      "market_id": "market-id",
+      "market_question": "Will ...?",
+      "market_slug": "optional-market-slug",
+      "market_event_slug": "optional-event-slug"
     }
   ]
 }
@@ -532,197 +589,378 @@ Runs weekly LLM decisions for all active cohorts.
 
 ---
 
-### POST /api/cron/check-resolutions
+## Admin Routes
 
-Checks for resolved markets and settles positions.
-
-**Schedule:** Every hour
-
-**Response:**
-```json
-{
-  "success": true,
-  "markets_checked": 25,
-  "markets_resolved": 2,
-  "cohorts_completed": 0,
-  "errors": 0,
-  "duration_ms": 5000
-}
-```
-
----
-
-### POST /api/cron/take-snapshots
-
-Takes daily portfolio snapshots for all agents.
-
-**Schedule:** Daily at 00:00 UTC
-
-**Response:**
-```json
-{
-  "success": true,
-  "snapshots_taken": 14,
-  "positions_updated": 35,
-  "errors": 0,
-  "duration_ms": 2000
-}
-```
-
----
-
-### POST /api/cron/backup
-
-Creates database backup.
-
-**Schedule:** Saturday at 23:00 UTC (before Sunday cohort)
-
-**Response:**
-```json
-{
-  "success": true,
-  "backup_path": "backups/forecaster-2024-01-13T23-00-00.db",
-  "duration_ms": 500
-}
-```
-
----
-
-## Admin Endpoints
+All admin routes require a valid `forecaster_admin` cookie except the login route itself.
 
 ### POST /api/admin/login
 
-Authenticate admin user.
+Authenticates the admin session.
 
-**Request Body:**
+```http
+POST /api/admin/login
+Content-Type: application/json
+```
+
+Body:
+
 ```json
 {
   "password": "your-admin-password"
 }
 ```
 
-**Response (Success):**
+Responses:
+
+- `200`:
+
 ```json
-{
-  "success": true
-}
+{ "success": true }
 ```
 
-Sets HTTP-only cookie `forecaster_admin`.
-
-**Response (Failure):**
-```json
-{
-  "error": "Invalid password"
-}
-```
-
----
+- `400`: missing password
+- `401`: invalid password
+- `429`: too many attempts
+- `503`: admin auth not configured in production
 
 ### DELETE /api/admin/login
 
-Logout admin user.
+Logs out the current admin session.
 
-**Response:**
+```http
+DELETE /api/admin/login
+```
+
+Response:
+
+```json
+{ "success": true }
+```
+
+### GET /api/admin/stats
+
+Returns high-level admin dashboard stats.
+
 ```json
 {
-  "success": true
+  "active_cohorts": 1,
+  "total_agents": 7,
+  "markets_tracked": 1234,
+  "total_api_cost": 12.34,
+  "updated_at": "2026-03-06T17:00:00.000Z"
 }
 ```
 
-Clears `forecaster_admin` cookie.
+### GET /api/admin/costs
 
----
+Returns cost data aggregated by model and overall summary.
+
+```json
+{
+  "costs_by_model": [
+    {
+      "model_id": "gpt-5.1",
+      "model_name": "GPT-5.2",
+      "color": "#10B981",
+      "total_cost": 0.25,
+      "total_input_tokens": 12000,
+      "total_output_tokens": 3000,
+      "decision_count": 6
+    }
+  ],
+  "summary": {
+    "total_cost": 1.1,
+    "total_input_tokens": 50000,
+    "total_output_tokens": 13000,
+    "total_decisions": 42,
+    "avg_cost_per_decision": 0.02619
+  },
+  "updated_at": "2026-03-06T17:00:00.000Z"
+}
+```
+
+### GET /api/admin/logs
+
+Returns recent system logs.
+
+```http
+GET /api/admin/logs
+GET /api/admin/logs?severity=error&limit=200
+```
+
+Query parameters:
+
+| Param | Required | Notes |
+|------|----------|-------|
+| `severity` | No | `info`, `warning`, `error`, or `all` |
+| `limit` | No | defaults to `100`, capped at `500` |
+
+Response:
+
+```json
+{
+  "logs": [
+    {
+      "id": "log-id",
+      "event_type": "decisions_run_complete",
+      "event_data": "{\"cohorts_processed\":1}",
+      "severity": "info",
+      "created_at": "2026-03-06T17:00:00.000Z"
+    }
+  ],
+  "updated_at": "2026-03-06T17:00:00.000Z"
+}
+```
+
+### POST /api/admin/action
+
+Triggers a bounded set of admin actions from the dashboard.
+
+```http
+POST /api/admin/action
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "action": "start-cohort | sync-markets | check-cohorts | backup",
+  "force": true
+}
+```
+
+Behavior by action:
+
+| Action | Result |
+|--------|--------|
+| `start-cohort` | starts or reuses the current week's cohort |
+| `sync-markets` | runs market sync |
+| `check-cohorts` | completes cohorts whose open positions are fully gone |
+| `backup` | creates a SQLite backup via the backup API |
 
 ### POST /api/admin/export
 
-Create a small, capped export (CSV+zip) for a cohort and date window.
+Creates a bounded CSV export and ZIP archive.
 
-**Auth:** admin session (`forecaster_admin` cookie)  
-**Body:**
+```http
+POST /api/admin/export
+Content-Type: application/json
+```
+
+Body:
+
 ```json
 {
-  "cohort_id": "uuid-required",
-  "from": "2025-12-01T00:00:00Z",
-  "to":   "2025-12-03T00:00:00Z",
-  "tables": ["decisions","trades","positions","portfolio_snapshots","markets","agents","cohorts","models"],
+  "cohort_id": "cohort-id",
+  "from": "2026-03-01T00:00:00.000Z",
+  "to": "2026-03-02T00:00:00.000Z",
+  "tables": ["decisions", "trades"],
   "include_prompts": false
 }
 ```
-Notes:
-- Max range: 7 days. Max rows per table: 50k. Rejects if exceeded.
-- Default tables: cohorts, agents, models, markets, decisions, trades, positions, portfolio_snapshots.
-- `include_prompts` adds prompt/response fields to `decisions`; default false.
 
-**Response (success):**
+Rules:
+
+- `cohort_id`, `from`, and `to` are required
+- `to` must be after `from`
+- max date window: **7 days**
+- max rows per exported table: **50,000**
+- default tables:
+  - `cohorts`
+  - `agents`
+  - `models`
+  - `markets`
+  - `decisions`
+  - `trades`
+  - `positions`
+  - `portfolio_snapshots`
+- ZIP filenames are sanitized and generated server-side
+- exports are cleaned up after roughly 24 hours
+
+Success response:
+
 ```json
 {
   "success": true,
-  "download_url": "/api/admin/export?file=export-<cohort>-<timestamp>.zip",
-  "info": { "cohort_id": "...", "from": "...", "to": "...", "tables": ["..."], "include_prompts": false }
+  "download_url": "/api/admin/export?file=export-cohort-id-2026-03-06T17-00-00-000Z.zip",
+  "info": {
+    "cohort_id": "cohort-id",
+    "from": "2026-03-01T00:00:00.000Z",
+    "to": "2026-03-02T00:00:00.000Z",
+    "tables": ["decisions", "trades"],
+    "include_prompts": false
+  }
 }
 ```
 
 ### GET /api/admin/export
 
-Download a previously generated export.
+Downloads a previously generated ZIP archive.
 
-**Auth:** admin session  
-**Query:** `file` = filename returned by POST  
-Returns `application/zip`; 404 if missing/expired (exports cleaned after ~24h).
+```http
+GET /api/admin/export?file=export-cohort-id-2026-03-06T17-00-00-000Z.zip
+```
+
+Response:
+
+- `200` with `application/zip`
+- `404` if missing or already cleaned up
 
 ---
 
-## Error Handling
+## Cron Routes
 
-### Common Errors
+All cron routes require `Authorization: Bearer {CRON_SECRET}`.
 
-**Missing Authentication:**
+### POST /api/cron/start-cohort
+
+Starts the current week's cohort if conditions are met.
+
+```http
+POST /api/cron/start-cohort
+POST /api/cron/start-cohort?force=true
+```
+
+Success response:
+
 ```json
 {
-  "error": "Unauthorized"
+  "success": true,
+  "cohort_id": "cohort-id",
+  "cohort_number": 4,
+  "agents_created": 7
 }
 ```
-Status: 401
 
-**Resource Not Found:**
+If the start window is not met and `force` is absent, response is:
+
 ```json
 {
-  "error": "Model not found"
+  "success": false,
+  "message": "Not Sunday or outside start window"
 }
 ```
-Status: 404
 
-**Invalid Parameters:**
+### POST /api/cron/run-decisions
+
+Runs weekly decisions for all active cohorts.
+
+```http
+POST /api/cron/run-decisions
+```
+
+Current behavior:
+
+- route budget: `maxDuration = 600`
+- model calls are sequential
+- the route ensures the current week's cohort exists before the run
+
+Response shape:
+
 ```json
 {
-  "error": "Invalid status parameter. Use: active, closed, resolved, all"
+  "success": true,
+  "cohort_bootstrap": {
+    "cohort_id": "cohort-id",
+    "cohort_number": 4
+  },
+  "cohorts_processed": 1,
+  "total_agents": 7,
+  "total_errors": 0,
+  "duration_ms": 12345,
+  "results": []
 }
 ```
-Status: 400
 
-**Server Error:**
+### POST /api/cron/sync-markets
+
+Runs Polymarket market sync.
+
 ```json
 {
-  "error": "Database connection failed"
+  "success": true,
+  "markets_added": 12,
+  "markets_updated": 188,
+  "errors": [],
+  "duration_ms": 4312
 }
 ```
-Status: 500
+
+### POST /api/cron/check-resolutions
+
+Checks closed markets for resolution and settles positions.
+
+```json
+{
+  "success": true,
+  "markets_checked": 23,
+  "markets_resolved": 4,
+  "positions_settled": 9,
+  "cohorts_completed": 1,
+  "errors": 0,
+  "duration_ms": 1840
+}
+```
+
+### POST /api/cron/take-snapshots
+
+Updates open-position MTM values and records timestamped snapshots.
+
+```json
+{
+  "success": true,
+  "snapshots_taken": 7,
+  "positions_updated": 13,
+  "errors": 0,
+  "duration_ms": 620
+}
+```
+
+Notes:
+
+- snapshots are keyed by `snapshot_timestamp`
+- closed-but-unresolved positions try to preserve prior value if current price feeds become unhelpful
+
+### POST /api/cron/backup
+
+Creates a SQLite backup.
+
+```json
+{
+  "success": true,
+  "backup_path": "backups/forecaster-2026-03-06T17-00-00-000Z.db",
+  "duration_ms": 140
+}
+```
 
 ---
 
-## Rate Limits
+## Model IDs and Route Parameters
 
-- **Public endpoints:** No rate limits
-- **Cron endpoints:** Should follow scheduled intervals
-- **OpenRouter calls:** Handled by OpenRouter's rate limiting
+The following stable IDs appear in paths and payloads:
+
+| Stable ID | Display Name |
+|-----------|--------------|
+| `gpt-5.1` | GPT-5.2 |
+| `gemini-2.5-flash` | Gemini 3 Pro |
+| `grok-4` | Grok 4.1 |
+| `claude-opus-4.5` | Claude Opus 4.5 |
+| `deepseek-v3.1` | DeepSeek V3.2 |
+| `kimi-k2` | Kimi K2 |
+| `qwen-3-next` | Qwen 3 |
+
+Examples:
+
+- `/api/models/gpt-5.1`
+- `/api/cohorts/<id>/models/gemini-2.5-flash`
 
 ---
 
-## Webhooks (Future)
+## Operational Notes for Integrators
 
-Not currently implemented. Planned for v2:
-- Market resolution notifications
-- Decision completion notifications
-- Cohort completion notifications
-
+- admin and cron routes should be treated as **operational APIs**, not public product APIs
+- `/api/health` is safe for uptime checks but intentionally redacted
+- the public site can legitimately return empty leaderboard / market arrays on a fresh database
+- performance charts are based on timestamped snapshots, not one snapshot per day
+- decision rows are unique per `(agent_id, cohort_id, decision_week)` even though reruns may overwrite the claimed row

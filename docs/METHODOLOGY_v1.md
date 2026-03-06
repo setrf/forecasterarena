@@ -1,287 +1,528 @@
 # Forecaster Arena Methodology v1
 
-**Version**: 1.0  
-**Effective From**: Cohort 1  
-**Last Updated**: 2024
+- Version: `v1`
+- Effective from: Cohort 1
+- Document status: Current implementation-aligned reference
+- Last updated: March 6, 2026
+
+This document specifies the benchmark methodology implemented by Forecaster
+Arena today. It focuses on the measurement protocol rather than deployment or
+operational details, but where implementation constraints materially affect the
+benchmark, they are described explicitly.
 
 ---
 
-## Abstract
+## 1. Benchmark Objective
 
-Forecaster Arena is a benchmark for evaluating Large Language Model (LLM) forecasting capabilities using real prediction markets. Unlike traditional benchmarks that may be contaminated by training data, this system tests genuine predictive reasoning by requiring models to forecast real-world outcomes that have not yet occurred.
+Forecaster Arena evaluates whether frontier LLMs can make useful, calibrated
+forecasts about real future events by participating in paper-traded prediction
+markets.
 
-This document specifies the complete methodology for v1 of the benchmark, including the cohort system, decision protocol, scoring methodology, and statistical considerations.
+The benchmark is designed to measure:
 
----
+- probabilistic reasoning under uncertainty
+- confidence calibration
+- portfolio construction and risk management
+- consistency under identical decision conditions
 
-## 1. Introduction
+The benchmark is explicitly not trying to measure:
 
-### 1.1 Motivation
-
-Traditional LLM benchmarks face a fundamental challenge: models may have been trained on the very data used for evaluation. This leads to benchmark saturation and inflated performance metrics that do not reflect genuine reasoning capabilities.
-
-Prediction markets offer a unique solution. They present questions about future events, outcomes that cannot exist in any training data because they have not happened yet. By having LLMs make forecasts on these markets, we can evaluate their ability to:
-
-1. Reason about uncertainty
-2. Synthesize information from their knowledge base
-3. Make calibrated probability estimates
-4. Manage risk across a portfolio
-
-### 1.2 The Problem with Traditional Benchmarks
-
-- **Data contamination**: Training data may contain benchmark answers
-- **Memorization vs. reasoning**: High scores may reflect memorization, not understanding
-- **Static nature**: Benchmarks become stale as models improve
-- **Lack of real-world grounding**: Abstract tasks may not reflect practical capabilities
-
-### 1.3 Reality as Benchmark
-
-Prediction markets provide:
-
-- **Novel questions**: Markets are created for future events
-- **Objective resolution**: Outcomes are determined by reality, not human judgment
-- **Continuous renewal**: New markets are created constantly
-- **Calibration testing**: Market prices provide probability baselines
+- tool-augmented web research ability during a decision run
+- conversational helpfulness
+- coding performance
+- user preference alignment
 
 ---
 
-## 2. System Design
+## 2. Why Prediction Markets
 
-### 2.1 Cohort System
+Prediction markets are used because they provide:
 
-**Design Rationale**: Running multiple independent cohorts provides statistical power and allows comparison across different market conditions.
+- future-facing questions that cannot exist in pretraining corpora as answered facts
+- externally resolved outcomes
+- continuously refreshed evaluation items
+- market prices that can serve as a practical confidence baseline
 
-**Specification**:
-- A new cohort starts automatically every Sunday at 00:00 UTC
-- Each cohort includes all 7 LLM models
-- Each model starts with $10,000 virtual currency
-- Cohorts run until ALL bets resolve (no artificial time limit)
-- No refills: if a model reaches $0, it remains bankrupt for that cohort
-
-**Why This Design**:
-- Weekly cadence balances data collection speed with meaningful market movements
-- No time limit ensures accurate final scoring (no mark-to-market estimation)
-- Multiple cohorts enable statistical analysis across different market regimes
-
-### 2.2 Market Selection
-
-**Source**: Polymarket Gamma API (public, no authentication required)
-
-**Selection Criteria**:
-- Top 500 markets by trading volume
-- Active status (not closed or resolved)
-- Both binary (YES/NO) and multi-outcome markets supported
-
-**Why Top 500 by Volume**:
-- Higher volume indicates more liquid markets with reliable prices
-- Reduces noise from illiquid markets with unreliable price signals
-- Keeps prompt size manageable for LLM context windows
-
-### 2.3 LLM Configuration
-
-**Models** (v1):
-1. GPT-5.1 (OpenAI)
-2. Gemini 2.5 Flash (Google)
-3. Grok 4 (xAI)
-4. Claude Opus 4.5 (Anthropic)
-5. DeepSeek V3.1 (DeepSeek)
-6. Kimi K2 (Moonshot AI)
-7. Qwen 3 Next (Alibaba)
-
-**API Configuration**:
-- Temperature: 0 (deterministic for reproducibility)
-- All models accessed via OpenRouter unified API
-- Identical prompts for all models (fairness)
-
-**Why Temperature 0**:
-- Reproducibility: Same inputs should yield same outputs
-- Reduces noise in performance measurement
-- Allows verification of results
+This does not make the benchmark perfect. Prediction markets still contain
+noise, liquidity issues, and crowd biases. But they are far more resistant to
+benchmark contamination than static Q&A sets.
 
 ---
 
-## 3. Decision Protocol
+## 3. Unit of Competition: Cohorts
 
-### 3.1 Information Provided
+### 3.1 Definition
 
-Each week, LLMs receive:
+A cohort is an independent weekly competition instance containing one agent for
+each active model.
 
-1. **Portfolio State**:
-   - Current cash balance
-   - Open positions with mark-to-market values
-   - Total portfolio value and P/L
+### 3.2 Schedule
 
-2. **Market Information** (Top 500 by volume):
-   - Market ID
-   - Question text
-   - Category
-   - Current price (YES probability for binary markets)
-   - Trading volume
-   - Close date
+- A new cohort starts on Sunday at `00:00 UTC`
+- The weekly decision run is scheduled for Sunday at `00:05 UTC`
+- Cohorts remain active until all open positions resolve or are otherwise
+  settled
 
-**What Is NOT Provided**:
-- Price history (only current price)
-- News or external context
-- Other models' decisions
+### 3.3 Why weekly cohorts
 
-### 3.2 Action Space
+Weekly cohorts were chosen because they:
 
-LLMs can take three types of actions:
+- provide repeated samples for comparing models across time
+- avoid the interpretability problems of one endless rolling contest
+- are frequent enough to collect data, but not so frequent that every minor
+  price move becomes a decision event
 
-1. **BET**: Place a new bet on a market
-   - Specify: market_id, side (YES/NO), amount
-   - Can place multiple bets in one decision
+### 3.4 Cohort uniqueness
 
-2. **SELL**: Close or reduce an existing position
-   - Specify: position_id, percentage (1-100%)
-   - Can sell multiple positions in one decision
-
-3. **HOLD**: Take no action this week
-
-### 3.3 Constraints
-
-| Constraint | Value | Rationale |
-|------------|-------|-----------|
-| Minimum bet | $50 | Prevents noise from trivial bets |
-| Maximum bet | 25% of cash balance | Risk management, prevents all-in strategies |
-| Positions per market | 1 per side | Simplifies portfolio tracking |
-| Partial sells | Allowed | Enables nuanced position management |
+The system enforces one cohort per normalized UTC week start. This is not only
+an operational convenience; it is part of benchmark integrity. Duplicate weekly
+cohorts would distort aggregate results and break fair comparability.
 
 ---
 
-## 4. Scoring Methodology
+## 4. Competing Models
 
-### 4.1 Brier Score
+The current active model roster is:
 
-The Brier Score measures forecast accuracy. Lower is better (0 = perfect, 1 = worst).
+| Internal ID | Display Name | Provider | OpenRouter ID |
+|-------------|--------------|----------|---------------|
+| `gpt-5.1` | GPT-5.2 | OpenAI | `openai/gpt-5.2` |
+| `gemini-2.5-flash` | Gemini 3 Pro | Google | `google/gemini-3-pro-preview` |
+| `grok-4` | Grok 4.1 | xAI | `x-ai/grok-4.1-fast` |
+| `claude-opus-4.5` | Claude Opus 4.5 | Anthropic | `anthropic/claude-opus-4.5` |
+| `deepseek-v3.1` | DeepSeek V3.2 | DeepSeek | `deepseek/deepseek-v3.2` |
+| `kimi-k2` | Kimi K2 | Moonshot AI | `moonshotai/kimi-k2-thinking` |
+| `qwen-3-next` | Qwen 3 | Alibaba | `qwen/qwen3-235b-a22b-instruct-2507` |
 
-**Formula**:
-$$\text{Brier} = (f - o)^2$$
+Important note:
+
+- Historical internal IDs are intentionally stable and may lag display-name
+  updates. For example, `gpt-5.1` currently maps to display name `GPT-5.2`.
+- Benchmark analysis should use stable IDs for joins and display names for
+  presentation.
+
+### 4.1 Fairness conditions
+
+All agents receive:
+
+- the same decision cadence
+- the same market universe for a given run
+- the same starting balance
+- the same bet constraints
+- the same system-prompt structure
+- deterministic temperature (`0`)
+
+The benchmark does not attempt to normalize provider-native context windows,
+hidden reasoning behavior, or proprietary inference stacks beyond what
+OpenRouter exposes.
+
+---
+
+## 5. Starting Capital and Constraints
+
+Each agent begins each cohort with `$10,000` in virtual cash.
+
+Constraints:
+
+| Rule | Value |
+|------|-------|
+| Starting balance | `$10,000` |
+| Minimum bet | `$50` |
+| Maximum single bet | `25%` of current cash balance |
+| Position model | one open position per market per side |
+| Recapitalization | none |
+
+Why these constraints exist:
+
+- The minimum bet avoids token “dust” positions.
+- The max bet forces portfolio construction rather than all-in gambling.
+- One position per market/side keeps accounting and attribution auditable.
+- No recapitalization makes bankruptcy and cash management meaningful.
+
+---
+
+## 6. Market Universe
+
+### 6.1 Source
+
+Markets are sourced from the Polymarket Gamma API.
+
+### 6.2 Selection rule
+
+The benchmark decision engine pulls the top `500` markets by volume for the
+decision prompt context.
+
+### 6.3 Market types
+
+The system supports:
+
+- binary markets (`YES` / `NO`)
+- multi-outcome markets (named outcomes with per-outcome prices)
+
+### 6.4 Why not all markets
+
+Showing all markets would:
+
+- exceed practical prompt budgets
+- include illiquid noise
+- make decision context uneven in quality
+
+The top-volume filter is therefore part of the benchmark design, not just a UI
+optimization.
+
+---
+
+## 7. Information Provided to Models
+
+During a weekly decision run, each agent receives:
+
+### 7.1 Portfolio state
+
+- current cash balance
+- open positions
+- average entry price
+- side-correct current price
+- current marked value
+- unrealized P/L
+
+For binary markets, the stored market price is the `YES` price. When a model
+holds a `NO` position, the prompt converts that to the side-correct price so
+the model sees the relevant value for its existing exposure.
+
+### 7.2 Market list
+
+For each selected market, the prompt includes fields such as:
+
+- market ID
+- question
+- category
+- current price or outcome prices
+- volume
+- close date
+
+### 7.3 Information intentionally omitted
+
+The weekly prompt does not directly provide:
+
+- real-time news browsing
+- other models’ positions or decisions
+- explicit historical price series
+- human-authored external commentary
+
+This keeps the benchmark focused on model reasoning over a shared static
+snapshot.
+
+---
+
+## 8. Decision Protocol
+
+### 8.1 Allowed actions
+
+Each model must output one of:
+
+- `BET`
+- `SELL`
+- `HOLD`
+
+### 8.2 BET format
+
+```json
+{
+  "action": "BET",
+  "bets": [
+    { "market_id": "uuid", "side": "YES", "amount": 500.0 }
+  ],
+  "reasoning": "Why this trade should be made."
+}
+```
+
+### 8.3 SELL format
+
+```json
+{
+  "action": "SELL",
+  "sells": [
+    { "position_id": "uuid", "percentage": 100 }
+  ],
+  "reasoning": "Why this position should be reduced or exited."
+}
+```
+
+### 8.4 HOLD format
+
+```json
+{
+  "action": "HOLD",
+  "reasoning": "Why the current portfolio should remain unchanged."
+}
+```
+
+### 8.5 Response validation
+
+The engine:
+
+- parses the response
+- validates structure and value ranges
+- retries malformed outputs up to the configured malformed-response retry limit
+- defaults to `HOLD` if the output still cannot be made valid
+
+This fallback is part of benchmark execution because a benchmark run must
+complete even when a model’s output format fails.
+
+---
+
+## 9. Decision Execution Semantics
+
+### 9.1 Sequential processing
+
+Within a cohort, agents are processed sequentially.
+
+This means:
+
+- all models still see the same market universe
+- but each model is called one after another, not concurrently
+
+The design is intended to reduce provider contention and keep operations
+predictable.
+
+### 9.2 Idempotency and claim-before-call
+
+The engine now claims a unique decision row for
+`(agent_id, cohort_id, decision_week)` before making the network call.
+
+Why this matters:
+
+- overlapping cron executions must not generate duplicate decisions
+- duplicate trades would invalidate the fairness of the benchmark
+- retryable failures should update the same decision row, not create a new one
+
+This is an implementation safeguard that directly supports benchmark integrity.
+
+### 9.3 Retryable zero-trade results
+
+If a model emits `BET` or `SELL` but all executions fail, the result is stored as
+a retryable failure rather than as a final successful decision.
+
+That allows the system to distinguish:
+
+- valid “no action” outcomes, from
+- apparent trading decisions that produced zero state change
+
+---
+
+## 10. Trade Accounting
+
+### 10.1 BET execution
+
+For a buy:
+
+- cash balance decreases by `total_amount`
+- open position cost basis increases
+- shares are computed from `amount / executable_price`
+
+### 10.2 SELL execution
+
+For a sell:
+
+- a fraction of the position is reduced or closed
+- realized proceeds are returned to cash
+- cost basis is reduced proportionally
+
+### 10.3 Binary price handling
+
+For binary markets:
+
+- `YES` trades use the stored `current_price`
+- `NO` trades use `1 - current_price`
+
+### 10.4 Multi-outcome handling
+
+For multi-outcome markets:
+
+- the engine reads the named outcome price from `current_prices`
+- invalid or missing outcome prices cause execution failure
+
+---
+
+## 11. Scoring
+
+Forecaster Arena uses two primary evaluation axes:
+
+1. calibration quality
+2. portfolio value generation
+
+### 11.1 Brier score
+
+For a resolved trade:
+
+```text
+Brier = (forecast_probability - actual_outcome)^2
+```
 
 Where:
-- $f$ = forecast probability (0 to 1)
-- $o$ = actual outcome (1 if correct, 0 if incorrect)
 
-**Deriving Forecast Probability from Bet Size**:
+- `forecast_probability` is derived from bet size
+- `actual_outcome` is `1` if the traded side won, otherwise `0`
 
-Since LLMs express confidence through bet sizing:
+Interpretation:
 
-$$\text{confidence} = \frac{\text{bet\_amount}}{\text{max\_possible\_bet}}$$
+- lower is better
+- `0` is perfect
+- `0.25` corresponds to an uninformative 50/50 forecast on binary outcomes
 
-Where max_possible_bet = 25% of cash balance at time of bet.
+### 11.2 Implied confidence from position sizing
 
-**Examples**:
-- Bet $2,500 with $10,000 balance -> confidence = 100%
-- Bet $1,250 with $10,000 balance -> confidence = 50%
-- Bet $50 with $10,000 balance -> confidence = 2%
+The system derives confidence from bet size:
 
-**For NO Bets**:
-- A NO bet with confidence X is equivalent to a YES bet with confidence (1-X)
+```text
+max_possible_bet = cash_balance * 0.25
+implied_confidence = bet_amount / max_possible_bet
+```
 
-### 4.2 Portfolio Returns
+This intentionally couples stated conviction to actual capital allocation.
 
-Simple percentage return from initial balance:
+### 11.3 Portfolio returns
 
-$$\text{Return} = \frac{\text{final\_value} - 10000}{10000} \times 100\%$$
+Portfolio return is measured from the `$10,000` cohort baseline:
 
-### 4.3 Aggregate Metrics
+```text
+Return % = (total_value - 10000) / 10000 * 100
+```
 
-**Per Model (across all cohorts)**:
-- Average Brier Score
-- Average Return
-- Win Rate (% of bets that were correct)
-- Number of resolved bets
+### 11.4 Why both metrics are required
 
-**Statistical Significance**:
-- Multiple cohorts provide independent samples
-- Confidence intervals can be computed for rankings
+Portfolio return alone can reward luck or over-concentration.
+Brier score alone can ignore practical value generation.
 
----
+Using both means the benchmark values:
 
-## 5. Statistical Considerations
-
-### 5.1 Multiple Cohorts
-
-Running multiple cohorts enables:
-- Estimation of performance variance
-- Detection of regime-dependent performance
-- Statistical testing of model differences
-
-### 5.2 Confidence Intervals
-
-With $n$ cohorts, we can estimate:
-- Mean performance: $\bar{x} = \frac{1}{n}\sum_{i=1}^{n} x_i$
-- Standard error: $SE = \frac{s}{\sqrt{n}}$
-- 95% CI: $\bar{x} \pm 1.96 \times SE$
-
-### 5.3 Limitations
-
-1. **Market efficiency**: Prediction markets may already incorporate available information
-2. **Model updates**: LLM versions may change during the benchmark period
-3. **Market availability**: Not all topics have active prediction markets
-4. **Single decision per week**: May miss optimal timing
+- being right
+- knowing how confident to be
+- and sizing positions coherently
 
 ---
 
-## 6. Reproducibility
+## 12. Snapshot Methodology
 
-### 6.1 Data Availability
+### 12.1 Cadence
 
-All data is stored and can be inspected:
-- Full prompts sent to each LLM
-- Complete responses received
-- All trades executed
-- Market prices at decision time
+Portfolio snapshots are taken on a 10-minute schedule.
 
-### 6.2 Code Availability
+### 12.2 Stored values
 
-The complete system is open source:
-- Repository: [GitHub URL]
-- License: MIT
+Each snapshot records:
 
-### 6.3 Prompt Transparency
+- cash balance
+- positions value
+- total value
+- total P/L
+- total P/L percent
+- cumulative Brier score
+- number of resolved bets
 
-Full prompts are documented in [PROMPT_DESIGN.md](./PROMPT_DESIGN.md).
+### 12.3 Timestamp semantics
 
----
+Snapshots use `snapshot_timestamp`, not a daily bucket.
 
-## Appendix A: Full Prompt Templates
+This supports:
 
-See [PROMPT_DESIGN.md](./PROMPT_DESIGN.md) for complete prompt specifications.
+- intraday chart ranges such as `10M` and `1H`
+- detailed debugging of position valuation
+- cohort-level and aggregate model curves
 
-## Appendix B: Database Schema
+### 12.4 Closed-but-unresolved handling
 
-See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) for complete schema documentation.
-
-## Appendix C: Mathematical Formulas
-
-### Brier Score (Binary Markets)
-$$BS = (f - o)^2$$
-
-### Brier Score (Multi-Outcome Markets)
-$$BS = \sum_{i=1}^{R} (f_i - o_i)^2$$
-
-Where R is the number of outcomes.
-
-### Implied Confidence from Bet Size
-$$c = \min\left(\frac{a}{b \times 0.25}, 1.0\right)$$
-
-Where:
-- $c$ = implied confidence
-- $a$ = bet amount
-- $b$ = cash balance at time of bet
-
-### Position Value (Mark-to-Market)
-For YES positions: $V = \text{shares} \times \text{current\_price}$
-For NO positions: $V = \text{shares} \times (1 - \text{current\_price})$
-
-### Settlement Value
-$$V = \begin{cases} \text{shares} \times 1.0 & \text{if side matches outcome} \\ 0 & \text{otherwise} \end{cases}$$
+When a market is closed but unresolved and fresh pricing is unusable, the system
+can fall back to prior valuation behavior rather than collapsing the position to
+zero. This preserves more stable mark-to-market curves during settlement gaps.
 
 ---
 
-## Version History
+## 13. Resolution Methodology
 
-| Version | Date | Changes |
-|---------|------|---------|
-| v1 | 2024 | Initial methodology |
+### 13.1 Source of truth
+
+Resolution status is checked against Polymarket.
+
+### 13.2 Local resolution ordering
+
+The local system only marks a market `resolved` after settlement succeeds.
+
+This is important because marking a market resolved too early can strand open
+positions that would no longer be revisited by later resolution jobs.
+
+### 13.3 Unknown or indeterminate winners
+
+If upstream data says a market is resolved but the winning outcome cannot be
+reliably determined, the system refunds positions as `CANCELLED`.
+
+This is a conservative operational choice intended to protect benchmark
+accounting from ambiguous resolution data.
+
+---
+
+## 14. Reproducibility and Auditability
+
+The benchmark stores:
+
+- full prompts
+- raw model responses
+- parsed decision payloads
+- trade records
+- portfolio snapshots
+- Brier scores
+- system logs
+
+This supports:
+
+- replay and inspection
+- external research review
+- debugging of model and execution failures
+- export of bounded data slices for analysis
+
+---
+
+## 15. What This Benchmark Still Does Not Solve
+
+Important limitations remain:
+
+### 15.1 Static-knowledge bias
+
+Even though the target event is in the future, models still reason from a
+frozen knowledge state rather than from live browsing during the run.
+
+### 15.2 Market-efficiency dependency
+
+Markets themselves may already reflect public consensus or liquidity distortions.
+The benchmark therefore evaluates forecasting inside a market environment, not
+in isolation from it.
+
+### 15.3 Provider changes over time
+
+Hosted models can change behavior between benchmark weeks even when internal IDs
+stay constant.
+
+### 15.4 Sequential execution reality
+
+The benchmark is operationally deterministic, but not infinitely parallel.
+Decision runtime and provider availability can still shape what “production
+reproducibility” means in practice.
+
+---
+
+## 16. Methodology Boundaries
+
+Changes that would require a methodology version bump include:
+
+- altering scoring formulas
+- changing starting balance or bet constraints
+- changing market-selection rules
+- adding or removing decision actions
+- introducing external retrieval or tool use into the prompt protocol
+
+Changes that can happen without a methodology bump include:
+
+- implementation hardening for safety or idempotency
+- UI improvements
+- admin/export/security improvements
+- model display-name refreshes when the benchmark protocol itself is unchanged

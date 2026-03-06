@@ -1,359 +1,537 @@
-# Database Schema Documentation
+# Database Schema Reference
 
-**Database**: SQLite (better-sqlite3)  
-**Location**: `data/forecaster.db`
+Last updated: 2026-03-06
 
----
+- Database engine: SQLite
+- Driver: `better-sqlite3`
+- Default path: `data/forecaster.db`
 
-## Overview
-
-Forecaster Arena uses SQLite for data persistence. The schema is designed for:
-
-1. **Full audit trail**: Every decision and trade is logged
-2. **Reproducibility**: Prompts and responses stored verbatim
-3. **Performance**: Indexes on frequently queried columns
-4. **Referential integrity**: Foreign keys enforce relationships
+This document describes the schema that the application currently initializes in
+`lib/db/schema.ts`. It is intended to be the implementation-aligned reference
+for analysts, operators, and future migration work.
 
 ---
 
-## Entity Relationship Diagram
+## 1. Design Principles
 
-```
-┌─────────────────┐     ┌─────────────────┐
-│ methodology_    │     │    cohorts      │
-│   versions      │◀────│                 │
-└─────────────────┘     └────────┬────────┘
-                                 │
-                                 │ 1:N
-                                 ▼
-┌─────────────────┐     ┌─────────────────┐
-│     models      │◀────│     agents      │
-└─────────────────┘     └────────┬────────┘
-        │                        │
-        │                        │ 1:N
-        │               ┌────────┴────────┐
-        │               │                 │
-        ▼               ▼                 ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│   api_costs     │  │   positions     │  │   decisions     │
-└─────────────────┘  └────────┬────────┘  └────────┬────────┘
-                              │                    │
-                              │                    │
-                              ▼                    ▼
-                     ┌─────────────────┐  ┌─────────────────┐
-                     │     trades      │◀─│                 │
-                     └────────┬────────┘  └─────────────────┘
-                              │
-                              ▼
-                     ┌─────────────────┐
-                     │  brier_scores   │
-                     └─────────────────┘
+The schema is optimized for:
 
-┌─────────────────┐     ┌─────────────────┐
-│    markets      │     │ portfolio_      │
-└─────────────────┘     │   snapshots     │
-                        └─────────────────┘
+1. reproducibility
+2. auditability
+3. simple single-node deployment
+4. safe retry behavior for cron-driven workflows
 
-┌─────────────────┐
-│  system_logs    │
-└─────────────────┘
+The most important implications are:
+
+- prompts and raw model responses are stored
+- market/trade/decision history is append-oriented
+- weekly cohort and decision uniqueness are enforced at the database layer
+- portfolio history is timestamped, not merely day-bucketed
+
+---
+
+## 2. Entity Map
+
+```text
+methodology_versions
+        ^
+        |
+      cohorts ----< agents ----< decisions
+         |            |             |
+         |            |             v
+         |            |           trades ----< brier_scores
+         |            |
+         |            +----< positions >---- markets
+         |            |
+         |            +----< portfolio_snapshots
+         |
+         +----------------------------------< system_logs (logical ops only)
+
+models ----< agents
+models ----< api_costs
+decisions ----< api_costs
 ```
 
+Legend:
+
+- `A ----< B` means one `A` row relates to many `B` rows
+- some relationships are logical rather than enforced through direct foreign
+  keys from both directions
+
 ---
 
-## Tables
+## 3. Table Reference
 
-### methodology_versions
+### 3.1 `methodology_versions`
 
 Tracks benchmark methodology versions for reproducibility.
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| version | TEXT | PRIMARY KEY | Version identifier (e.g., 'v1') |
-| title | TEXT | NOT NULL | Version title |
-| description | TEXT | NOT NULL | Full description |
-| changes_summary | TEXT | | Changes from previous version |
-| effective_from_cohort | INTEGER | | First cohort using this version |
-| document_hash | TEXT | | SHA256 hash of methodology document |
-| created_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
+| Column | Type | Notes |
+|--------|------|-------|
+| `version` | `TEXT` | Primary key |
+| `title` | `TEXT` | Not null |
+| `description` | `TEXT` | Not null |
+| `changes_summary` | `TEXT` | Nullable |
+| `effective_from_cohort` | `INTEGER` | Nullable |
+| `document_hash` | `TEXT` | Nullable |
+| `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+
+Operational notes:
+
+- The app seeds methodology metadata on startup.
+- `cohorts.methodology_version` references this table.
 
 ---
 
-### cohorts
+### 3.2 `cohorts`
 
-Weekly competition instances.
+Represents one weekly benchmark competition instance.
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| cohort_number | INTEGER | NOT NULL, UNIQUE | Sequential number (1, 2, 3...) |
-| started_at | TEXT | NOT NULL | ISO8601 start timestamp |
-| status | TEXT | NOT NULL, DEFAULT 'active' | 'active' or 'completed' |
-| completed_at | TEXT | | When all bets resolved |
-| methodology_version | TEXT | NOT NULL, DEFAULT 'v1' | FK to methodology_versions |
-| initial_balance | REAL | NOT NULL, DEFAULT 10000.00 | Starting balance per agent |
-| created_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `cohort_number` | `INTEGER` | Not null, unique |
+| `started_at` | `TEXT` | Not null; normalized weekly UTC start |
+| `status` | `TEXT` | Not null, default `active` |
+| `completed_at` | `TEXT` | Nullable |
+| `methodology_version` | `TEXT` | Not null, default `v1` |
+| `initial_balance` | `REAL` | Not null, default `10000.00` |
+| `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
 
----
+Foreign keys:
 
-### models
+- `methodology_version -> methodology_versions(version)`
 
-The 7 competing LLM models (reference table).
+Uniqueness:
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | Internal ID (e.g., 'gpt-5.1') |
-| openrouter_id | TEXT | NOT NULL, UNIQUE | OpenRouter API identifier |
-| display_name | TEXT | NOT NULL | Human-readable name |
-| provider | TEXT | NOT NULL | Company name (e.g., 'OpenAI') |
-| color | TEXT | | Hex color for charts |
-| is_active | INTEGER | DEFAULT 1 | 1=active, 0=disabled |
-| added_at | TEXT | DEFAULT CURRENT_TIMESTAMP | When model was added |
+- `cohort_number` is unique
+- `started_at` is also uniquely indexed so only one cohort can exist for a
+  given normalized week start
 
----
+Why `started_at` uniqueness matters:
 
-### agents
-
-LLM instance within a specific cohort.
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| cohort_id | TEXT | NOT NULL, FK | Links to cohorts |
-| model_id | TEXT | NOT NULL, FK | Links to models |
-| cash_balance | REAL | NOT NULL, DEFAULT 10000.00 | Current available cash |
-| total_invested | REAL | NOT NULL, DEFAULT 0.00 | Sum of open positions cost |
-| status | TEXT | NOT NULL, DEFAULT 'active' | 'active' or 'bankrupt' |
-| created_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
-
-**Unique Constraint**: (cohort_id, model_id) - One agent per model per cohort
+- the application creates cohorts by normalized Sunday `00:00 UTC`
+- duplicate week creation would corrupt aggregated cohort comparisons
 
 ---
 
-### markets
+### 3.3 `models`
 
-Polymarket prediction markets.
+Reference table for the active model roster.
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | Internal UUID |
-| polymarket_id | TEXT | NOT NULL, UNIQUE | Polymarket's market ID |
-| question | TEXT | NOT NULL | Market question |
-| description | TEXT | | Detailed description |
-| category | TEXT | | Category (Politics, Crypto, etc.) |
-| market_type | TEXT | NOT NULL, DEFAULT 'binary' | 'binary' or 'multi_outcome' |
-| outcomes | TEXT | | JSON array for multi-outcome |
-| close_date | TEXT | NOT NULL | When betting closes |
-| status | TEXT | NOT NULL, DEFAULT 'active' | active/closed/resolved/cancelled |
-| current_price | REAL | | YES price for binary (0-1) |
-| current_prices | TEXT | | JSON for multi-outcome prices |
-| volume | REAL | | Total trading volume |
-| liquidity | REAL | | Current liquidity |
-| resolution_outcome | TEXT | | Winning outcome after resolution |
-| resolved_at | TEXT | | Resolution timestamp |
-| first_seen_at | TEXT | DEFAULT CURRENT_TIMESTAMP | When first synced |
-| last_updated_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Last price update |
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key; stable internal identifier |
+| `openrouter_id` | `TEXT` | Not null, unique |
+| `display_name` | `TEXT` | Not null |
+| `provider` | `TEXT` | Not null |
+| `color` | `TEXT` | Nullable |
+| `is_active` | `INTEGER` | Default `1` |
+| `added_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
 
----
+Current seeded roster in code:
 
-### positions
+| `id` | `display_name` |
+|------|----------------|
+| `gpt-5.1` | `GPT-5.2` |
+| `gemini-2.5-flash` | `Gemini 3 Pro` |
+| `grok-4` | `Grok 4.1` |
+| `claude-opus-4.5` | `Claude Opus 4.5` |
+| `deepseek-v3.1` | `DeepSeek V3.2` |
+| `kimi-k2` | `Kimi K2` |
+| `qwen-3-next` | `Qwen 3` |
 
-Open holdings in markets.
+Important note:
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| agent_id | TEXT | NOT NULL, FK | Links to agents |
-| market_id | TEXT | NOT NULL, FK | Links to markets |
-| side | TEXT | NOT NULL | 'YES', 'NO', or outcome name |
-| shares | REAL | NOT NULL | Number of shares held |
-| avg_entry_price | REAL | NOT NULL | Weighted average cost basis |
-| total_cost | REAL | NOT NULL | Total $ invested |
-| current_value | REAL | | Mark-to-market value |
-| unrealized_pnl | REAL | | Unrealized profit/loss |
-| status | TEXT | NOT NULL, DEFAULT 'open' | open/closed/settled |
-| opened_at | TEXT | DEFAULT CURRENT_TIMESTAMP | When position opened |
-| closed_at | TEXT | | When position closed |
-
-**Unique Constraint**: (agent_id, market_id, side)
+- the stable internal `id` is not guaranteed to match the newest display name
 
 ---
 
-### decisions
+### 3.4 `agents`
 
-Full LLM decision log.
+Represents one model instance inside one cohort.
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| agent_id | TEXT | NOT NULL, FK | Links to agents |
-| cohort_id | TEXT | NOT NULL, FK | Links to cohorts |
-| decision_week | INTEGER | NOT NULL | Week number within cohort |
-| decision_timestamp | TEXT | NOT NULL | When decision was made |
-| prompt_system | TEXT | NOT NULL | Full system prompt |
-| prompt_user | TEXT | NOT NULL | Full user prompt |
-| raw_response | TEXT | | Raw LLM response |
-| parsed_response | TEXT | | Parsed JSON response |
-| retry_count | INTEGER | DEFAULT 0 | Number of retries |
-| action | TEXT | NOT NULL | BET/SELL/HOLD/ERROR |
-| reasoning | TEXT | | LLM's explanation |
-| tokens_input | INTEGER | | Prompt tokens |
-| tokens_output | INTEGER | | Response tokens |
-| api_cost_usd | REAL | | Estimated API cost |
-| response_time_ms | INTEGER | | Response latency |
-| error_message | TEXT | | Error if any |
-| created_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `cohort_id` | `TEXT` | Not null |
+| `model_id` | `TEXT` | Not null |
+| `cash_balance` | `REAL` | Not null, default `10000.00` |
+| `total_invested` | `REAL` | Not null, default `0.00` |
+| `status` | `TEXT` | Not null, default `active` |
+| `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
 
----
+Foreign keys:
 
-### trades
+- `cohort_id -> cohorts(id)`
+- `model_id -> models(id)`
 
-All buy/sell transactions.
+Uniqueness:
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| agent_id | TEXT | NOT NULL, FK | Links to agents |
-| market_id | TEXT | NOT NULL, FK | Links to markets |
-| position_id | TEXT | FK | Links to positions |
-| decision_id | TEXT | FK | Links to decisions |
-| trade_type | TEXT | NOT NULL | 'BUY' or 'SELL' |
-| side | TEXT | NOT NULL | 'YES', 'NO', or outcome |
-| shares | REAL | NOT NULL | Number of shares |
-| price | REAL | NOT NULL | Price at execution |
-| total_amount | REAL | NOT NULL | Total $ amount |
-| implied_confidence | REAL | | For Brier score calculation |
-| executed_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Execution timestamp |
+- `UNIQUE(cohort_id, model_id)`
+
+This is what guarantees one agent per model per cohort.
 
 ---
 
-### portfolio_snapshots
+### 3.5 `markets`
 
-Daily portfolio snapshots for charting.
+Stores local Polymarket market state.
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| agent_id | TEXT | NOT NULL, FK | Links to agents |
-| snapshot_date | TEXT | NOT NULL | YYYY-MM-DD format |
-| cash_balance | REAL | NOT NULL | Cash at snapshot |
-| positions_value | REAL | NOT NULL | Sum of position values |
-| total_value | REAL | NOT NULL | Cash + positions |
-| total_pnl | REAL | NOT NULL | P/L from start |
-| total_pnl_percent | REAL | NOT NULL | P/L as percentage |
-| brier_score | REAL | | Cumulative Brier score |
-| num_resolved_bets | INTEGER | DEFAULT 0 | Resolved bet count |
-| created_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `polymarket_id` | `TEXT` | Not null, unique |
+| `slug` | `TEXT` | Nullable |
+| `event_slug` | `TEXT` | Nullable |
+| `question` | `TEXT` | Not null |
+| `description` | `TEXT` | Nullable |
+| `category` | `TEXT` | Nullable |
+| `market_type` | `TEXT` | Not null, default `binary` |
+| `outcomes` | `TEXT` | Nullable JSON-ish payload |
+| `close_date` | `TEXT` | Not null |
+| `status` | `TEXT` | Not null, default `active` |
+| `current_price` | `REAL` | Nullable YES price for binary markets |
+| `current_prices` | `TEXT` | Nullable multi-outcome prices payload |
+| `volume` | `REAL` | Nullable |
+| `liquidity` | `REAL` | Nullable |
+| `resolution_outcome` | `TEXT` | Nullable |
+| `resolved_at` | `TEXT` | Nullable |
+| `first_seen_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+| `last_updated_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
 
-**Unique Constraint**: (agent_id, snapshot_date)
+Statuses used in practice:
 
----
+- `active`
+- `closed`
+- `resolved`
+- `cancelled` may appear conceptually, but current resolution handling writes
+  `status = 'resolved'` with `resolution_outcome = 'CANCELLED'`
 
-### brier_scores
+Operational note:
 
-Individual bet scoring records.
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| agent_id | TEXT | NOT NULL, FK | Links to agents |
-| trade_id | TEXT | NOT NULL, FK | Links to trades |
-| market_id | TEXT | NOT NULL, FK | Links to markets |
-| forecast_probability | REAL | NOT NULL | Implied probability (0-1) |
-| actual_outcome | REAL | NOT NULL | 1 (correct) or 0 (wrong) |
-| brier_score | REAL | NOT NULL | Calculated Brier score |
-| calculated_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Calculation timestamp |
-
----
-
-### api_costs
-
-API usage and cost tracking.
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| model_id | TEXT | NOT NULL, FK | Links to models |
-| decision_id | TEXT | FK | Links to decisions |
-| tokens_input | INTEGER | | Input token count |
-| tokens_output | INTEGER | | Output token count |
-| cost_usd | REAL | | Estimated cost |
-| recorded_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Recording timestamp |
+- local status is not flipped to `resolved` until settlement succeeds
 
 ---
 
-### system_logs
+### 3.6 `positions`
 
-Audit trail for system events.
+Tracks open or historical holdings by agent, market, and side.
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PRIMARY KEY | UUID |
-| event_type | TEXT | NOT NULL | Event category |
-| event_data | TEXT | | JSON payload |
-| severity | TEXT | DEFAULT 'info' | info/warning/error |
-| created_at | TEXT | DEFAULT CURRENT_TIMESTAMP | Event timestamp |
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `agent_id` | `TEXT` | Not null |
+| `market_id` | `TEXT` | Not null |
+| `side` | `TEXT` | Not null |
+| `shares` | `REAL` | Not null |
+| `avg_entry_price` | `REAL` | Not null |
+| `total_cost` | `REAL` | Not null |
+| `current_value` | `REAL` | Nullable |
+| `unrealized_pnl` | `REAL` | Nullable |
+| `status` | `TEXT` | Not null, default `open` |
+| `opened_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+| `closed_at` | `TEXT` | Nullable |
+
+Foreign keys:
+
+- `agent_id -> agents(id)`
+- `market_id -> markets(id)`
+
+Uniqueness:
+
+- `UNIQUE(agent_id, market_id, side)`
+
+Statuses:
+
+- `open`
+- `closed`
+- `settled`
+
+Interpretation:
+
+- `closed` means the position was exited through sells
+- `settled` means the market outcome finalized the position
 
 ---
 
-## Indexes
+### 3.7 `decisions`
+
+Stores one weekly decision record per agent/cohort/week.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `agent_id` | `TEXT` | Not null |
+| `cohort_id` | `TEXT` | Not null |
+| `decision_week` | `INTEGER` | Not null |
+| `decision_timestamp` | `TEXT` | Not null |
+| `prompt_system` | `TEXT` | Not null |
+| `prompt_user` | `TEXT` | Not null |
+| `raw_response` | `TEXT` | Nullable |
+| `parsed_response` | `TEXT` | Nullable |
+| `retry_count` | `INTEGER` | Default `0` |
+| `action` | `TEXT` | Not null |
+| `reasoning` | `TEXT` | Nullable |
+| `tokens_input` | `INTEGER` | Nullable |
+| `tokens_output` | `INTEGER` | Nullable |
+| `api_cost_usd` | `REAL` | Nullable |
+| `response_time_ms` | `INTEGER` | Nullable |
+| `error_message` | `TEXT` | Nullable |
+| `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+
+Foreign keys:
+
+- `agent_id -> agents(id)`
+- `cohort_id -> cohorts(id)`
+
+Important uniqueness:
+
+- unique index on `(agent_id, cohort_id, decision_week)`
+
+Why this matters:
+
+- overlapping cron runs must not create duplicate weekly decisions for one agent
+
+Lifecycle note:
+
+- the engine may first write an in-progress placeholder row
+- later it finalizes that same row with the actual prompts, response, action,
+  timings, and errors
+
+This means:
+
+- `action = 'ERROR'` does not always mean an immutable terminal state
+- some `ERROR` rows can represent claim/retry bookkeeping before finalization
+
+---
+
+### 3.8 `trades`
+
+Stores all simulated buys and sells.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `agent_id` | `TEXT` | Not null |
+| `market_id` | `TEXT` | Not null |
+| `position_id` | `TEXT` | Nullable |
+| `decision_id` | `TEXT` | Nullable |
+| `trade_type` | `TEXT` | Not null |
+| `side` | `TEXT` | Not null |
+| `shares` | `REAL` | Not null |
+| `price` | `REAL` | Not null |
+| `total_amount` | `REAL` | Not null |
+| `implied_confidence` | `REAL` | Nullable |
+| `cost_basis` | `REAL` | Nullable |
+| `realized_pnl` | `REAL` | Nullable |
+| `executed_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+
+Foreign keys:
+
+- `agent_id -> agents(id)`
+- `market_id -> markets(id)`
+- `position_id -> positions(id)`
+- `decision_id -> decisions(id)`
+
+Interpretation:
+
+- `BUY` trades are the source of Brier-score confidence data
+- `SELL` trades can carry cost basis and realized P/L
+
+---
+
+### 3.9 `portfolio_snapshots`
+
+Timestamped portfolio history for charts and operations.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `agent_id` | `TEXT` | Not null |
+| `snapshot_timestamp` | `TEXT` | Not null |
+| `cash_balance` | `REAL` | Not null |
+| `positions_value` | `REAL` | Not null |
+| `total_value` | `REAL` | Not null |
+| `total_pnl` | `REAL` | Not null |
+| `total_pnl_percent` | `REAL` | Not null |
+| `brier_score` | `REAL` | Nullable |
+| `num_resolved_bets` | `INTEGER` | Default `0` |
+| `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+
+Foreign keys:
+
+- `agent_id -> agents(id)`
+
+Uniqueness:
+
+- `UNIQUE(agent_id, snapshot_timestamp)`
+
+Important correction:
+
+- the schema is timestamp-based
+- documentation that refers to `snapshot_date` is outdated
+
+This table is what enables intraday chart ranges such as `10M`, `1H`, and `1D`.
+
+---
+
+### 3.10 `brier_scores`
+
+One scoring row per resolved buy trade.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `agent_id` | `TEXT` | Not null |
+| `trade_id` | `TEXT` | Not null |
+| `market_id` | `TEXT` | Not null |
+| `forecast_probability` | `REAL` | Not null |
+| `actual_outcome` | `REAL` | Not null |
+| `brier_score` | `REAL` | Not null |
+| `calculated_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+
+Foreign keys:
+
+- `agent_id -> agents(id)`
+- `trade_id -> trades(id)`
+- `market_id -> markets(id)`
+
+Behavior note:
+
+- the query layer deduplicates by `trade_id` before inserting
+
+---
+
+### 3.11 `api_costs`
+
+Optional cost-tracking table for model usage.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `model_id` | `TEXT` | Not null |
+| `decision_id` | `TEXT` | Nullable |
+| `tokens_input` | `INTEGER` | Nullable |
+| `tokens_output` | `INTEGER` | Nullable |
+| `cost_usd` | `REAL` | Nullable |
+| `recorded_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+
+Foreign keys:
+
+- `model_id -> models(id)`
+- `decision_id -> decisions(id)`
+
+Note:
+
+- the main decision flow also stores estimated cost directly on `decisions`
+
+---
+
+### 3.12 `system_logs`
+
+Application audit trail and operational log stream.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `event_type` | `TEXT` | Not null |
+| `event_data` | `TEXT` | Nullable JSON payload |
+| `severity` | `TEXT` | Default `info` |
+| `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+
+Used for:
+
+- market sync completion/error logs
+- cohort start/completion logs
+- decision execution failure reporting
+- resolution partial failure reporting
+- admin action audit events
+
+---
+
+## 4. Key Indexes
+
+The schema contains many read-performance indexes. The most important semantic
+ones are:
+
+### Integrity / uniqueness indexes
+
+- `UNIQUE(cohort_id, model_id)` on `agents`
+- `UNIQUE(agent_id, market_id, side)` on `positions`
+- `UNIQUE(agent_id, snapshot_timestamp)` on `portfolio_snapshots`
+- unique index on `decisions(agent_id, cohort_id, decision_week)`
+- unique index on `cohorts(started_at)`
+
+### Operational query indexes
+
+- `idx_markets_status`
+- `idx_markets_volume`
+- `idx_trades_decision`
+- `idx_decisions_agent_week`
+- `idx_snapshots_agent_timestamp`
+- `idx_logs_created`
+
+Why these matter:
+
+- leaderboard and detail pages read recent snapshots and recent decisions often
+- cron workflows query closed markets, active cohorts, and per-agent weekly
+  decision state repeatedly
+
+---
+
+## 5. Important Query Semantics
+
+### 5.1 Current-week cohort lookup
+
+`getCohortForCurrentWeek()` looks up the cohort whose `started_at` equals the
+normalized current UTC week start.
+
+### 5.2 Decision claiming
+
+`claimDecisionForProcessing(...)` serializes the check-then-write path for
+weekly decisions using an immediate transaction and the unique decision index.
+
+### 5.3 Resolution retry safety
+
+Markets stay locally `closed` if settlement partially fails, so later resolution
+passes can safely retry the same market.
+
+### 5.4 Aggregate performance curves
+
+`/api/performance-data` groups `portfolio_snapshots` by timestamp and averages
+portfolio values across cohorts when needed.
+
+---
+
+## 6. Practical Analyst Notes
+
+- Use stable model IDs for joins.
+- Use display names for presentation.
+- Treat `decision_timestamp` as the operational timestamp, not `created_at`.
+- Use `snapshot_timestamp` for chart reconstruction.
+- When analyzing error rows in `decisions`, inspect `error_message` and the
+  presence or absence of related `trades`.
+
+---
+
+## 7. Migration / Compatibility Warnings
+
+If you are applying the current app to an older long-lived database, validate
+that there are no pre-existing duplicates that would violate the newer unique
+indexes:
 
 ```sql
--- Agents
-idx_agents_cohort ON agents(cohort_id)
-idx_agents_model ON agents(model_id)
-idx_agents_status ON agents(status)
+SELECT started_at, COUNT(*)
+FROM cohorts
+GROUP BY started_at
+HAVING COUNT(*) > 1;
 
--- Positions
-idx_positions_agent ON positions(agent_id)
-idx_positions_market ON positions(market_id)
-idx_positions_status ON positions(status)
-idx_positions_agent_status ON positions(agent_id, status)
-
--- Trades
-idx_trades_agent ON trades(agent_id)
-idx_trades_market ON trades(market_id)
-idx_trades_decision ON trades(decision_id)
-idx_trades_executed ON trades(executed_at DESC)
-
--- Decisions
-idx_decisions_agent ON decisions(agent_id)
-idx_decisions_cohort ON decisions(cohort_id)
-idx_decisions_timestamp ON decisions(decision_timestamp DESC)
-
--- Portfolio Snapshots
-idx_snapshots_agent ON portfolio_snapshots(agent_id)
-idx_snapshots_date ON portfolio_snapshots(snapshot_date DESC)
-idx_snapshots_agent_date ON portfolio_snapshots(agent_id, snapshot_date DESC)
-
--- Markets
-idx_markets_status ON markets(status)
-idx_markets_polymarket ON markets(polymarket_id)
-idx_markets_category ON markets(category)
-idx_markets_volume ON markets(volume DESC)
-idx_markets_close_date ON markets(close_date)
-
--- Brier Scores
-idx_brier_agent ON brier_scores(agent_id)
-idx_brier_market ON brier_scores(market_id)
-
--- System Logs
-idx_logs_type ON system_logs(event_type)
-idx_logs_severity ON system_logs(severity)
-idx_logs_created ON system_logs(created_at DESC)
-
--- Cohorts
-idx_cohorts_status ON cohorts(status)
-idx_cohorts_started ON cohorts(started_at DESC)
+SELECT agent_id, cohort_id, decision_week, COUNT(*)
+FROM decisions
+GROUP BY agent_id, cohort_id, decision_week
+HAVING COUNT(*) > 1;
 ```
 
----
-
-## Backup Strategy
-
-- Weekly backup before each new cohort (Saturday 23:00 UTC)
-- Backup files stored in `backups/` directory
-- Format: `forecaster-YYYY-MM-DDTHH-MM-SS.db`
-
-
+Resolve those before relying on the current uniqueness guarantees.
 

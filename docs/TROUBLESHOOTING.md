@@ -1,561 +1,459 @@
 # Troubleshooting Guide
 
-Comprehensive guide for diagnosing and fixing common issues in Forecaster Arena.
+This guide is for diagnosing operational problems in the current Forecaster
+Arena implementation.
+
+It focuses on the system as it exists today:
+
+- Next.js app server
+- SQLite database
+- cron-triggered internal endpoints
+- OpenRouter-backed weekly model decisions
+- timestamped portfolio snapshots
 
 ---
 
-## Quick Diagnostics
+## 1. Fast Triage
 
-### Health Check
+Start with these checks:
+
 ```bash
-curl https://yourdomain.com/api/health
+pm2 status
+pm2 logs forecaster-arena --lines 100
+curl -s https://yourdomain.example/api/health | jq
+sqlite3 /path/to/forecaster.db "PRAGMA integrity_check;"
 ```
 
-Expected response:
+Interpretation:
+
+- PM2 unhealthy: app startup/runtime issue
+- `/api/health` degraded: config, DB, or integrity issue
+- integrity check fails: stop and investigate before continuing writes
+
+Important note about `/api/health`:
+
+- the endpoint intentionally redacts exact secret names and raw internal error
+  text
+- use server logs and local config inspection for root-cause detail
+
+---
+
+## 2. Build and Typecheck Failures
+
+### Symptom
+
+- `npm run typecheck` fails on missing `.next/types/...` files
+
+### Cause
+
+The project includes generated Next route/page types in TypeScript input, so a
+fresh checkout may need a successful build first.
+
+### Fix
+
+```bash
+npm ci
+npm run build
+npm run typecheck
+```
+
+If `npm run build` fails first, fix the build error before expecting
+typecheck to work.
+
+---
+
+## 3. App Will Not Start
+
+### Symptoms
+
+- PM2 shows `errored`
+- reverse proxy returns `502`
+- startup logs stop immediately
+
+### Checks
+
+```bash
+pm2 logs forecaster-arena --lines 200
+printenv | rg 'OPENROUTER_API_KEY|CRON_SECRET|ADMIN_PASSWORD|DATABASE_PATH|BACKUP_PATH'
+ls -l .env.local
+```
+
+### Common causes
+
+#### Missing production secrets
+
+Expected behavior in production:
+
+- cron auth fails closed if `CRON_SECRET` is missing
+- admin auth fails closed if `ADMIN_PASSWORD` is missing
+- OpenRouter-dependent operations fail if `OPENROUTER_API_KEY` is missing
+
+#### Missing `zip`
+
+Admin export creation uses `zip`. If it is not installed:
+
+- normal app pages still work
+- admin export requests fail
+
+Fix:
+
+```bash
+sudo apt-get install -y zip
+```
+
+#### DB path or permissions wrong
+
+Check:
+
+```bash
+ls -ld data backups
+ls -l data/forecaster.db
+```
+
+---
+
+## 4. Health Endpoint Returns 503
+
+### Meaning
+
+At least one of:
+
+- database check failed
+- required config is incomplete
+- integrity issues were detected
+
+### Example degraded response
+
 ```json
 {
-  "status": "ok",
-  "timestamp": "2025-12-01T20:18:53.198Z",
+  "status": "error",
   "checks": {
     "database": { "status": "ok" },
-    "environment": { "status": "ok" },
+    "environment": {
+      "status": "error",
+      "message": "Required configuration is incomplete"
+    },
     "data_integrity": { "status": "ok" }
   }
 }
 ```
 
-If status is `"error"`, check the `checks` object for specific failures.
+### Next steps
 
-### Application Status
-```bash
-pm2 status
-pm2 logs forecaster-arena --lines 50
-```
+1. inspect app logs for startup warnings
+2. verify `.env.local`
+3. verify DB access
+4. run `PRAGMA integrity_check;`
 
-### Database Status
-```bash
-sqlite3 data/forecaster.db "SELECT COUNT(*) FROM system_logs ORDER BY created_at DESC LIMIT 1;"
-```
+If you need the exact missing secrets, inspect local env/config directly instead
+of expecting `/api/health` to reveal them.
 
 ---
 
-## Common Issues
+## 5. Cron Jobs Are Not Running
 
-### 1. Application Won't Start
+### Symptoms
 
-**Symptoms:**
-- PM2 shows `errored` or `stopped` status
-- 502 Bad Gateway from Nginx
-- Health check returns 503
+- markets stop updating
+- no Sunday decisions are created
+- snapshot charts stay flat or stale
 
-**Diagnosis:**
+### Checks
+
 ```bash
-# Check PM2 logs
-pm2 logs forecaster-arena --lines 100
-
-# Check for port conflicts
-lsof -i :3000
-
-# Verify environment variables
-pm2 env forecaster-arena | grep -E "OPENROUTER|CRON_SECRET|ADMIN_PASSWORD"
-```
-
-**Common Causes & Fixes:**
-
-1. **Missing Environment Variables**
-   - Error: `OPENROUTER_API_KEY is not set`
-   - Fix: Add to `.env.local` and restart PM2
-
-2. **Database Permission Issues**
-   - Error: `EACCES: permission denied`
-   - Fix: `chmod 600 data/forecaster.db` or `chmod 640 data/forecaster.db`
-
-3. **Port Already in Use**
-   - Error: `EADDRINUSE: address already in use`
-   - Fix: `pm2 delete forecaster-arena` then restart, or change PORT in `.env.local`
-
-4. **Build Errors**
-   - Error: TypeScript or build errors
-   - Fix: `npm run build` locally first, check for errors
-
----
-
-### 2. Cron Jobs Not Running
-
-**Symptoms:**
-- Markets not syncing
-- No decisions being made on Sunday
-- No snapshots being taken
-
-**Diagnosis:**
-```bash
-# Check crontab
 crontab -l
+tail -n 100 /opt/forecasterarena/logs/sync.log
+tail -n 100 /opt/forecasterarena/logs/decisions.log
+tail -n 100 /opt/forecasterarena/logs/snapshots.log
+```
 
-# Check cron logs
-tail -f /home/forecaster/logs/sync.log
-tail -f /home/forecaster/logs/decisions.log
+### Manual auth test
 
-# Test cron endpoint manually
-curl -X POST http://localhost:3000/api/cron/sync-markets \
+```bash
+curl -i -X POST http://127.0.0.1:3010/api/cron/sync-markets \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-**Common Causes & Fixes:**
+### Common causes
 
-1. **Wrong CRON_SECRET**
-   - Symptom: 401 Unauthorized in cron logs
-   - Fix: Verify `CRON_SECRET` in `.env.local` matches crontab
+#### Wrong `CRON_SECRET`
 
-2. **Cron Not Scheduled**
-   - Symptom: No cron entries
-   - Fix: Add cron jobs (see `docs/DEPLOYMENT_CHECKLIST.md`)
+Symptom:
 
-3. **Timezone Issues**
-   - Symptom: Jobs run at wrong time
-   - Fix: `sudo timedatectl set-timezone UTC`
+- cron routes return `401`
 
-4. **Cron User Permissions**
-   - Symptom: Permission denied errors
-   - Fix: Ensure cron runs as `forecaster` user, not root
+Fix:
+
+- verify the secret in cron exactly matches the app runtime secret
+
+#### Host timezone confusion
+
+The schedule is written assuming UTC. Verify:
+
+```bash
+timedatectl
+```
+
+If you do not want the host on UTC, ensure the cron expressions account for the
+host timezone.
+
+#### Cron exists but points to wrong port
+
+If PM2 runs the app on `3010` but cron targets `3000`, jobs will silently miss
+the live service.
 
 ---
 
-### 3. Database Issues
+## 6. Weekly Decisions Did Not Complete
 
-**Symptoms:**
-- Database locked errors
-- Corrupted database
-- Missing data
+### Symptoms
 
-**Diagnosis:**
+- fewer than expected decisions for the weekly run
+- no new trades on Sunday
+- run-decisions route times out
+
+### Current runtime characteristics
+
+- route budget: 10 minutes
+- per-model network timeout: 40 seconds
+- malformed response retry limit: 1
+- OpenRouter transport retry default: 0
+- models processed sequentially
+
+### Checks
+
 ```bash
-# Check database integrity
-sqlite3 data/forecaster.db "PRAGMA integrity_check;"
-
-# Check database size
-ls -lh data/forecaster.db
-
-# Check for locks
-lsof data/forecaster.db
+sqlite3 /path/to/forecaster.db \
+  "SELECT cohort_id, agent_id, decision_week, action, error_message, decision_timestamp FROM decisions ORDER BY decision_timestamp DESC LIMIT 20;"
 ```
 
-**Common Causes & Fixes:**
+### What “in progress” means
 
-1. **Database Locked**
-   - Error: `database is locked`
-   - Fix: Check for multiple processes accessing DB, restart app
+The decision engine now claims a unique weekly decision row before making the
+model call. This prevents duplicate runs from double-executing the same agent.
 
-2. **Corrupted Database**
-   - Error: `database disk image is malformed`
-   - Fix: Restore from backup (see Backup/Restore section)
+If a run dies mid-flight:
 
-3. **Disk Space Full**
-   - Error: `no space left on device`
-   - Fix: `df -h` to check disk space, clean up old backups
+- an in-progress row may exist for that `(agent, cohort, week)`
+- stale in-progress rows are reclaimable by later runs
 
-4. **Permission Denied**
-   - Error: `EACCES: permission denied`
-   - Fix: `chmod 600 data/forecaster.db` and `chown forecaster:forecaster data/forecaster.db`
+### Recovery approach
+
+1. inspect the latest decision rows
+2. inspect PM2 logs for provider or timeout errors
+3. rerun `/api/cron/run-decisions` manually with valid auth if needed
+
+Because the row is claimed before execution, reruns should reuse the same
+decision record instead of inserting duplicates.
 
 ---
 
-### 4. API Errors
+## 7. A Market Is Resolved Upstream But Still Closed Locally
 
-**Symptoms:**
-- 500 Internal Server Error
-- API endpoints return errors
-- Health check fails
+### This can be expected
 
-**Diagnosis:**
+The system now intentionally leaves a market locally `closed` if any position
+settlement fails during resolution processing.
+
+Why:
+
+- marking it `resolved` too early could strand open positions permanently
+- leaving it `closed` allows the next resolution pass to retry settlement
+
+### Checks
+
 ```bash
-# Check application logs
-pm2 logs forecaster-arena --err
-
-# Check system logs in database
-sqlite3 data/forecaster.db \
-  "SELECT * FROM system_logs WHERE severity='error' ORDER BY created_at DESC LIMIT 10;"
-
-# Test health endpoint
-curl https://yourdomain.com/api/health | jq
+sqlite3 /path/to/forecaster.db \
+  "SELECT id, polymarket_id, status, resolution_outcome, resolved_at FROM markets WHERE status='closed' ORDER BY close_date DESC LIMIT 20;"
 ```
 
-**Common Causes & Fixes:**
+Then inspect recent error logs:
 
-1. **Database Connection Failed**
-   - Error: `SQLITE_CANTOPEN`
-   - Fix: Check database path, permissions, disk space
-
-2. **Missing Environment Variables**
-   - Error: `OPENROUTER_API_KEY is not set`
-   - Fix: Add to `.env.local`, restart PM2
-
-3. **External API Failures**
-   - Error: `Polymarket API error` or `OpenRouter API error`
-   - Fix: Check API status, verify API keys, check rate limits
-
----
-
-### 5. Nginx Errors
-
-**Symptoms:**
-- 502 Bad Gateway
-- SSL certificate errors
-- Connection refused
-
-**Diagnosis:**
 ```bash
-# Check Nginx error logs
-sudo tail -f /var/log/nginx/error.log
-
-# Test Nginx config
-sudo nginx -t
-
-# Check if app is running
-curl http://localhost:3000/api/health
-```
-
-**Common Causes & Fixes:**
-
-1. **App Not Running**
-   - Error: `502 Bad Gateway`
-   - Fix: `pm2 restart forecaster-arena`
-
-2. **SSL Certificate Expired**
-   - Error: `SSL certificate problem`
-   - Fix: `sudo certbot renew`
-
-3. **Nginx Config Error**
-   - Error: `nginx: configuration file test failed`
-   - Fix: Check `/etc/nginx/sites-available/forecasterarena` syntax
-
----
-
-### 6. Market Sync Issues
-
-**Symptoms:**
-- Markets not updating
-- Old market data
-- Missing markets
-
-**Diagnosis:**
-```bash
-# Check last sync time
-sqlite3 data/forecaster.db \
-  "SELECT MAX(last_updated_at) FROM markets;"
-
-# Check sync logs
-tail -f /home/forecaster/logs/sync.log
-
-# Manually trigger sync
-curl -X POST http://localhost:3000/api/cron/sync-markets \
-  -H "Authorization: Bearer YOUR_CRON_SECRET"
-```
-
-**Common Causes & Fixes:**
-
-1. **Polymarket API Down**
-   - Error: `Polymarket API error: 503`
-   - Fix: Wait and retry, check Polymarket status
-
-2. **Rate Limiting**
-   - Error: `429 Too Many Requests`
-   - Fix: Add delays between requests in `lib/polymarket/client.ts`
-
-3. **Network Issues**
-   - Error: `ECONNREFUSED` or timeout
-   - Fix: Check server internet connection, firewall rules
-
----
-
-### 7. Decision Making Issues
-
-**Symptoms:**
-- No decisions on Sunday
-- LLM errors in decisions
-- Missing decisions
-
-**Diagnosis:**
-```bash
-# Check recent decisions
-sqlite3 data/forecaster.db \
-  "SELECT COUNT(*) FROM decisions WHERE decision_timestamp > datetime('now', '-7 days');"
-
-# Check for errors
-sqlite3 data/forecaster.db \
-  "SELECT * FROM decisions WHERE action='ERROR' ORDER BY decision_timestamp DESC LIMIT 10;"
-
-# Check OpenRouter API key
-grep OPENROUTER_API_KEY .env.local
-```
-
-**Common Causes & Fixes:**
-
-1. **OpenRouter API Key Invalid**
-   - Error: `401 Unauthorized` in decision logs
-   - Fix: Verify API key, check OpenRouter dashboard
-
-2. **Model ID Changed**
-   - Error: `Model not found` or `400 Bad Request`
-   - Fix: Check `lib/constants.ts` for correct model IDs
-
-3. **Rate Limiting**
-   - Error: `429 Too Many Requests`
-   - Fix: Add delays between LLM calls, check OpenRouter limits
-
-4. **Malformed Responses**
-   - Error: Decisions marked as `ERROR`
-   - Fix: Check `decisions` table for `error_message`, review prompts
-
----
-
-## Backup & Restore
-
-### Creating a Backup
-
-**Manual Backup:**
-```bash
-curl -X POST http://localhost:3000/api/cron/backup \
-  -H "Authorization: Bearer YOUR_CRON_SECRET"
-```
-
-**Manual File Copy:**
-```bash
-cp data/forecaster.db backups/forecaster-manual-$(date +%Y%m%d-%H%M%S).db
-```
-
-### Restoring from Backup
-
-**Step 1: Stop Application**
-```bash
-pm2 stop forecaster-arena
-```
-
-**Step 2: Backup Current Database**
-```bash
-cp data/forecaster.db data/forecaster.db.broken-$(date +%Y%m%d-%H%M%S)
-```
-
-**Step 3: Restore Backup**
-```bash
-cp backups/forecaster-YYYY-MM-DDTHH-MM-SS.db data/forecaster.db
-chmod 600 data/forecaster.db
-chown forecaster:forecaster data/forecaster.db
-```
-
-**Step 4: Verify Integrity**
-```bash
-sqlite3 data/forecaster.db "PRAGMA integrity_check;"
-```
-
-**Step 5: Restart Application**
-```bash
-pm2 start forecaster-arena
+sqlite3 /path/to/forecaster.db \
+  "SELECT event_type, event_data, created_at FROM system_logs WHERE severity='error' ORDER BY created_at DESC LIMIT 20;"
 ```
 
 ---
 
-## Monitoring & Alerts
+## 8. Duplicate Weekly Cohorts or Decisions
 
-### Key Metrics to Monitor
+### Expected current behavior
 
-1. **Application Health**
-   - Health check endpoint status
-   - PM2 process status
-   - Response times
+The current code enforces uniqueness for:
 
-2. **Database Health**
-   - Database size
-   - Table row counts
-   - Integrity checks
+- one cohort per normalized weekly `started_at`
+- one decision per `(agent_id, cohort_id, decision_week)`
 
-3. **Cron Jobs**
-   - Last execution time
-   - Success/failure rates
-   - Execution duration
+### If a uniqueness error appears
 
-4. **API Usage**
-   - OpenRouter API costs
-   - Request success rates
-   - Rate limit status
+It usually means historical DB state predates the current constraints or was
+manually modified.
 
-### Setting Up Alerts
+Investigate:
 
-**Health Check Monitoring:**
 ```bash
-# Add to cron (every 5 minutes)
-*/5 * * * * curl -f https://yourdomain.com/api/health || echo "Health check failed" | mail -s "Alert" admin@example.com
+sqlite3 /path/to/forecaster.db \
+  "SELECT started_at, COUNT(*) FROM cohorts GROUP BY started_at HAVING COUNT(*) > 1;"
+
+sqlite3 /path/to/forecaster.db \
+  "SELECT agent_id, cohort_id, decision_week, COUNT(*) FROM decisions GROUP BY agent_id, cohort_id, decision_week HAVING COUNT(*) > 1;"
 ```
 
-**PM2 Monitoring:**
-```bash
-# PM2 monitoring (built-in)
-pm2 install pm2-logrotate
-pm2 set pm2-logrotate:max_size 10M
-pm2 set pm2-logrotate:retain 7
-```
+Resolve duplicates before continuing normal operation.
 
 ---
 
-## Recovery Procedures
+## 9. Export Fails
 
-### Complete System Recovery
+### Symptoms
 
-**If everything fails:**
+- admin export request returns `500`
+- archive is not downloadable
+- export succeeds for tiny windows but fails for larger ones
 
-1. **Stop all services**
-   ```bash
-   pm2 stop all
-   ```
+### Current export limits
 
-2. **Restore database from backup**
-   ```bash
-   # Find latest backup
-   ls -lt backups/ | head -2
-   
-   # Restore
-   cp backups/forecaster-LATEST.db data/forecaster.db
-   ```
+- requires authenticated admin session
+- max date window: 7 days
+- max rows per table: 50,000
+- cleanup window: about 24 hours
 
-3. **Verify environment**
-   ```bash
-   cat .env.local
-   ```
+### Checks
 
-4. **Rebuild application**
-   ```bash
-   npm run build
-   ```
+```bash
+ls -l backups/exports
+which zip
+```
 
-5. **Restart services**
-   ```bash
-   pm2 restart forecaster-arena
-   ```
+### Common causes
 
-### Database Corruption Recovery
+#### Missing `zip`
 
-**If database is corrupted:**
+Install it:
 
-1. **Check integrity**
-   ```bash
-   sqlite3 data/forecaster.db "PRAGMA integrity_check;"
-   ```
+```bash
+sudo apt-get install -y zip
+```
 
-2. **If corrupted, restore from backup**
-   ```bash
-   pm2 stop forecaster-arena
-   cp backups/forecaster-LATEST.db data/forecaster.db
-   pm2 start forecaster-arena
-   ```
+#### Window too large
 
-3. **If no backup, attempt repair**
-   ```bash
-   sqlite3 data/forecaster.db ".recover" | sqlite3 data/forecaster-recovered.db
-   mv data/forecaster-recovered.db data/forecaster.db
-   ```
+The route rejects overly large requests by design. Narrow the date range or
+request fewer tables.
+
+#### Export expired
+
+Archives are cleaned up automatically, so a previously issued download URL may
+return `404` after cleanup.
 
 ---
 
-## Performance Issues
+## 10. Charts Are Empty or Misleading
 
-### Slow API Responses
+### Home page
 
-**Diagnosis:**
+The homepage now distinguishes:
+
+- `Live Benchmark`
+- `Synced Preview`
+- `Awaiting First Cohort`
+
+If the site shows an awaiting/synced preview state, check whether:
+
+- any cohorts exist
+- any markets exist
+- snapshots exist
+
+### Performance API
+
+Check:
+
 ```bash
-# Check database size
-du -h data/forecaster.db
-
-# Check query performance
-sqlite3 data/forecaster.db "EXPLAIN QUERY PLAN SELECT * FROM decisions WHERE agent_id='...';"
+curl -s "https://yourdomain.example/api/performance-data?range=1M" | jq
 ```
 
-**Fixes:**
-- Ensure all indexes exist (check `lib/db/schema.ts`)
-- Vacuum database: `sqlite3 data/forecaster.db "VACUUM;"`
-- Check for N+1 queries in code
+Supported ranges:
 
-### High Memory Usage
+- `10M`
+- `1H`
+- `1D`
+- `1W`
+- `1M`
+- `3M`
+- `ALL`
 
-**Diagnosis:**
-```bash
-pm2 monit
-free -h
-```
+If the response is empty, the likely causes are:
 
-**Fixes:**
-- Restart PM2: `pm2 restart forecaster-arena`
-- Check for memory leaks in logs
-- Increase server RAM if needed
+- no snapshots yet
+- snapshots outside the requested range
+- wrong `cohort_id`
 
 ---
 
-## Log Analysis
+## 11. Markets Page Looks Empty
 
-### Viewing System Logs
+Check the underlying API:
 
-**Recent Errors:**
 ```bash
-sqlite3 data/forecaster.db \
-  "SELECT * FROM system_logs WHERE severity='error' ORDER BY created_at DESC LIMIT 20;"
+curl -s "https://yourdomain.example/api/markets?limit=1" | jq
 ```
 
-**All Logs by Type:**
-```bash
-sqlite3 data/forecaster.db \
-  "SELECT event_type, COUNT(*) as count FROM system_logs GROUP BY event_type ORDER BY count DESC;"
-```
+Look at:
 
-**PM2 Logs:**
-```bash
-pm2 logs forecaster-arena --lines 100 --err
-```
+- `total`
+- `stats.total_markets`
+- `stats.active_markets`
+
+If these are zero:
+
+- market sync has not run yet
+- or sync is failing
+
+If totals are non-zero but the UI still looks sparse, inspect filters:
+
+- `status`
+- `category`
+- `search`
+- `cohort_bets`
 
 ---
 
-## Getting Help
+## 12. Database Integrity or Locking Problems
 
-### Information to Collect
+### Checks
 
-When reporting issues, include:
+```bash
+sqlite3 /path/to/forecaster.db "PRAGMA integrity_check;"
+lsof /path/to/forecaster.db
+df -h
+```
 
-1. **Error Messages**
-   - PM2 logs: `pm2 logs forecaster-arena --lines 100`
-   - System logs: `sqlite3 data/forecaster.db "SELECT * FROM system_logs WHERE severity='error' ORDER BY created_at DESC LIMIT 10;"`
+### Common causes
 
-2. **System Status**
-   - Health check: `curl https://yourdomain.com/api/health`
-   - PM2 status: `pm2 status`
-   - Database size: `ls -lh data/forecaster.db`
+- disk full
+- wrong permissions
+- unexpected extra process touching the DB
 
-3. **Configuration**
-   - Environment variables (without secrets): `env | grep -E "NODE_ENV|DATABASE_PATH|BACKUP_PATH"`
-   - Cron jobs: `crontab -l`
+### Recovery
 
-### Support Channels
+If integrity fails:
 
-- GitHub Issues: https://github.com/setrf/forecasterarena/issues
-- Documentation: `docs/` directory
-- Health Check: `/api/health` endpoint
+1. stop the app
+2. back up the broken DB file
+3. restore the latest good backup
+4. re-run integrity and health checks
 
 ---
 
-## Prevention
+## 13. Recommended Escalation Order
 
-### Regular Maintenance
+When something is wrong:
 
-**Weekly:**
-- Check backup directory size
-- Review error logs
-- Verify cron jobs are running
-
-**Monthly:**
-- Review database size
-- Check disk space
-- Review API costs
-- Test backup restoration
-
-**Quarterly:**
-- Review and update dependencies
-- Security audit
-- Performance optimization review
+1. check PM2 process health
+2. hit `/api/health`
+3. inspect app logs
+4. inspect DB integrity
+5. inspect `system_logs`
+6. manually hit the failing endpoint with the expected auth
+7. only then restart cron/app services if the root cause still points there
 

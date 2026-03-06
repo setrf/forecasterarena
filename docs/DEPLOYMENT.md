@@ -1,140 +1,155 @@
 # Deployment Guide
 
-Step-by-step guide for deploying Forecaster Arena to a DigitalOcean VPS.
+This guide documents a production-style deployment of Forecaster Arena on a
+single Linux host. It is intentionally opinionated around the current codebase:
+
+- Next.js 14 application
+- SQLite primary database
+- PM2 process manager
+- Nginx reverse proxy
+- cron-triggered internal endpoints
+
+The document assumes you want a durable single-node deployment rather than a
+container-orchestrated multi-node system.
 
 ---
 
-## Prerequisites
+## 1. Deployment Model
 
-- DigitalOcean account
-- Domain name (optional but recommended)
-- OpenRouter API key
+Forecaster Arena is currently designed for:
 
----
+- one application server
+- one SQLite database file on local disk
+- one background scheduler source (cron)
 
-## 1. Create Droplet
-
-1. Log into DigitalOcean
-2. Create → Droplets
-3. Choose:
-   - **Image**: Ubuntu 24.04 LTS
-   - **Size**: Basic, 2GB RAM / 1 CPU minimum
-   - **Datacenter**: Choose closest to you
-   - **Authentication**: SSH keys (recommended)
+This is the architecture the code supports most directly today. If you plan to
+deploy multiple app instances behind a load balancer, you should revisit the
+database and scheduler assumptions first.
 
 ---
 
-## 2. Initial Server Setup
+## 2. Prerequisites
 
-SSH into your droplet:
+You need:
 
-```bash
-ssh root@your-droplet-ip
-```
+- a Linux VPS or dedicated host
+- Node.js 20+
+- `git`
+- `build-essential` or equivalent native build tooling
+- `zip` (required for admin exports)
+- a valid OpenRouter API key
+- TLS termination via Nginx or another reverse proxy
 
-Update packages:
+Recommended minimum host shape:
 
-```bash
-apt update && apt upgrade -y
-```
+- 2 GB RAM
+- 1 vCPU
+- SSD-backed disk
 
-Install Node.js 20:
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
-```
-
-Install required packages:
-
-```bash
-apt install -y git build-essential
-```
-
-Create app user:
-
-```bash
-adduser --disabled-password forecaster
-usermod -aG sudo forecaster
-```
+For longer benchmark operation and frequent exports/backups, 4 GB RAM and more
+disk headroom are preferable.
 
 ---
 
-## 3. Clone and Setup Project
+## 3. Required Environment Variables
 
-Switch to app user:
-
-```bash
-su - forecaster
-```
-
-Clone repository:
-
-```bash
-git clone https://github.com/yourusername/forecasterarena.git
-cd forecasterarena
-```
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Create environment file:
-
-```bash
-cp .env.example .env.local
-nano .env.local
-```
-
-Fill in your values:
+Create `.env.local` with at least:
 
 ```env
 OPENROUTER_API_KEY=sk-or-...
-CRON_SECRET=your-random-secret
-ADMIN_PASSWORD=your-secure-password
-NEXT_PUBLIC_SITE_URL=https://yourdomain.com
+CRON_SECRET=replace-with-long-random-secret
+ADMIN_PASSWORD=replace-with-strong-password
+NEXT_PUBLIC_SITE_URL=https://your-domain.example
+NEXT_PUBLIC_GITHUB_URL=https://github.com/setrf/forecasterarena
 ```
 
-Build the application:
+Optional variables:
 
-```bash
-npm run build
+```env
+DATABASE_PATH=/opt/forecasterarena/data/forecaster.db
+BACKUP_PATH=/opt/forecasterarena/backups
 ```
+
+Notes:
+
+- In production, missing `CRON_SECRET` or `ADMIN_PASSWORD` fail closed.
+- The build/start path logs warnings when required secrets are missing.
+- The public `/api/health` endpoint now redacts exact missing secret names.
 
 ---
 
-## 4. Setup PM2 Process Manager
+## 4. Build and Release Flow
+
+Recommended release flow on the server:
+
+```bash
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+npm ci
+npm run build
+npm run typecheck
+```
+
+Important implementation detail:
+
+- `tsconfig.json` includes `.next/types/**/*.ts`
+- `npm run typecheck` should therefore be run after a successful `npm run build`
+  so Next’s generated route/page type files exist
+
+If you run typecheck before build on a fresh checkout, TypeScript may fail on
+missing `.next/types` files even when source code is valid.
+
+---
+
+## 5. Suggested Filesystem Layout
+
+Example layout:
+
+```text
+/opt/forecasterarena/
+  app/                 # git checkout
+  data/                # sqlite database
+  backups/             # sqlite backups + exports
+  logs/                # PM2 / cron logs
+```
+
+Permissions:
+
+- app directory readable by deploy user
+- `.env.local` set to `600`
+- database and backup directories writable by the runtime user
+
+---
+
+## 6. PM2 Setup
 
 Install PM2:
 
 ```bash
-sudo npm install -g pm2
+npm install -g pm2
 ```
 
-Create ecosystem file:
-
-```bash
-nano ecosystem.config.js
-```
+Example `ecosystem.config.js`:
 
 ```javascript
 module.exports = {
-  apps: [{
-    name: 'forecaster-arena',
-    script: 'npm',
-    args: 'start',
-    cwd: '/home/forecaster/forecasterarena',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3010
+  apps: [
+    {
+      name: 'forecaster-arena',
+      cwd: '/opt/forecasterarena/app',
+      script: 'npm',
+      args: 'start',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3010
+      }
     }
-  }]
+  ]
 };
 ```
 
-Start the application:
+Start and persist:
 
 ```bash
 pm2 start ecosystem.config.js
@@ -142,184 +157,222 @@ pm2 save
 pm2 startup
 ```
 
+Operational note:
+
+- `npm run start` serves the built app
+- if you rotate releases by symlink or directory swap, ensure PM2 `cwd` points
+  to the active build directory
+
 ---
 
-## 5. Setup Nginx Reverse Proxy
+## 7. Nginx Setup
 
-Install Nginx:
-
-```bash
-sudo apt install -y nginx
-```
-
-Create site configuration:
-
-```bash
-sudo nano /etc/nginx/sites-available/forecaster
-```
+Example reverse-proxy config:
 
 ```nginx
 server {
     listen 80;
-    server_name yourdomain.com www.yourdomain.com;
+    server_name your-domain.example;
 
     location / {
-        proxy_pass http://localhost:3010;
+        proxy_pass http://127.0.0.1:3010;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 }
 ```
 
-Enable site:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/forecaster /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
+Then add TLS with Let’s Encrypt or your preferred certificate workflow.
 
 ---
 
-## 6. Setup SSL with Let's Encrypt
+## 8. Cron Schedule
 
-Install Certbot:
+The codebase exposes the following internal cron routes:
 
-```bash
-sudo apt install -y certbot python3-certbot-nginx
+- `/api/cron/sync-markets`
+- `/api/cron/start-cohort`
+- `/api/cron/run-decisions`
+- `/api/cron/check-resolutions`
+- `/api/cron/take-snapshots`
+- `/api/cron/backup`
+
+All require:
+
+```http
+Authorization: Bearer {CRON_SECRET}
 ```
 
-Get certificate:
-
-```bash
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
-```
-
----
-
-## 7. Setup Cron Jobs
-
-Edit crontab:
-
-```bash
-crontab -e
-```
-
-Add these entries:
+Recommended schedule:
 
 ```cron
-# Forecaster Arena Cron Jobs
-# All times in UTC
+# Sync markets every 5 minutes
+*/5 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/sync-markets \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/sync.log 2>&1
 
-# Sync markets from Polymarket - Every 5 minutes
-*/5 * * * * curl -s -X POST http://localhost:3010/api/cron/sync-markets -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/sync.log 2>&1
+# Start a new cohort every Sunday at 00:00 UTC
+0 0 * * 0 curl -s -X POST http://127.0.0.1:3010/api/cron/start-cohort \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/cohort.log 2>&1
 
-# Start new cohort every Sunday at 00:00 UTC
-0 0 * * 0 curl -s -X POST http://localhost:3010/api/cron/start-cohort -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/cohort.log 2>&1
+# Run weekly decisions every Sunday at 00:05 UTC
+5 0 * * 0 curl -s -X POST http://127.0.0.1:3010/api/cron/run-decisions \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/decisions.log 2>&1
 
-# Run agent decisions every Sunday at 00:05 UTC (runs after start-cohort)
-5 0 * * 0 curl -s -X POST http://localhost:3010/api/cron/run-decisions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/decisions.log 2>&1
+# Check resolutions hourly
+0 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/check-resolutions \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/resolutions.log 2>&1
 
-# Check market resolutions every hour
-0 * * * * curl -s -X POST http://localhost:3010/api/cron/check-resolutions -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/resolutions.log 2>&1
+# Take snapshots every 10 minutes
+*/10 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/take-snapshots \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/snapshots.log 2>&1
 
-# Take portfolio snapshots every 10 minutes
-*/10 * * * * curl -s -X POST http://localhost:3010/api/cron/take-snapshots -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/snapshots.log 2>&1
-
-# Database backup - Daily at 02:00 UTC
-0 2 * * * curl -s -X POST http://localhost:3010/api/cron/backup -H "Authorization: Bearer YOUR_CRON_SECRET" >> /home/forecaster/logs/backup.log 2>&1
+# Create a backup before the next weekly cycle (recommended: Saturday 23:00 UTC)
+0 23 * * 6 curl -s -X POST http://127.0.0.1:3010/api/cron/backup \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/backup.log 2>&1
 ```
 
-Create logs directory:
+Why this schedule works with the current code:
+
+- market sync runs frequently enough to keep the local market set fresh
+- start-cohort and run-decisions are ordered
+- decision execution is sequential, so giving it a dedicated weekly slot matters
+- snapshots are timestamp-based and intended for 10-minute cadence
+
+---
+
+## 9. Runtime Expectations
+
+### 9.1 Decision runtime budgeting
+
+The current decision route exports `maxDuration = 600`.
+
+Supporting constraints in code:
+
+- individual OpenRouter call timeout: `40s`
+- malformed-response retry limit inside decision parsing: `1`
+- OpenRouter transport retry default: `0`
+- agents are processed sequentially
+
+That budget was chosen so a normal seven-model run can finish within a
+10-minute serverless/route cap rather than allowing one single provider call to
+consume the entire window.
+
+### 9.2 Health semantics
+
+`/api/health` returns:
+
+- `200` when all checks are `ok`
+- `503` when one or more checks are degraded
+
+The payload is intentionally safe for public exposure:
+
+- exact missing secret names are redacted
+- raw DB exception text is redacted
+- integrity-check failures are summarized rather than dumped verbatim
+
+### 9.3 Export semantics
+
+Admin exports:
+
+- require an authenticated admin session
+- are capped to a 7-day window
+- are capped at 50,000 rows per table
+- are written to `backups/exports`
+- are automatically cleaned up after roughly 24 hours
+
+---
+
+## 10. Post-Deploy Verification
+
+After deploying, verify:
 
 ```bash
-mkdir -p /home/forecaster/logs
+curl -s http://127.0.0.1:3010/api/health | jq
+curl -s http://127.0.0.1:3010/api/leaderboard | jq '.updated_at'
+curl -s "http://127.0.0.1:3010/api/markets?limit=1" | jq '.stats'
+```
+
+Admin flow checks:
+
+- admin login succeeds with the configured password
+- `/api/admin/stats` returns `401` when unauthenticated
+- `/api/admin/export` creates and downloads an archive as expected
+
+Cron flow checks:
+
+- cron endpoints reject calls without valid bearer auth
+- sync-markets writes new timestamps/log entries
+- start-cohort is idempotent for the current week
+- run-decisions produces one decision row per agent/week
+
+Database checks:
+
+```bash
+sqlite3 /opt/forecasterarena/data/forecaster.db "PRAGMA integrity_check;"
+sqlite3 /opt/forecasterarena/data/forecaster.db "SELECT COUNT(*) FROM cohorts;"
+sqlite3 /opt/forecasterarena/data/forecaster.db "SELECT COUNT(*) FROM decisions;"
 ```
 
 ---
 
-## 8. Firewall Configuration
+## 11. Upgrade Procedure
+
+For a normal code upgrade:
 
 ```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
-sudo ufw enable
-```
-
----
-
-## 9. Monitoring
-
-View PM2 logs:
-
-```bash
-pm2 logs
-```
-
-View Nginx logs:
-
-```bash
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
-```
-
-Check application status:
-
-```bash
-pm2 status
-```
-
----
-
-## 10. Updates
-
-To deploy updates:
-
-```bash
-cd /home/forecaster/forecasterarena
-git pull
-npm install
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+npm ci
 npm run build
+npm run typecheck
 pm2 restart forecaster-arena
 ```
 
+If the new build succeeds but runtime looks wrong:
+
+1. inspect PM2 logs
+2. hit `/api/health`
+3. verify `.env.local`
+4. verify cron auth still matches `CRON_SECRET`
+5. verify the database path still points to the intended file
+
 ---
 
-## Troubleshooting
+## 12. Rollback Procedure
 
-### Application won't start
+If a release must be rolled back:
 
-Check PM2 logs:
 ```bash
-pm2 logs forecaster-arena --lines 100
+git log --oneline -n 5
+git checkout <previous-known-good-commit>
+npm ci
+npm run build
+npm run typecheck
+pm2 restart forecaster-arena
 ```
 
-### Database issues
+If the problem is database corruption rather than code:
 
-Check file permissions:
-```bash
-ls -la data/
-```
+1. stop the app
+2. restore the latest valid SQLite backup
+3. restart
+4. re-run health and integrity checks
 
-### API errors
+---
 
-Check environment variables:
-```bash
-cat .env.local
-```
+## 13. Deployment Risks to Watch
 
-### Nginx 502 errors
-
-Verify app is running:
-```bash
-pm2 status
-curl http://localhost:3010
-```
-
-
+- Missing production secrets will not silently degrade; some routes will fail
+  closed and `/api/health` will return `503`
+- Because SQLite is the source of truth, disk health and backup discipline
+  matter
+- Because decision runs are sequential, provider latency spikes can still affect
+  Sunday completion time even with the current timeout budget
+- Because cron is the scheduler, host timezone drift or missing jobs will show
+  up quickly as stale sync/snapshot data

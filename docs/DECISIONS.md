@@ -1,314 +1,435 @@
 # Design Decisions Log
 
-This document records all significant design decisions made for Forecaster Arena, including the rationale and alternatives considered.
+This document records the major product, methodology, and implementation
+decisions for Forecaster Arena. It is intended to answer three questions:
+
+1. What did the project choose to do?
+2. Why was that choice made?
+3. What constraints does that choice impose on operations and future changes?
+
+This file is a living design-history document. Historical entries remain in
+place even when later implementation details evolve, but entries should reflect
+the current production code unless explicitly marked as superseded.
+
+---
+
+## Current System Snapshot
+
+As of March 6, 2026, the production codebase currently implements:
+
+- Weekly cohort creation at Sunday 00:00 UTC
+- One agent per active model per cohort
+- Top-500 market selection by Polymarket volume
+- Sequential decision execution per cohort to reduce provider contention
+- Timestamped portfolio snapshots (10-minute cadence)
+- Public, redacted health reporting
+- Admin-only bounded CSV+ZIP exports
+- Database-level uniqueness for:
+  - one model per cohort (`agents`)
+  - one weekly cohort start timestamp (`cohorts.started_at`)
+  - one decision per agent/cohort/week (`decisions`)
+
+The active model roster in code is:
+
+1. GPT-5.2
+2. Gemini 3 Pro
+3. Grok 4.1
+4. Claude Opus 4.5
+5. DeepSeek V3.2
+6. Kimi K2
+7. Qwen 3
 
 ---
 
 ## Decision Log
 
-### D001: Cohort System Design
+### D001: Weekly Cohort System
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: The benchmark runs as independent weekly cohorts rather than as one
+  continuous portfolio.
 
-**Decision**: Implement a weekly cohort system where each cohort runs independently until all bets resolve.
+Rationale:
 
-**Rationale**:
-- Multiple cohorts provide statistical power for comparing model performance
-- Independent cohorts allow analysis across different market conditions
-- No artificial time limit ensures accurate final scoring
-- Weekly cadence balances data collection with meaningful market movements
+- Multiple cohorts provide repeated samples across different market regimes.
+- Weekly cohort boundaries are easy to explain publicly and audit internally.
+- A cohort can be analyzed independently without mixing capital paths.
+- Cohorts that run until all positions resolve avoid arbitrary finalization.
 
-**Alternatives Considered**:
-1. Single continuous competition - Rejected: harder to analyze statistically
-2. Fixed 90-day cohorts - Rejected: would require mark-to-market estimation for unresolved bets
-3. Monthly cohorts - Rejected: too infrequent for timely data collection
+Operational implications:
 
----
-
-### D002: Starting Balance
-
-**Date**: 2024  
-**Status**: Approved
-
-**Decision**: Each LLM starts with $10,000 virtual dollars per cohort.
-
-**Rationale**:
-- Round number for easy percentage calculations
-- Large enough to allow multiple meaningful bets
-- Small enough that bet sizing decisions matter
-
-**Alternatives Considered**:
-1. $1,000 - Rejected: too constraining with $50 minimum bet
-2. $100,000 - Rejected: makes individual bet outcomes less meaningful
+- Cohort IDs are the primary boundary for most analytics and exports.
+- Leaderboards can be aggregated across cohorts or inspected per cohort.
+- Operations need clear logic for “current week” detection and deduplication.
 
 ---
 
-### D003: Market Selection (Top 500 by Volume)
+### D002: One Agent Per Model Per Cohort
 
-**Date**: 2024
-**Status**: Approved
+- Status: Active
+- Decision: Each active model has exactly one agent in each cohort.
 
-**Decision**: Show LLMs only the top 500 markets by trading volume.
+Rationale:
 
-**Rationale**:
-- Higher volume markets have more reliable prices
-- Limits context window usage
-- Focuses on most liquid/active markets
+- Keeps competition conditions symmetric.
+- Prevents duplication or weighting of one provider by extra agent instances.
+- Simplifies attribution in leaderboards, charts, and trade history.
 
-**Alternatives Considered**:
-1. All markets - Rejected: too many for context window, includes illiquid markets
-2. Curated categories - Rejected: introduces selection bias
-3. Top 50 - Rejected: may miss good opportunities
+Implementation constraints:
 
----
-
-### D004: Betting Constraints
-
-**Date**: 2024  
-**Status**: Approved
-
-**Decision**: 
-- Minimum bet: $50
-- Maximum bet: 25% of cash balance
-- One position per market per side
-
-**Rationale**:
-- Minimum prevents noise from trivial bets
-- Maximum prevents all-in strategies, encourages portfolio thinking
-- One position simplifies tracking and prevents position manipulation
+- Enforced by `UNIQUE(cohort_id, model_id)` in `agents`.
+- Agent creation is safe to rerun because inserts use `INSERT OR IGNORE`.
 
 ---
 
-### D005: Temperature 0
+### D003: $10,000 Starting Balance
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: Each agent starts with `$10,000` in virtual cash.
 
-**Decision**: Use temperature 0 for all LLM API calls.
+Rationale:
 
-**Rationale**:
-- Ensures reproducibility
-- Same input should produce same output
-- Reduces noise in performance measurement
-- Allows verification of results
+- Easy to reason about for percentages and dashboard display.
+- Large enough to allow portfolio construction across multiple weeks.
+- Small enough that position sizing remains meaningful.
 
-**Alternatives Considered**:
-1. Temperature 0.7 - Rejected: introduces randomness, harder to reproduce
-2. Per-model optimal temperature - Rejected: unfair comparison
+Related constraints:
+
+- Minimum bet is `$50`
+- Maximum single bet is `25%` of current cash balance
 
 ---
 
-### D006: Brier Score from Bet Size
+### D004: Top-500 Market Selection
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: LLMs see the top 500 markets by trading volume.
 
-**Decision**: Derive implied probability from bet size using linear formula: confidence = bet_amount / max_possible_bet
+Rationale:
 
-**Rationale**:
-- Bet size is a natural expression of confidence
-- Linear relationship is simple and interpretable
-- Maximum bet = 100% confidence makes intuitive sense
+- Volume acts as a rough liquidity filter.
+- Keeping the selection bounded controls prompt size and cost.
+- A global ranking avoids manual category curation bias.
 
-**Formula**:
+Trade-offs:
+
+- Models do not see the full Polymarket universe.
+- Lower-volume niche markets are intentionally excluded.
+
+---
+
+### D005: Deterministic Prompting
+
+- Status: Active
+- Decision: All model calls use temperature `0`.
+
+Rationale:
+
+- Makes weekly decisions reproducible given identical inputs.
+- Reduces evaluation noise attributable to sampling randomness.
+- Makes debugging malformed responses and regression testing easier.
+
+---
+
+### D006: Decision Action Space = BET / SELL / HOLD
+
+- Status: Active
+- Decision: Models are limited to three high-level actions:
+  `BET`, `SELL`, and `HOLD`.
+
+Rationale:
+
+- Keeps parsing strict and auditable.
+- Maps cleanly to paper-trading portfolio operations.
+- Avoids introducing hidden intermediate semantics that are hard to score.
+
+Implementation note:
+
+- Malformed or invalid responses can fall back to a synthetic `HOLD`.
+- Trade execution may still fail even when the parsed action is valid.
+
+---
+
+### D007: Confidence Derived From Bet Size
+
+- Status: Active
+- Decision: Brier scoring uses implied confidence derived from bet size rather
+  than a separately requested probability field.
+
+Rationale:
+
+- Forces sizing and confidence to stay coupled.
+- Keeps the protocol smaller and easier to audit.
+- Makes the benchmark evaluate practical forecasting decisions, not only
+  verbalized probabilities.
+
+Formula:
+
+```text
+max_possible_bet = cash_balance * 0.25
+implied_confidence = bet_amount / max_possible_bet
 ```
-max_bet = cash_balance * 0.25
-implied_confidence = min(bet_amount / max_bet, 1.0)
-```
-
-**Alternatives Considered**:
-1. Ask LLM for explicit probability - Rejected: adds complexity, may not correlate with bet size
-2. Kelly criterion-based - Rejected: requires assumptions about edge
-3. Non-linear mapping - Rejected: harder to interpret
 
 ---
 
-### D007: Weekly Decision Frequency
+### D008: No Refills Within a Cohort
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: Agents are not recapitalized mid-cohort.
 
-**Decision**: LLMs make decisions once per week (Sunday 00:00 UTC).
+Rationale:
 
-**Rationale**:
-- Balances API costs with data collection
-- Allows meaningful market movements between decisions
-- Sunday midnight provides consistent global timing
-
-**Alternatives Considered**:
-1. Daily - Rejected: expensive, markets don't move that fast
-2. Every 3 minutes (like previous version) - Rejected: too frequent, expensive
-3. Monthly - Rejected: too infrequent, misses opportunities
+- Preserves the consequences of poor position sizing and liquidation choices.
+- Makes risk management part of benchmark performance.
+- Prevents artificial “reset” strategies.
 
 ---
 
-### D008: No Refills Policy
+### D009: SQLite as the Single-Node Source of Truth
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: SQLite is used as the operational database.
 
-**Decision**: If an LLM reaches $0, they remain bankrupt for that cohort.
+Rationale:
 
-**Rationale**:
-- Creates meaningful consequences for bad decisions
-- Tests risk management ability
-- Prevents gaming through intentional bankruptcy and restart
+- The system is single-node and write volume is moderate.
+- Backups are simple, fast, and operationally cheap.
+- Shipping a self-contained research benchmark matters more than horizontal
+  scaling complexity.
 
----
+Trade-offs:
 
-### D009: SQLite Database
-
-**Date**: 2024  
-**Status**: Approved
-
-**Decision**: Use SQLite with better-sqlite3 for data storage.
-
-**Rationale**:
-- Self-contained, no external dependencies
-- Excellent performance for read-heavy workloads
-- Easy backup (single file copy)
-- Suitable for single-server deployment
-
-**Alternatives Considered**:
-1. PostgreSQL - Rejected: overkill for single-server, requires separate process
-2. MongoDB - Rejected: schema-less not ideal for structured data
-3. In-memory only - Rejected: need persistence
+- Concurrency must be handled carefully in application code.
+- Multi-node execution would require a different storage strategy.
 
 ---
 
-### D010: OpenRouter for LLM Access
+### D010: OpenRouter as the Unified Model Gateway
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: All models are accessed through OpenRouter rather than through
+  provider-specific integrations.
 
-**Decision**: Use OpenRouter API for unified access to all LLM models.
+Rationale:
 
-**Rationale**:
-- Single API for all models
-- Consistent request/response format
-- Automatic fallbacks and rate limiting
-- Simplifies billing and monitoring
-
----
-
-### D011: Full Prompt Storage
-
-**Date**: 2024  
-**Status**: Approved
-
-**Decision**: Store complete system and user prompts for every decision.
-
-**Rationale**:
-- Critical for reproducibility
-- Enables analysis of prompt effectiveness
-- Allows verification of fair treatment
-- Supports academic publication
-
-**Trade-off**: Increased storage requirements (acceptable)
+- One transport surface for all participating models.
+- Simplifies usage accounting and operational support.
+- Reduces the number of secrets and SDK behaviors the system must manage.
 
 ---
 
-### D012: Public Methodology Documentation
+### D011: Full Prompt and Response Retention
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: The system stores the full prompts and model responses for each
+  decision row.
 
-**Decision**: Make complete prompts and methodology publicly available.
+Rationale:
 
-**Rationale**:
-- Transparency enables academic scrutiny
-- Allows others to reproduce results
-- Builds trust in the benchmark
-- Aligns with open science principles
+- Reproducibility is a core benchmark requirement.
+- Prompt-level auditing is necessary for fair comparisons.
+- Research users need more than aggregate performance figures.
 
-**Trade-off**: LLMs could potentially be trained on the prompts (accepted as inevitable)
+Operational implications:
 
----
-
-### D013: View-Only Data Access
-
-**Date**: 2024  
-**Status**: Approved
-
-**Decision**: Data is viewable on website but not bulk-downloadable.
-
-**Rationale**:
-- Protects against data scraping
-- Maintains control over data usage
-- Still allows visual inspection
-- Bulk access available on request for researchers
+- Decision exports can optionally include prompts.
+- Storage footprint is intentionally higher than a metrics-only system.
 
 ---
 
-### D014: Versioned Methodology
+### D012: Timestamped Portfolio Snapshots
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: Portfolio snapshots are stored by timestamp, not by calendar date.
 
-**Decision**: Methodology is versioned (v1, v2, etc.) with each cohort tied to a specific version.
+Rationale:
 
-**Rationale**:
-- Enables methodology evolution without invalidating historical data
-- Clear changelog of what changed
-- Standard practice in academic benchmarks
+- The public charts operate over intraday ranges (`10M`, `1H`, `1D`) as well as
+  longer windows.
+- A daily-only snapshot model cannot support accurate portfolio curves.
+- Timestamped snapshots preserve operational history for debugging and audits.
 
----
+Implementation constraints:
 
-### D015: 7 Initial Models
-
-**Date**: 2024  
-**Status**: Approved
-
-**Decision**: Start with 7 models: GPT-5.1, Gemini 3 Pro, Grok 4, Claude Opus 4.5, DeepSeek V3, Kimi K2, Qwen 3.
-
-**Rationale**:
-- Covers major LLM providers
-- Mix of commercial and open-weight models
-- Manageable number for visualization
-- New models can be added to future cohorts
+- Snapshot uniqueness is `(agent_id, snapshot_timestamp)`.
+- Downstream docs and queries must use `snapshot_timestamp`, not `snapshot_date`.
 
 ---
 
-### D016: Retry Once on Malformed Response
+### D013: Sequential Weekly Decision Execution
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: Agents in a cohort are processed sequentially.
 
-**Decision**: If LLM returns unparseable response, retry once with clarifying prompt. If still fails, treat as HOLD.
+Rationale:
 
-**Rationale**:
-- Single retry handles transient issues
-- Doesn't penalize models too heavily for occasional parsing errors
-- HOLD is safe default that doesn't harm the model
+- Minimizes provider and gateway rate-limit contention.
+- Keeps logs and operational tracing easier to follow.
+- Reduces the blast radius of partial failures.
 
----
+Trade-offs:
 
-### D017: Multi-Outcome Market Support
-
-**Date**: 2024  
-**Status**: Approved
-
-**Decision**: Support both binary (YES/NO) and multi-outcome markets.
-
-**Rationale**:
-- Opens up more betting opportunities
-- Tests more complex forecasting ability
-- Brier score formula works for multi-outcome
+- End-to-end weekly runtime is longer than a parallel fan-out design.
+- Timeout budgeting must account for the full sequential run.
 
 ---
 
-### D018: Daily Portfolio Snapshots
+### D014: Database-Level Decision Idempotency
 
-**Date**: 2024  
-**Status**: Approved
+- Status: Active
+- Decision: One decision row per `(agent_id, cohort_id, decision_week)` is
+  enforced in the database, and weekly decision execution claims that row before
+  calling the model.
 
-**Decision**: Take portfolio snapshots daily for all agents.
+Rationale:
 
-**Rationale**:
-- Enables detailed performance charts
-- Allows analysis of performance over time
-- Captures mark-to-market values between decisions
+- Read-before-write checks alone are not safe under overlapping cron runs.
+- Duplicate decisions can double-spend cash and invalidate benchmark results.
+- Claiming the row before network I/O prevents two workers from executing the
+  same agent/week concurrently.
 
+Implementation details:
 
+- `decisions` has a unique index on `(agent_id, cohort_id, decision_week)`.
+- The engine writes an in-progress placeholder row, then finalizes it after the
+  model response.
+- Retryable zero-trade outcomes reuse the same row instead of inserting another.
+- Stale in-progress rows can be reclaimed after a timeout window.
+
+---
+
+### D015: Database-Level Weekly Cohort Uniqueness
+
+- Status: Active
+- Decision: Weekly cohort creation is keyed by normalized UTC week start and is
+  uniqueness-constrained at the database layer.
+
+Rationale:
+
+- Cron drift or operator-triggered retries should not create two cohorts for the
+  same Sunday window.
+- A sequential `cohort_number` alone does not prevent duplicate weekly starts.
+
+Implementation details:
+
+- Week start is normalized to Sunday `00:00:00.000Z`.
+- `cohorts.started_at` is unique.
+- Cohort creation re-checks within an immediate transaction.
+
+---
+
+### D016: Resolve Markets Only After Successful Settlement
+
+- Status: Active
+- Decision: A market is marked locally resolved only after all position
+  settlements for that market complete successfully.
+
+Rationale:
+
+- Marking a market resolved too early can strand open positions permanently,
+  because later runs may skip it as already processed.
+- Settlement safety is more important than optimistic status transitions.
+
+Implementation details:
+
+- Resolution checks still detect an upstream resolved market first.
+- The system settles positions, records scoring, and only then updates the local
+  `markets.status = 'resolved'`.
+- Partial settlement failure leaves the market locally `closed`, making the next
+  resolution pass retryable.
+
+---
+
+### D017: Redacted Public Health Reporting
+
+- Status: Active
+- Decision: The public health endpoint reports subsystem status without
+  disclosing exact missing secret names or raw internal exception text.
+
+Rationale:
+
+- Health endpoints are useful operationally but are often internet-exposed.
+- Exact secret names and detailed exception text add low-value disclosure risk.
+- External monitors only need component-level health, not sensitive internals.
+
+Implementation notes:
+
+- `environment.message` now says configuration is incomplete instead of listing
+  variable names.
+- Database and integrity failures return generic labels such as
+  `Database unavailable` or `Integrity issues detected`.
+
+---
+
+### D018: Bounded, Admin-Only Exports
+
+- Status: Active
+- Decision: Admin exports are intentionally bounded by cohort, time window, and
+  per-table row caps, and are packaged without shell interpolation.
+
+Rationale:
+
+- Research exports should be available, but not as an unrestricted data dump.
+- Bounded exports keep server resource use predictable.
+- Shell-based ZIP command construction created avoidable injection risk.
+
+Implementation details:
+
+- Max export window: 7 days
+- Max rows per exported table: 50,000
+- Files are written to a temp directory, zipped with argv-based invocation, and
+  stored under `backups/exports`
+- Export archives are cleaned up after approximately 24 hours
+
+---
+
+### D019: Truthful Empty-State UX
+
+- Status: Active
+- Decision: The public UI should distinguish between:
+  - a live benchmark with real cohort data,
+  - a synced-but-not-yet-trading preview,
+  - and a system still awaiting the first cohort or market sync.
+
+Rationale:
+
+- Hardcoded “live” claims are misleading before data exists.
+- Research credibility depends on the UI accurately reflecting operational state.
+
+Implementation notes:
+
+- The home page status badge is runtime-aware.
+- The home page no longer hardcodes synced-market counts in empty states.
+- The models page still renders all seven competitors even before the first live
+  leaderboard exists.
+
+---
+
+## Superseded or Clarified Assumptions
+
+### S001: Daily Snapshots
+
+- Status: Superseded
+- Original assumption: portfolio snapshots were effectively daily.
+- Current reality: snapshots are timestamped and intended for 10-minute cadence.
+
+### S002: Health Endpoint as a Detailed Diagnostic Surface
+
+- Status: Clarified
+- Original assumption: public health responses could safely expose exact missing
+  secret names or raw database errors.
+- Current reality: health remains operationally useful, but intentionally
+  redacts sensitive implementation details.
+
+---
+
+## Future Decision Areas
+
+The following areas remain open for future design decisions:
+
+- Whether to move from sequential to queued/background decision execution
+- Whether to split public health and private diagnostics into separate endpoints
+- Whether to add first-class migrations rather than schema-on-start
+- Whether to support historical benchmark versions with model roster versioning
+- Whether to provide signed export URLs instead of session-gated downloads
 

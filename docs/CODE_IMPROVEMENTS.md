@@ -1,5 +1,9 @@
 # Pre-Deployment Code Improvements
 
+> Historical document: this file captures a pre-deployment improvement pass from
+> an earlier project state. It is not the authoritative description of current
+> implementation behavior. See `docs/README.md` for the current-reference docs.
+
 This document lists all code-level improvements made before deployment.
 
 ## ✅ Implemented Improvements
@@ -112,4 +116,3 @@ This document lists all code-level improvements made before deployment.
 - All system logs are preserved (no automatic deletion)
 - Error boundaries are optional but recommended
 - All changes are backward compatible
-

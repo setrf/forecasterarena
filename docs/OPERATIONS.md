@@ -1,532 +1,528 @@
-# Operations Runbook
+# Forecaster Arena Operations Runbook
 
-Day-to-day operational procedures for running Forecaster Arena in production.
+Last updated: 2026-03-06
+
+This runbook documents how to operate the application that exists in the repository today. It focuses on practical runtime procedures, verification steps, and failure handling.
 
 ---
 
-## Daily Operations
+## 1. Operational Assumptions
 
-### Morning Checks
+This repository assumes:
 
-**1. Health Check**
-```bash
-curl https://yourdomain.com/api/health | jq
+- a single deployed application instance,
+- a single SQLite database file,
+- externally scheduled cron calls,
+- no background worker queue,
+- no distributed rate limit,
+- paper-trading only.
+
+Because orchestration is route-driven, healthy operations depend on cron timing, environment configuration, and the SQLite file all being correct.
+
+---
+
+## 2. Required Environment
+
+Production should define all of the following:
+
+- `OPENROUTER_API_KEY`
+- `CRON_SECRET`
+- `ADMIN_PASSWORD`
+- `DATABASE_PATH` (optional override)
+- `BACKUP_PATH` (optional override)
+- `NEXT_PUBLIC_SITE_URL` (recommended)
+- `NEXT_PUBLIC_GITHUB_URL` (optional)
+
+Important current behavior:
+
+- If `CRON_SECRET` is missing in production, cron routes fail closed.
+- If `ADMIN_PASSWORD` is missing in production, admin login fails closed.
+- If `OPENROUTER_API_KEY` is missing in production, decision routes and model calls fail.
+- `GET /api/health` reports configuration incompleteness generically; it does not list missing secret names.
+
+---
+
+## 3. Recommended Cron Schedule
+
+The code does not contain its own scheduler. The currently intended cadence is:
+
+```cron
+# Sync top markets from Polymarket
+*/5 * * * * curl -s -X POST https://yourdomain.com/api/cron/sync-markets \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# Start the weekly cohort at Sunday 00:00 UTC
+0 0 * * 0 curl -s -X POST https://yourdomain.com/api/cron/start-cohort \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# Run model decisions after cohort creation
+5 0 * * 0 curl -s -X POST https://yourdomain.com/api/cron/run-decisions \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# Re-check closed markets for resolution
+0 * * * * curl -s -X POST https://yourdomain.com/api/cron/check-resolutions \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# Mark to market all active cohorts
+*/10 * * * * curl -s -X POST https://yourdomain.com/api/cron/take-snapshots \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# Create a database backup before the next weekly cycle
+0 23 * * 6 curl -s -X POST https://yourdomain.com/api/cron/backup \
+  -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Expected: `"status": "ok"`
+Why this schedule matters:
 
-**2. Application Status**
+- `run-decisions` assumes `start-cohort` has already executed or that the weekly cohort can still be bootstrapped.
+- `check-resolutions` only processes markets that are locally `closed`.
+- `take-snapshots` is most useful when run regularly; the database schema is timestamp-based, not day-based.
+
+---
+
+## 4. Daily Checks
+
+Run these at least once per day.
+
+### 4.1 Health Endpoint
+
+```bash
+curl -s https://yourdomain.com/api/health | jq
+```
+
+Healthy example:
+
+```json
+{
+  "status": "ok",
+  "checks": {
+    "database": { "status": "ok" },
+    "environment": { "status": "ok" },
+    "data_integrity": { "status": "ok" }
+  }
+}
+```
+
+Unhealthy example:
+
+```json
+{
+  "status": "error",
+  "checks": {
+    "database": { "status": "ok" },
+    "environment": {
+      "status": "error",
+      "message": "Required configuration is incomplete"
+    }
+  }
+}
+```
+
+Interpretation:
+
+- `database = error` means the app could not open or query SQLite.
+- `environment = error` means one or more required production settings are missing.
+- `data_integrity = error` means the lightweight integrity probe failed or detected an issue.
+
+### 4.2 Application Process Health
+
 ```bash
 pm2 status
+pm2 logs forecaster-arena --lines 100
 ```
 
-Expected: `online` status for `forecaster-arena`
+Expected:
 
-**3. Recent Errors**
+- the process is `online`,
+- no restart loop,
+- no repeated OpenRouter timeout or auth failures.
+
+### 4.3 Recent Errors
+
 ```bash
-sqlite3 data/forecaster.db \
-  "SELECT COUNT(*) FROM system_logs WHERE severity='error' AND created_at > datetime('now', '-24 hours');"
+sqlite3 data/forecaster.db "
+  SELECT severity, event_type, created_at
+  FROM system_logs
+  WHERE severity = 'error'
+  ORDER BY created_at DESC
+  LIMIT 50;
+"
 ```
 
-Expected: 0 or very few errors
+Pay attention to:
 
-**4. Last Market Sync**
+- `cohort_start_error`
+- `decisions_run_error`
+- `agent_decision_error`
+- `agent_decision_execution_failed`
+- `market_resolution_partial_failure`
+- `take_snapshots_error`
+- `market_sync_error`
+
+### 4.4 Market Freshness
+
 ```bash
-sqlite3 data/forecaster.db \
-  "SELECT MAX(last_updated_at) FROM markets;"
+sqlite3 data/forecaster.db "
+  SELECT MAX(last_updated_at) AS last_market_update,
+         COUNT(*) AS total_markets
+  FROM markets;
+"
 ```
 
-Expected: Within last 10 minutes (markets sync every 5 minutes)
+Interpretation:
+
+- If `last_market_update` is stale, `sync-markets` is not running or is failing.
+- If `total_markets` is zero in production, the public site will show empty-state copy instead of live benchmark copy.
 
 ---
 
-## Weekly Operations
+## 5. Weekly Checks
 
-### Sunday Morning (After Decision Run)
+Run these after the Sunday decision window.
 
-**1. Verify Decision Run**
+### 5.1 Cohort Existence
+
 ```bash
-# Check decisions made this week
-sqlite3 data/forecaster.db \
-  "SELECT COUNT(*) FROM decisions WHERE decision_timestamp > datetime('now', '-24 hours');"
+sqlite3 data/forecaster.db "
+  SELECT id, cohort_number, started_at, status
+  FROM cohorts
+  ORDER BY started_at DESC
+  LIMIT 3;
+"
 ```
 
-Expected: 7 decisions (one per model) if new cohort started
+Expected:
 
-**2. Check New Cohort**
+- one newly created weekly cohort,
+- `started_at` normalized to the week start,
+- no duplicate cohort rows for the same Sunday.
+
+### 5.2 Decision Coverage
+
 ```bash
-sqlite3 data/forecaster.db \
-  "SELECT * FROM cohorts ORDER BY started_at DESC LIMIT 1;"
+sqlite3 data/forecaster.db "
+  SELECT cohort_id, decision_week, COUNT(*) AS decisions
+  FROM decisions
+  WHERE decision_timestamp > datetime('now', '-24 hours')
+  GROUP BY cohort_id, decision_week
+  ORDER BY decision_timestamp DESC;
+"
 ```
 
-**3. Verify Snapshots**
+Expected:
+
+- one decision row per active agent for the run,
+- no duplicate rows for the same `(agent_id, cohort_id, decision_week)`.
+
+Because the application now claims a single canonical decision row per agent/week, reruns should overwrite or reuse that row rather than add another one.
+
+### 5.3 Trades Recorded
+
 ```bash
-sqlite3 data/forecaster.db \
-  "SELECT COUNT(*) FROM portfolio_snapshots WHERE snapshot_date = date('now');"
+sqlite3 data/forecaster.db "
+  SELECT d.id, d.action, COUNT(t.id) AS trades
+  FROM decisions d
+  LEFT JOIN trades t ON t.decision_id = d.id
+  WHERE d.decision_timestamp > datetime('now', '-24 hours')
+  GROUP BY d.id, d.action
+  ORDER BY d.decision_timestamp DESC;
+"
 ```
 
-Expected: 7 snapshots (one per agent in active cohorts)
+Interpretation:
 
-**4. Review API Costs**
+- `HOLD` with zero trades is normal.
+- `BET` or `SELL` with zero trades is retryable but indicates an execution problem.
+
+### 5.4 Snapshot Freshness
+
 ```bash
-sqlite3 data/forecaster.db \
-  "SELECT SUM(api_cost_usd) FROM decisions WHERE decision_timestamp > datetime('now', '-7 days');"
+sqlite3 data/forecaster.db "
+  SELECT MAX(snapshot_timestamp) AS latest_snapshot,
+         COUNT(*) AS snapshots_last_hour
+  FROM portfolio_snapshots
+  WHERE snapshot_timestamp > datetime('now', '-1 hour');
+"
 ```
+
+Important:
+
+- The table uses `snapshot_timestamp`, not `snapshot_date`.
+- Snapshot rows are upserted per `(agent_id, snapshot_timestamp)`.
 
 ---
 
-## Cron Job Schedule
+## 6. Manual Operations
 
-### Market Sync
-**Schedule**: Every 5 minutes (`*/5 * * * *`)
-**Endpoint**: `/api/cron/sync-markets`
-**Log**: `/home/forecaster/logs/sync.log`
+### 6.1 Sync Markets
 
-**Verification:**
 ```bash
-tail -f /home/forecaster/logs/sync.log
+curl -s -X POST http://localhost:3000/api/cron/sync-markets \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-### Start New Cohort
-**Schedule**: Sunday 00:00 UTC (`0 0 * * 0`)
-**Endpoint**: `/api/cron/start-cohort`
-**Log**: `/home/forecaster/logs/cohort.log`
+Use when:
 
-**Verification:**
+- market totals look stale,
+- close/resolution transitions appear delayed,
+- local development database needs seeding.
+
+### 6.2 Start Weekly Cohort
+
 ```bash
-# Check if new cohort was created
-sqlite3 data/forecaster.db \
-  "SELECT * FROM cohorts ORDER BY started_at DESC LIMIT 1;"
+curl -s -X POST http://localhost:3000/api/cron/start-cohort \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-### Run Decisions
-**Schedule**: Sunday 00:05 UTC (`5 0 * * 0`)
-**Endpoint**: `/api/cron/run-decisions`
-**Log**: `/home/forecaster/logs/decisions.log`
+Use when:
 
-**Verification:**
+- validating a fresh environment,
+- recovering after a missed Sunday run.
+
+Current safeguards:
+
+- the operation is week-unique,
+- repeated calls in the same week return the existing cohort,
+- agent creation is idempotent by `(cohort_id, model_id)`.
+
+### 6.3 Run Decisions
+
 ```bash
-# Check decisions were made
-sqlite3 data/forecaster.db \
-  "SELECT COUNT(*) FROM decisions WHERE decision_timestamp > datetime('now', '-1 hour');"
+curl -s -X POST http://localhost:3000/api/cron/run-decisions \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-### Check Resolutions
-**Schedule**: Every hour (`0 * * * *`)
-**Endpoint**: `/api/cron/check-resolutions`
-**Log**: `/home/forecaster/logs/resolutions.log`
+Use sparingly.
 
-**Verification:**
+Current runtime behavior:
+
+- the route budget is 10 minutes,
+- model calls are capped at 40 seconds each,
+- transport retries are effectively disabled by default,
+- malformed-output retries remain enabled once per model.
+
+### 6.4 Check Resolutions
+
 ```bash
-# Check recently resolved markets
-sqlite3 data/forecaster.db \
-  "SELECT * FROM markets WHERE status='resolved' AND resolved_at > datetime('now', '-24 hours');"
+curl -s -X POST http://localhost:3000/api/cron/check-resolutions \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-### Take Snapshots
-**Schedule**: Every 10 minutes (`*/10 * * * *`)
-**Endpoint**: `/api/cron/take-snapshots`
-**Log**: `/home/forecaster/logs/snapshots.log`
+Important current behavior:
 
-**Verification:**
+- markets are only marked `resolved` after settlement succeeds,
+- if one position fails to settle, the market remains `closed` locally and will be retried later.
+
+### 6.5 Take Snapshots
+
 ```bash
-# Check today's snapshots
-sqlite3 data/forecaster.db \
-  "SELECT COUNT(*) FROM portfolio_snapshots WHERE snapshot_timestamp > datetime('now', '-1 hour');"
-
-# Spot-check one agent's latest MTM (closed-but-unresolved markets use prior value if price feeds are 0/1)
-sqlite3 data/forecaster.db \
-  "SELECT snapshot_timestamp, total_value, positions_value FROM portfolio_snapshots WHERE agent_id = (SELECT id FROM agents LIMIT 1) ORDER BY snapshot_timestamp DESC LIMIT 3;"
+curl -s -X POST http://localhost:3000/api/cron/take-snapshots \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-### Backup
-**Schedule**: Saturday 23:00 UTC (`0 23 * * 6`)
-**Endpoint**: `/api/cron/backup`
-**Log**: `/home/forecaster/logs/backup.log`
+Important current behavior:
 
-**Verification:**
+- closed-but-unresolved positions can use prior value as a fallback,
+- this prevents the portfolio curve from collapsing incorrectly when external prices become unusable.
+
+### 6.6 Create Backup
+
 ```bash
-# List backups
-ls -lth backups/ | head -10
+curl -s -X POST http://localhost:3000/api/cron/backup \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
+
+Backups are written to `backups/` by default and old exports/backups are pruned according to their respective retention logic.
+
+### 6.7 Create Admin Export
+
+Admin exports are cookie-authenticated, not cron-authenticated.
+
+```bash
+curl -s -X POST http://localhost:3000/api/admin/export \
+  -H "Content-Type: application/json" \
+  -H "Cookie: forecaster_admin=..." \
+  -d '{
+    "cohort_id": "cohort-id",
+    "from": "2026-03-01T00:00:00.000Z",
+    "to": "2026-03-07T00:00:00.000Z",
+    "include_prompts": false
+  }'
+```
+
+Operational constraints:
+
+- 7 day max range,
+- 50,000 row cap per table,
+- ZIP archive name is sanitized,
+- old archives are cleaned after roughly 24 hours.
 
 ---
 
-## Monitoring Queries
+## 7. Diagnostic SQL
 
-### System Health
+### 7.1 Decision Rows Still “In Progress”
 
-**Database Size:**
 ```sql
-SELECT 
-  page_count * page_size / 1024 / 1024 as size_mb
-FROM pragma_page_count(), pragma_page_size();
-```
-
-**Table Row Counts:**
-```sql
-SELECT 
-  'cohorts' as table_name, COUNT(*) as count FROM cohorts
-UNION ALL
-SELECT 'agents', COUNT(*) FROM agents
-UNION ALL
-SELECT 'markets', COUNT(*) FROM markets
-UNION ALL
-SELECT 'positions', COUNT(*) FROM positions
-UNION ALL
-SELECT 'trades', COUNT(*) FROM trades
-UNION ALL
-SELECT 'decisions', COUNT(*) FROM decisions
-UNION ALL
-SELECT 'snapshots', COUNT(*) FROM portfolio_snapshots
-UNION ALL
-SELECT 'logs', COUNT(*) FROM system_logs;
-```
-
-**Recent Activity:**
-```sql
-SELECT 
-  event_type,
-  COUNT(*) as count,
-  MAX(created_at) as last_occurrence
-FROM system_logs
-WHERE created_at > datetime('now', '-7 days')
-GROUP BY event_type
-ORDER BY count DESC;
-```
-
-### Performance Metrics
-
-**Average Decision Time:**
-```sql
-SELECT 
-  AVG(response_time_ms) as avg_ms,
-  MAX(response_time_ms) as max_ms
+SELECT id, agent_id, cohort_id, decision_week, decision_timestamp
 FROM decisions
-WHERE decision_timestamp > datetime('now', '-7 days');
+WHERE action = 'ERROR'
+  AND error_message = '__IN_PROGRESS__'
+ORDER BY decision_timestamp DESC;
 ```
 
-**API Costs (Last 7 Days):**
+Interpretation:
+
+- a fresh row may simply represent a running decision,
+- a stale row may indicate a crashed run that should be reclaimed by the next decision cycle.
+
+### 7.2 Duplicate-Protection Sanity Checks
+
 ```sql
-SELECT 
-  m.display_name,
-  SUM(d.api_cost_usd) as total_cost,
-  COUNT(d.id) as decision_count,
-  AVG(d.api_cost_usd) as avg_cost
-FROM decisions d
-JOIN agents a ON d.agent_id = a.id
-JOIN models m ON a.model_id = m.id
-WHERE d.decision_timestamp > datetime('now', '-7 days')
-GROUP BY m.display_name
-ORDER BY total_cost DESC;
+SELECT agent_id, cohort_id, decision_week, COUNT(*) AS cnt
+FROM decisions
+GROUP BY agent_id, cohort_id, decision_week
+HAVING COUNT(*) > 1;
 ```
 
-**Market Resolution Rate:**
 ```sql
-SELECT 
-  COUNT(*) as total_markets,
-  SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved,
-  ROUND(100.0 * SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) / COUNT(*), 2) as resolution_rate
-FROM markets;
+SELECT started_at, COUNT(*) AS cnt
+FROM cohorts
+GROUP BY started_at
+HAVING COUNT(*) > 1;
 ```
+
+Both queries should return zero rows.
+
+### 7.3 Markets Stuck Closed
+
+```sql
+SELECT id, polymarket_id, question, close_date, last_updated_at
+FROM markets
+WHERE status = 'closed'
+ORDER BY close_date DESC
+LIMIT 50;
+```
+
+If rows remain here for too long, inspect resolution logs and retry `/api/cron/check-resolutions`.
+
+### 7.4 Open Positions on Closed Markets
+
+```sql
+SELECT p.id, p.agent_id, p.market_id, p.side, p.status, m.status AS market_status
+FROM positions p
+JOIN markets m ON p.market_id = m.id
+WHERE p.status = 'open'
+  AND m.status IN ('closed', 'resolved')
+ORDER BY m.status, p.opened_at DESC;
+```
+
+Some `open` + `closed` rows are expected before resolution. `open` + `resolved` rows should be investigated.
 
 ---
 
-## Manual Operations
+## 8. Common Failure Modes
 
-### Manually Trigger Market Sync
+### 8.1 Health Endpoint Shows `environment = error`
 
-```bash
-curl -X POST http://localhost:3000/api/cron/sync-markets \
-  -H "Authorization: Bearer YOUR_CRON_SECRET"
-```
+Likely causes:
 
-### Manually Create Backup
+- missing production env vars,
+- process started without the correct `.env.local`,
+- deployment secret drift.
 
-```bash
-curl -X POST http://localhost:3000/api/cron/backup \
-  -H "Authorization: Bearer YOUR_CRON_SECRET"
-```
+What to do:
 
-### Manually Run Decisions (Testing)
+1. inspect actual process env,
+2. confirm `OPENROUTER_API_KEY`, `CRON_SECRET`, and `ADMIN_PASSWORD`,
+3. restart the service,
+4. re-check `/api/health`.
 
-```bash
-curl -X POST http://localhost:3000/api/cron/run-decisions \
-  -H "Authorization: Bearer YOUR_CRON_SECRET"
-```
+### 8.2 Decisions Are Missing After Sunday Run
 
-**Warning**: Only run this manually for testing. Normal schedule is Sunday 00:05 UTC.
+Likely causes:
 
-### Check Specific Agent Performance
+- cron did not call the route,
+- OpenRouter auth/config failed,
+- model requests timed out,
+- decision rows are stuck in `__IN_PROGRESS__`.
 
-```bash
-# Get agent ID
-sqlite3 data/forecaster.db \
-  "SELECT a.id, m.display_name FROM agents a JOIN models m ON a.model_id = m.id WHERE a.cohort_id = 'COHORT_ID';"
+What to do:
 
-# Get agent stats
-sqlite3 data/forecaster.db \
-  "SELECT * FROM agents WHERE id = 'AGENT_ID';"
-```
+1. inspect logs for `decisions_run_error` and `agent_decision_error`,
+2. query in-progress decisions,
+3. manually rerun `/api/cron/run-decisions` if the environment is healthy.
 
----
+### 8.3 Market Stays Closed But Never Resolves
 
-## Database Maintenance
+Likely causes:
 
-### Vacuum Database
+- Polymarket still has no decisive winner,
+- settlement is partially failing and the market is intentionally being left `closed`,
+- resolution checks are not running.
 
-**When**: Monthly or when database grows large
+What to do:
 
-```bash
-pm2 stop forecaster-arena
-sqlite3 data/forecaster.db "VACUUM;"
-pm2 start forecaster-arena
-```
+1. inspect `market_resolution_partial_failure` in `system_logs`,
+2. inspect `positions` for that market,
+3. rerun `/api/cron/check-resolutions` after the underlying failure is fixed.
 
-### Analyze Tables (Update Statistics)
+### 8.4 Exports Fail
 
-```bash
-sqlite3 data/forecaster.db "ANALYZE;"
-```
+Likely causes:
 
-### Check Database Integrity
+- invalid date range,
+- row cap exceeded,
+- temp directory / zip utility failure,
+- missing admin session.
 
-```bash
-sqlite3 data/forecaster.db "PRAGMA integrity_check;"
-```
+What to do:
 
-Expected: `ok`
+1. reduce the date window,
+2. confirm session auth,
+3. check server logs,
+4. verify the `zip` executable exists in the runtime environment.
 
 ---
 
-## Backup Management
+## 9. Release / Deployment Validation
 
-### List Backups
+After every deploy:
 
-```bash
-ls -lth backups/
-```
+1. `curl /api/health`
+2. `curl /api/leaderboard`
+3. `curl /api/markets?limit=1`
+4. verify admin login,
+5. run a build-local smoke test if the host permits it,
+6. confirm scheduled jobs still include the correct bearer token.
 
-### Backup Retention Policy
+Recommended additional checks after schema-affecting changes:
 
-- **Automatic**: Keeps last 10 backups minimum
-- **Automatic**: Deletes backups older than 30 days
-- **Manual**: Can keep specific backups by renaming them
-
-### Verify Backup Integrity
-
-```bash
-sqlite3 backups/forecaster-YYYY-MM-DDTHH-MM-SS.db "PRAGMA integrity_check;"
-```
+- verify unique decision rows,
+- verify unique weekly cohorts,
+- verify snapshot insertion still upserts cleanly.
 
 ---
 
-## Log Management
+## 10. Developer Notes
 
-### View Recent System Logs
+This repository’s `tsconfig.json` includes `.next/types/**/*.ts`. In practice that means:
 
-```bash
-sqlite3 data/forecaster.db \
-  "SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 50;"
-```
+- `npm run build` should succeed before `npm run typecheck` is fully meaningful,
+- a failed build can cause `typecheck` to complain about missing generated `.next/types` files.
 
-### Filter by Severity
+For local validation, use this order:
 
-```bash
-# Errors only
-sqlite3 data/forecaster.db \
-  "SELECT * FROM system_logs WHERE severity='error' ORDER BY created_at DESC LIMIT 20;"
-
-# Warnings
-sqlite3 data/forecaster.db \
-  "SELECT * FROM system_logs WHERE severity='warning' ORDER BY created_at DESC LIMIT 20;"
-```
-
-### Filter by Event Type
-
-```bash
-# Market sync events
-sqlite3 data/forecaster.db \
-  "SELECT * FROM system_logs WHERE event_type LIKE '%market_sync%' ORDER BY created_at DESC LIMIT 20;"
-
-# Decision events
-sqlite3 data/forecaster.db \
-  "SELECT * FROM system_logs WHERE event_type LIKE '%decision%' ORDER BY created_at DESC LIMIT 20;"
-```
-
-**Note**: All logs are preserved (no automatic deletion) for audit trail.
+1. `npm test`
+2. `npm run build`
+3. `npm run typecheck`
 
 ---
 
-## Emergency Procedures
+## 11. Related Documentation
 
-### Application Completely Down
-
-1. **Check PM2**
-   ```bash
-   pm2 status
-   pm2 logs forecaster-arena --lines 100
-   ```
-
-2. **Restart Application**
-   ```bash
-   pm2 restart forecaster-arena
-   ```
-
-3. **If Still Failing**
-   ```bash
-   pm2 delete forecaster-arena
-   cd /home/forecaster/forecasterarena
-   npm run build
-   pm2 start npm --name forecaster-arena -- start
-   pm2 save
-   ```
-
-### Database Corruption
-
-1. **Stop Application**
-   ```bash
-   pm2 stop forecaster-arena
-   ```
-
-2. **Restore Latest Backup**
-   ```bash
-   LATEST_BACKUP=$(ls -t backups/*.db | head -1)
-   cp "$LATEST_BACKUP" data/forecaster.db
-   chmod 600 data/forecaster.db
-   ```
-
-3. **Verify Integrity**
-   ```bash
-   sqlite3 data/forecaster.db "PRAGMA integrity_check;"
-   ```
-
-4. **Restart Application**
-   ```bash
-   pm2 start forecaster-arena
-   ```
-
-### Cron Jobs Not Running
-
-1. **Check Crontab**
-   ```bash
-   crontab -l
-   ```
-
-2. **Verify CRON_SECRET**
-   ```bash
-   grep CRON_SECRET .env.local
-   # Compare with crontab entries
-   ```
-
-3. **Test Manually**
-   ```bash
-   curl -X POST http://localhost:3000/api/cron/sync-markets \
-     -H "Authorization: Bearer YOUR_CRON_SECRET"
-   ```
-
-4. **Check Cron Service**
-   ```bash
-   sudo systemctl status cron
-   ```
-
----
-
-## Performance Tuning
-
-### Database Optimization
-
-**When Database Grows Large (>100MB):**
-
-1. **Vacuum**
-   ```bash
-   sqlite3 data/forecaster.db "VACUUM;"
-   ```
-
-2. **Analyze**
-   ```bash
-   sqlite3 data/forecaster.db "ANALYZE;"
-   ```
-
-3. **Check Index Usage**
-   ```sql
-   SELECT * FROM sqlite_master WHERE type='index';
-   ```
-
-### Application Optimization
-
-**If Response Times Are Slow:**
-
-1. **Check Database Size**
-   ```bash
-   du -h data/forecaster.db
-   ```
-
-2. **Review Query Performance**
-   - Check for missing indexes
-   - Review N+1 query patterns
-   - Add pagination where needed
-
-3. **Consider Caching**
-   - Cache static data (models list)
-   - Cache leaderboard data (refresh every 5 minutes)
-
----
-
-## Security Checklist
-
-### Weekly Security Review
-
-- [ ] No default secrets in use (check console warnings)
-- [ ] SSL certificate valid (not expired)
-- [ ] Database file permissions correct (600 or 640)
-- [ ] Backup directory permissions correct
-- [ ] No unauthorized access in system logs
-- [ ] API keys not exposed in logs
-
-### Monthly Security Review
-
-- [ ] Review system logs for suspicious activity
-- [ ] Check for failed login attempts
-- [ ] Verify backup security
-- [ ] Review dependency updates for security patches
-
----
-
-## Useful Commands Reference
-
-### Application
-```bash
-pm2 status                    # Check status
-pm2 logs forecaster-arena     # View logs
-pm2 restart forecaster-arena # Restart app
-pm2 monit                     # Monitor resources
-```
-
-### Database
-```bash
-sqlite3 data/forecaster.db   # Open database shell
-sqlite3 data/forecaster.db ".tables"  # List tables
-sqlite3 data/forecaster.db ".schema"  # Show schema
-```
-
-### System
-```bash
-df -h                         # Check disk space
-free -h                       # Check memory
-top                           # Monitor processes
-```
-
-### Network
-```bash
-curl http://localhost:3000/api/health  # Test locally
-curl https://yourdomain.com/api/health # Test externally
-```
-
----
-
-## Contact & Support
-
-- **GitHub Issues**: https://github.com/setrf/forecasterarena/issues
-- **Documentation**: `docs/` directory
-- **Health Check**: `/api/health` endpoint
+- `docs/ARCHITECTURE.md`
+- `docs/API_REFERENCE.md`
+- `docs/SECURITY.md`
+- `docs/DATABASE_SCHEMA.md`
+- `docs/TROUBLESHOOTING.md`

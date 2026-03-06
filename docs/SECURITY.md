@@ -1,336 +1,375 @@
-# Security Documentation
+# Forecaster Arena Security Notes
 
-This document outlines the security measures, best practices, and known considerations for Forecaster Arena.
+Last updated: 2026-03-06
 
----
-
-## Security Overview
-
-Forecaster Arena is a research benchmark platform that:
-- Does NOT handle real money (paper trading only)
-- Does NOT collect user data beyond admin authentication
-- Does NOT expose sensitive user information
-- Does handle API keys and authentication secrets
+This document describes the security posture implemented in the repository today. It is intentionally concrete: it describes what the code actually does, where the trust boundaries are, and which limitations still exist.
 
 ---
 
-## Secret Management
+## 1. Threat Model
 
-### Environment Variables
+Forecaster Arena is not a consumer-facing financial product. It is a research benchmark that:
 
-All secrets are stored in `.env.local` which:
-- ✅ Is gitignored (`.env*.local` in `.gitignore`)
-- ✅ Has restricted permissions (`600` - owner read/write only)
-- ✅ Is never committed to version control
-- ✅ Uses placeholder values in `.env.example`
+- does not custody funds,
+- does not execute real trades,
+- does not maintain end-user accounts,
+- does not store PII beyond a transient admin session cookie,
+- does store operational secrets and benchmark internals.
 
-**Required Secrets**:
+The main security goals are therefore:
 
-| Secret | Purpose | Generation |
-|--------|---------|------------|
-| `OPENROUTER_API_KEY` | LLM API access | From https://openrouter.ai/settings/keys |
-| `CRON_SECRET` | Cron endpoint authentication | `openssl rand -hex 32` |
-| `ADMIN_PASSWORD` | Admin dashboard access | Strong password (12+ chars) |
-
-### Cron Secret Handling
-
-**Current Implementation**:
-- CRON_SECRET is stored in both:
-  1. `/opt/forecasterarena/.env.local` (permissions: 600, owner: www-data)
-  2. `/etc/cron.d/forecasterarena` (permissions: 644, owner: root)
-
-**Security Considerations**:
-
-⚠️ **Known Issue**: The crontab file at `/etc/cron.d/forecasterarena` has 644 permissions, making the CRON_SECRET readable by all users on the system.
-
-**Risk Assessment**:
-- **Impact**: Low-Medium (allows unauthorized triggering of cron endpoints)
-- **Likelihood**: Low (requires local system access)
-- **Mitigation**: Single-user system, no sensitive data exposure
-
-**Recommended Improvements**:
-
-1. **Option 1: Restrict crontab permissions** (Simple)
-   ```bash
-   sudo chmod 600 /etc/cron.d/forecasterarena
-   ```
-   Note: Some cron implementations require 644 permissions
-
-2. **Option 2: Use wrapper script** (More secure)
-   ```bash
-   # Create /usr/local/bin/forecaster-cron.sh
-   #!/bin/bash
-   source /opt/forecasterarena/.env.local
-   curl -s -X POST "$1" -H "Authorization: Bearer $CRON_SECRET"
-
-   # Crontab entry becomes:
-   */5 * * * * root /usr/local/bin/forecaster-cron.sh http://localhost:3010/api/cron/sync-markets
-   ```
-
-3. **Option 3: IP-based authentication** (Most secure)
-   - Allow cron endpoints only from localhost
-   - Verify `X-Forwarded-For` or remote address in API routes
+1. protect cron mutation routes from unauthorized callers,
+2. protect the admin surface from unauthorized callers,
+3. avoid accidental leakage of secrets or raw internal failure details,
+4. preserve benchmark data integrity under retries or overlapping jobs,
+5. keep filesystem export/backup paths from becoming command-injection or traversal surfaces.
 
 ---
 
-## API Authentication
+## 2. Sensitive Assets
 
-### Cron Endpoints
+Primary sensitive assets:
 
-All `/api/cron/*` endpoints require:
+- `OPENROUTER_API_KEY`
+- `CRON_SECRET`
+- `ADMIN_PASSWORD`
+- the SQLite database file and backups
+- exported ZIP archives produced by the admin export route
+- full decision prompts/responses stored for reproducibility
 
-```http
-Authorization: Bearer {CRON_SECRET}
-```
-
-**Implementation**:
-- Constant-time comparison (prevents timing attacks)
-- Returns 401 if missing or invalid
-- Logs failed authentication attempts
-
-**Code Reference**: Each cron route validates via:
-```typescript
-const authHeader = req.headers.get('authorization');
-const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-if (authHeader !== expectedAuth) {
-  return Response.json({ error: 'Unauthorized' }, { status: 401 });
-}
-```
-
-### Admin Dashboard
-
-Admin endpoints (`/api/admin/*`) use:
-- Password-based authentication
-- HTTP-only session cookies
-- Constant-time password comparison
-
-**Session Security**:
-- Cookie: `forecaster-admin-session`
-- Attributes: `HttpOnly`, `Secure` (in production), `SameSite=Strict`
-- Expiration: Session-based (cleared on browser close)
+Even though the benchmark data is not financial, prompt/response history and admin routes still deserve protection because they enable operational control and internal analysis.
 
 ---
 
-## Production Security Checklist
+## 3. Authentication Model
 
-### Before Deployment
+### 3.1 Cron Authentication
 
-- [ ] Generate strong `CRON_SECRET`: `openssl rand -hex 32`
-- [ ] Set strong `ADMIN_PASSWORD` (12+ characters, mixed case, numbers, symbols)
-- [ ] Obtain valid `OPENROUTER_API_KEY`
-- [ ] Set `NODE_ENV=production`
-- [ ] Verify `.env.local` has 600 permissions
-- [ ] Verify `.env.local` is gitignored
-- [ ] Consider restricting `/etc/cron.d/forecasterarena` permissions
+Implemented in:
 
-### After Deployment
+- `lib/api/cron-auth.ts`
+- `middleware.ts`
+- all `app/api/cron/*` route handlers
 
-- [ ] Verify no default secrets in use (check console warnings)
-- [ ] Test cron endpoints return 401 without valid auth
-- [ ] Test admin login with correct and incorrect passwords
-- [ ] Verify API keys are not exposed in logs
-- [ ] Check file permissions on database and backups
+Current behavior:
 
-### Regular Maintenance
+- Cron routes require `Authorization: Bearer <CRON_SECRET>`.
+- Comparison uses constant-time comparison.
+- In production, missing `CRON_SECRET` causes authorization to fail closed.
 
-- [ ] Rotate `CRON_SECRET` if exposed (update both .env.local and crontab)
-- [ ] Rotate `ADMIN_PASSWORD` periodically
-- [ ] Monitor API costs and usage patterns
-- [ ] Review system logs for suspicious activity
+Implications:
 
----
+- A caller without the bearer token cannot start cohorts, run decisions, sync markets, take snapshots, trigger backups, or run resolution checks.
+- Operational correctness still depends on the deployment using an actual strong secret.
 
-## Known Security Limitations
+### 3.2 Admin Authentication
 
-### 1. Single-User System Design
+Implemented in:
 
-**Limitation**: Designed for single-server deployment, not multi-tenant.
+- `app/api/admin/login/route.ts`
+- `lib/auth.ts`
+- `lib/api/admin-route.ts`
 
-**Implications**:
-- No user isolation between agents (intentional - they're all part of the benchmark)
-- Admin dashboard has single password (not multi-user)
-- Cron jobs run as root or www-data
+Current behavior:
 
-**Acceptable because**:
-- Research platform, not production service
-- No real money or sensitive user data
-- Single administrator expected
+- Login is password-only.
+- Session cookie name: `forecaster_admin`
+- Cookie settings:
+  - `httpOnly: true`
+  - `secure: true` in production
+  - `sameSite: 'lax'`
+  - `path: '/'`
+  - `maxAge: 7 days`
+- Cookie contents are base64-encoded `admin:<timestamp>:<hmac>` data.
+- HMAC key is `ADMIN_PASSWORD`.
+- Session validation also checks age.
 
-### 2. SQLite Database
+Security consequences:
 
-**Limitation**: Database file must be readable by web server user.
-
-**Implications**:
-- File permissions allow www-data to read/write
-- No row-level security or access control
-- Backups are plain copies (not encrypted)
-
-**Acceptable because**:
-- All data is public (will be published in research)
-- No PII or financial data
-- Single-server deployment
-
-### 3. Cron Authentication
-
-**Limitation**: CRON_SECRET visible in crontab file.
-
-**Implications**:
-- Any user on system can read secret
-- Secret must match between crontab and app
-- Changing secret requires updating both files
-
-**Mitigation**:
-- Single-user or trusted server environment
-- File permissions restrict .env.local
-- Consider wrapper script (see recommendations above)
+- A password rotation invalidates existing sessions.
+- Session validation is stateless and server-side verifiable.
+- In production, missing `ADMIN_PASSWORD` disables admin login and validation.
 
 ---
 
-## Vulnerability Disclosure
+## 4. Rate Limiting
 
-If you discover a security vulnerability, please:
+Implemented in `middleware.ts` and partially duplicated in `app/api/admin/login/route.ts`.
 
-1. **Do NOT** open a public GitHub issue
-2. Email: [security contact - add if available]
-3. Include:
-   - Description of vulnerability
-   - Steps to reproduce
-   - Potential impact assessment
-   - Suggested fix (if available)
+Current limits:
 
-We will respond within 48 hours and work on a fix.
+- `POST /api/admin/login`: 5 requests per minute per IP in middleware
+- `POST /api/admin/login`: 5 attempts per 10 minutes per IP in route-local store
+- `POST /api/cron/*`: 10 requests per minute per IP
+- non-login `GET/POST /api/admin/*`: 30 requests per minute per IP
 
----
+Current limitation:
 
-## Security Best Practices for Developers
+- The limiter is in-memory and per-process only.
+- It is not suitable as a distributed or multi-instance protection layer.
+- IP extraction depends on proxy headers, so deployment trust boundaries matter.
 
-### Code Guidelines
-
-1. **Never commit secrets**
-   - Use environment variables
-   - Check `.gitignore` includes `.env*.local`
-   - Use `.env.example` for documentation only
-
-2. **Validate all inputs**
-   - Use TypeScript for type safety
-   - Validate API request bodies
-   - Sanitize SQL queries (use parameterized queries)
-
-3. **Handle errors securely**
-   - Don't expose stack traces in production
-   - Log errors server-side
-   - Return generic error messages to clients
-
-4. **Use constant-time comparisons**
-   - For password/secret comparison
-   - Prevents timing attacks
-   - Example: `secureCompare(a, b)` not `a === b`
-
-### Dependencies
-
-- Keep dependencies updated: `npm audit`
-- Review dependency changes before updating
-- Pin critical dependency versions
-- Use `npm ci` in production (not `npm install`)
-
-### Database
-
-- All queries use parameterized statements
-- Foreign key constraints enforced
-- Transactions for multi-step operations
-- Regular backups (automated via cron)
+This is acceptable for the current single-instance architecture, but should not be described as robust distributed abuse protection.
 
 ---
 
-## Compliance Considerations
+## 5. Secret Handling
 
-### GDPR / Privacy
+### Required Production Secrets
 
-**Data Collected**:
-- Admin session cookies (temporary, not PII)
-- LLM decision logs (prompts and responses - no PII)
-- Market data from Polymarket (public information)
-- System logs (API calls, errors - no PII)
+| Secret | Used for | Fail-closed behavior |
+|--------|----------|----------------------|
+| `OPENROUTER_API_KEY` | OpenRouter requests | Decision/model calls fail |
+| `CRON_SECRET` | Cron route auth | Cron routes reject requests |
+| `ADMIN_PASSWORD` | Admin login + session signing | Admin auth is unavailable |
 
-**Data NOT Collected**:
-- User personal information
-- User financial information
-- User behavioral tracking
-- Third-party analytics
+### Current Runtime Warning Behavior
 
-**Conclusion**: Minimal privacy concerns. All data is either public or operational.
+`lib/constants.ts` emits server-side warnings in production when secrets are missing.
 
-### API Terms of Service
+Important nuance:
 
-**OpenRouter**:
-- Respect rate limits
-- Use API key securely
-- Monitor costs
-- Attribution in research publications
-
-**Polymarket**:
-- Public API, no authentication required
-- Respect rate limits (500 req/hour)
-- No data scraping beyond stated purpose
-- Market data used for research only
+- those warnings are useful operationally,
+- they do not appear in the public health response,
+- they can appear multiple times during build/start because different build/runtime processes evaluate the module independently.
 
 ---
 
-## Incident Response Plan
+## 6. Public Health Endpoint
 
-### If CRON_SECRET is Exposed
+`GET /api/health` is intentionally public.
 
-1. Generate new secret: `openssl rand -hex 32`
-2. Update `.env.local`
-3. Update `/etc/cron.d/forecasterarena`
-4. Restart application: `sudo systemctl restart forecaster-arena` (or `pm2 restart`)
-5. Monitor logs for unauthorized cron calls
-6. Review recent cron job executions
+Current security posture:
 
-### If ADMIN_PASSWORD is Exposed
+- It reports only subsystem-level status:
+  - `database`
+  - `environment`
+  - `data_integrity`
+- It does **not** expose:
+  - exact missing secret names,
+  - raw database exception text,
+  - raw integrity failure internals.
 
-1. Change password in `.env.local`
-2. Restart application
-3. Clear all admin sessions
-4. Review admin dashboard access logs
+Current redacted messages include:
 
-### If OPENROUTER_API_KEY is Exposed
+- `Database unavailable`
+- `Required configuration is incomplete`
+- `Integrity check unavailable`
+- `Integrity issues detected`
 
-1. Revoke key at https://openrouter.ai/settings/keys
-2. Generate new key
-3. Update `.env.local`
-4. Restart application
-5. Monitor API usage for suspicious activity
-6. Review recent API costs
+This is a deliberate tradeoff:
 
-### If Database is Compromised
-
-1. Stop application immediately
-2. Assess extent of compromise
-3. Restore from known-good backup
-4. Review all recent changes
-5. Check for data exfiltration
-6. Rotate all secrets
-7. Document incident for analysis
+- enough detail for uptime and monitoring systems,
+- not enough detail to leak configuration names or internal exception strings to unauthenticated callers.
 
 ---
 
-## Security Audit History
+## 7. Export Route Hardening
 
-| Date | Auditor | Findings | Status |
-|------|---------|----------|--------|
-| 2024 | Internal | Default secrets, timing attacks | Fixed |
-| - | - | Crontab permissions | Documented |
+`POST /api/admin/export` is one of the more sensitive routes because it crosses from database records into temporary filesystem artifacts.
+
+Current protections:
+
+1. Admin authentication is required.
+2. Export filenames are sanitized to alphanumeric characters, `_`, and `-`.
+3. Archive creation uses `spawnSync('zip', ['-j', ...])` with argv, not shell-interpolated command strings.
+4. Export archives are written beneath the app-owned export directory.
+5. Downloads use `path.basename(...)` before joining to the export directory.
+6. Old ZIP exports are cleaned up automatically after about 24 hours.
+7. The route caps:
+   - export window to 7 days,
+   - each table to 50,000 rows.
+
+Security outcome:
+
+- the previous shell-injection class of bug is addressed,
+- the filename/path surface is materially safer,
+- exports remain bounded enough to be operationally reasonable.
+
+Operational note:
+
+- the route still relies on the `zip` binary existing in the server environment.
 
 ---
 
-## Additional Resources
+## 8. Data Integrity as a Security Property
 
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
-- [Next.js Security Headers](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables#security)
+For this application, integrity is as important as confidentiality.
+
+Recent hardening in the codebase now protects the benchmark from duplicate or partially-applied mutation flows.
+
+### 8.1 Weekly Cohort Uniqueness
+
+The database now enforces week uniqueness via a unique index on `cohorts.started_at`.
+
+Current behavior:
+
+- `createCohort()` normalizes to the current week start (Sunday 00:00 UTC),
+- concurrent callers resolve to the same weekly cohort,
+- agent creation is idempotent through `INSERT OR IGNORE` plus unique `(cohort_id, model_id)`.
+
+Why it matters:
+
+- overlapping cron triggers should not create multiple cohorts for the same week,
+- the benchmark must preserve one canonical weekly competition instance.
+
+### 8.2 Decision Claiming
+
+The database now enforces one canonical decision row per `(agent_id, cohort_id, decision_week)`.
+
+Current flow:
+
+1. Claim the row before making the model call.
+2. Mark it as in progress using a reserved placeholder state:
+   - `action = 'ERROR'`
+   - `error_message = '__IN_PROGRESS__'`
+3. Replace placeholder data with the finalized decision once the model returns.
+4. Mark the row as `ERROR` with a real message if processing fails.
+
+Why it matters:
+
+- overlapping decision runs no longer produce duplicate rows and duplicate trades,
+- retries reclaim the same logical decision row instead of appending a second row,
+- stale in-progress placeholders can be safely reclaimed later.
+
+### 8.3 Resolution Ordering
+
+Resolution now follows this order:
+
+1. detect the winner,
+2. settle all open positions,
+3. only after that succeeds, mark the market `resolved`.
+
+Why it matters:
+
+- a partial settlement failure no longer strands open positions under a market already marked resolved,
+- the next resolution pass can retry safely because the market remains `closed` until the local write set is complete.
 
 ---
 
-**Last Updated**: 2025-12-11
-**Version**: 1.0
+## 9. Database and Filesystem Exposure
+
+### SQLite
+
+Current realities:
+
+- SQLite is writable by the app process,
+- backups are filesystem-level artifacts,
+- there is no database-level user isolation or at-rest encryption by default.
+
+This is acceptable for the current deployment model, but operators should treat:
+
+- `data/forecaster.db`
+- `backups/`
+- `backups/exports/`
+
+as sensitive operational assets.
+
+### Backups and Exports
+
+Backups:
+
+- created through the SQLite backup API,
+- stored on local disk by default.
+
+Exports:
+
+- created from selected tables,
+- cleaned more aggressively than database backups,
+- intended as short-lived operational artifacts.
+
+---
+
+## 10. What the Public Site Intentionally Does Not Reveal
+
+Public pages and public APIs are now more careful about not overstating or overexposing the system state.
+
+Examples:
+
+- Empty-state UI no longer hardcodes a live synced market count when the database is empty.
+- The public health endpoint no longer reveals exact missing environment variable names.
+- Admin export filenames no longer preserve arbitrary raw user input.
+
+These are not just UX improvements; they reduce information leakage and misrepresentation.
+
+---
+
+## 11. Remaining Security Limitations
+
+These are still real and should be documented honestly.
+
+### 11.1 In-Memory Rate Limiting
+
+- single-process only,
+- resets on restart,
+- not shared across instances.
+
+### 11.2 Trusted Header Assumptions
+
+Both middleware and login flows derive client IP from proxy headers such as:
+
+- `cf-connecting-ip`
+- `x-real-ip`
+- `x-forwarded-for`
+
+This is acceptable only when the deployment stack controls those headers.
+
+### 11.3 Single-Admin Model
+
+The admin surface is designed around one password and one admin role, not multi-user RBAC.
+
+### 11.4 No Secret Vault Integration
+
+Secrets are environment-driven. There is no first-class KMS/secret-manager integration in the repository itself.
+
+### 11.5 External Binary Dependency for ZIP Exports
+
+The export route now invokes `zip` safely, but still assumes the binary is installed and callable.
+
+---
+
+## 12. Production Security Checklist
+
+Before production:
+
+- [ ] Set strong `OPENROUTER_API_KEY`
+- [ ] Set strong `CRON_SECRET`
+- [ ] Set strong `ADMIN_PASSWORD`
+- [ ] Verify `.env.local` is not committed
+- [ ] Verify the process can read only the intended env file
+- [ ] Verify `zip` exists if admin export will be used
+- [ ] Verify the SQLite database path and backup path are writable by the app process
+
+After deployment:
+
+- [ ] `GET /api/health` returns no leaked secret names
+- [ ] Cron routes return `401` without bearer token
+- [ ] Admin login rejects bad passwords and sets `forecaster_admin` cookie on success
+- [ ] Export route can generate and download a ZIP artifact
+- [ ] No duplicate weekly cohorts exist
+- [ ] No duplicate per-week decisions exist
+
+Ongoing:
+
+- [ ] Review `system_logs` regularly
+- [ ] Rotate `CRON_SECRET` and `ADMIN_PASSWORD` when needed
+- [ ] Audit backup/export directories for retention and permissions
+- [ ] Re-check rate limiting assumptions if moving beyond a single instance
+
+---
+
+## 13. Related Files
+
+Primary code references:
+
+- `app/api/admin/export/route.ts`
+- `app/api/admin/login/route.ts`
+- `app/api/health/route.ts`
+- `lib/api/cron-auth.ts`
+- `lib/auth.ts`
+- `middleware.ts`
+- `lib/db/queries/cohorts.ts`
+- `lib/db/queries/decisions.ts`
+- `lib/engine/decision.ts`
+- `lib/engine/resolution.ts`
+- `lib/db/schema.ts`

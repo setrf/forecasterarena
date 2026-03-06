@@ -7,636 +7,361 @@
 *Reality as the ultimate benchmark*
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)](https://sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Live Demo](https://forecasterarena.com) | [Documentation](./docs/) | [Methodology](./docs/METHODOLOGY_v1.md)
+[Live Demo](https://forecasterarena.com) | [API Reference](./docs/API_REFERENCE.md) | [Architecture](./docs/ARCHITECTURE.md) | [Methodology](./docs/METHODOLOGY_v1.md)
 
 </div>
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Why This Matters](#why-this-matters)
-- [The 7 Competing Models](#the-7-competing-models)
-- [How It Works](#how-it-works)
-- [Scoring System](#scoring-system)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [API Reference](#api-reference)
-- [Cron Jobs](#cron-jobs)
-- [Configuration](#configuration)
-- [Deployment](#deployment)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+> Documentation status: updated for the current codebase on March 6, 2026.
 
 ---
 
-## Overview
+## What This Repository Does
 
-Forecaster Arena is an **academic-grade benchmark** that tests Large Language Model (LLM) forecasting capabilities using real prediction markets from [Polymarket](https://polymarket.com). 
+Forecaster Arena is a paper-trading benchmark for evaluating frontier LLMs on real prediction markets from [Polymarket](https://polymarket.com). Every active model receives the same market universe, the same portfolio constraints, and the same deterministic prompting setup. Performance is tracked through:
 
-Unlike traditional benchmarks that may be contaminated by training data, this system evaluates **genuine predictive reasoning** about future events that cannot exist in any training corpus, because they have not happened yet.
+- **Brier score** for calibration quality
+- **Portfolio value / P&L** for practical trading outcomes
+- **Full decision logs** for reproducibility
 
-### Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **Real Markets** | Live data from Polymarket prediction markets |
-| **7 Frontier LLMs** | Head-to-head competition with identical conditions |
-| **Dual Scoring** | Brier Score (calibration) + Portfolio Returns (value) |
-| **Full Reproducibility** | Every prompt, decision, and calculation is logged |
-| **Academic Grade** | Methodology designed for publication standards |
-| **Open Source** | Complete transparency in code and methodology |
+The benchmark is intentionally built around future events so the models cannot rely on memorized benchmark answers from training corpora.
 
 ---
 
-## Why This Matters
+## Current Model Roster
 
-### The Problem with Traditional Benchmarks
+The codebase separates **stable internal IDs** from **current display names / OpenRouter targets**. The public UI shows `displayName`, while the database and routes still use the stable `id`.
 
-Traditional LLM benchmarks face a fundamental challenge:
+| Internal ID | Display Name | Provider | OpenRouter ID |
+|-------------|--------------|----------|---------------|
+| `gpt-5.1` | GPT-5.2 | OpenAI | `openai/gpt-5.2` |
+| `gemini-2.5-flash` | Gemini 3 Pro | Google | `google/gemini-3-pro-preview` |
+| `grok-4` | Grok 4.1 | xAI | `x-ai/grok-4.1-fast` |
+| `claude-opus-4.5` | Claude Opus 4.5 | Anthropic | `anthropic/claude-opus-4.5` |
+| `deepseek-v3.1` | DeepSeek V3.2 | DeepSeek | `deepseek/deepseek-v3.2` |
+| `kimi-k2` | Kimi K2 | Moonshot AI | `moonshotai/kimi-k2-thinking` |
+| `qwen-3-next` | Qwen 3 | Alibaba | `qwen/qwen3-235b-a22b-instruct-2507` |
 
-```
-+-------------------------------------------------------------+
-|  TRADITIONAL BENCHMARK PROBLEM                               |
-+-------------------------------------------------------------+
-|                                                              |
-|  Training Data --------> May Include --------> Benchmark     |
-|       |                  Benchmark Answers      Answers      |
-|       |                                           ^          |
-|       +-------------------------------------------+          |
-|                                                              |
-|  Result: High scores may reflect MEMORIZATION,               |
-|          not genuine REASONING ability                       |
-|                                                              |
-+-------------------------------------------------------------+
-```
+Why this matters:
 
-### Our Solution: Reality as Benchmark
-
-```
-+-------------------------------------------------------------+
-|  FORECASTER ARENA APPROACH                                   |
-+-------------------------------------------------------------+
-|                                                              |
-|  Future Events --------> Cannot Exist --------> Genuine      |
-|       |                  in Training Data       Reasoning    |
-|       |                                           ^          |
-|       +--------- Prediction Markets --------------+          |
-|                                                              |
-|  Result: Scores reflect TRUE forecasting ability             |
-|          No memorization possible                            |
-|                                                              |
-+-------------------------------------------------------------+
-```
+- API paths and database rows use the **internal ID**
+- Charts and UI labels use the **display name**
+- Documentation should refer to both when ambiguity would be costly
 
 ---
 
-## The 7 Competing Models
+## System Behavior
 
-| Model | Provider | Color | Description |
-|-------|----------|-------|-------------|
-| **GPT-5.1** | OpenAI | Emerald | Latest GPT architecture |
-| **Gemini 2.5 Flash** | Google | Blue | Fast Gemini generation |
-| **Grok 4** | xAI | Violet | xAI's reasoning model |
-| **Claude Opus 4.5** | Anthropic | Amber | Anthropic's most capable |
-| **DeepSeek V3.1** | DeepSeek | Red | Open-weight powerhouse |
-| **Kimi K2** | Moonshot AI | Pink | Thinking-enabled model |
-| **Qwen 3 Next** | Alibaba | Cyan | 235B parameter giant |
+### Weekly benchmark lifecycle
 
-All models receive:
-- Identical system prompts
-- Identical market information
-- Identical starting capital ($10,000)
-- Identical betting constraints
-- Temperature = 0 (deterministic)
+1. **Market sync**
+   - The app syncs Polymarket markets into SQLite.
+   - The decision engine uses the **top 500 markets by volume**.
 
----
+2. **Cohort creation**
+   - A cohort represents one weekly competition instance.
+   - Cohorts are now **week-unique** at the database level, so duplicate Sunday starts do not create parallel competitions for the same week.
 
-## How It Works
+3. **Decision run**
+   - Every active agent builds a prompt from its current portfolio plus the current market set.
+   - OpenRouter calls are deterministic (`temperature = 0`).
+   - The current implementation uses a **40 second per-model timeout**, **no transport retries by default**, and **1 malformed-response retry**.
 
-### Weekly Cycle
+4. **Trade execution**
+   - Models can `BET`, `SELL`, or `HOLD`.
+   - Bets are bounded by the portfolio rules in [`lib/constants.ts`](./lib/constants.ts):
+     - initial balance: `$10,000`
+     - minimum bet: `$50`
+     - maximum single bet: `25%` of available cash
 
-```
-+-------------------------------------------------------------+
-|  SUNDAY 00:00 UTC - WEEKLY DECISION CYCLE                    |
-+-------------------------------------------------------------+
-|                                                              |
-|  1. New Cohort Created (if Sunday)                           |
-|     +-- 7 agents initialized with $10,000 each               |
-|                                                              |
-|  2. Market Sync                                              |
-|     +-- Fetch top 500 markets from Polymarket by volume      |
-|                                                              |
-|  3. LLM Decisions (for each model)                           |
-|     +-- Build context: portfolio + markets                   |
-|     +-- Call OpenRouter API (temp=0)                         |
-|     +-- Parse response (retry once if malformed)             |
-|     +-- Execute trades (BET/SELL/HOLD)                       |
-|                                                              |
-|  4. Resolution Check                                         |
-|     +-- Check for resolved markets                           |
-|     +-- Settle winning/losing positions                      |
-|     +-- Calculate Brier scores                               |
-|                                                              |
-|  5. Portfolio Snapshots                                      |
-|     +-- 10-minute mark-to-market valuations (includes closed-but-unresolved positions with prior-value fallback) |
-|                                                              |
-+-------------------------------------------------------------+
-```
+5. **Resolution and scoring**
+   - Closed markets are checked for resolution on a recurring basis.
+   - Positions are settled and Brier scores are created from recorded buy trades.
+   - The app only marks a market `resolved` locally **after** settlements succeed, so partial failures can be retried safely.
 
-### Decision Format
-
-Models respond with JSON in one of three formats:
-
-```json
-// BET - Place new bets
-{
-  "action": "BET",
-  "bets": [
-    { "market_id": "uuid", "side": "YES", "amount": 500.00 }
-  ],
-  "reasoning": "Based on recent polling data..."
-}
-
-// SELL - Close positions
-{
-  "action": "SELL",
-  "sells": [
-    { "position_id": "uuid", "percentage": 100 }
-  ],
-  "reasoning": "Market conditions have changed..."
-}
-
-// HOLD - No action
-{
-  "action": "HOLD",
-  "reasoning": "Current positions are well-calibrated..."
-}
-```
+6. **Portfolio snapshots**
+   - Snapshots are timestamped, not daily-bucketed.
+   - The current snapshot route records **10-minute mark-to-market state** and preserves prior value when markets are closed but unresolved and price feeds become unhelpful.
 
 ---
 
-## Scoring System
+## Safety and Integrity Guarantees
 
-### 1. Brier Score (Calibration)
+Recent changes in the codebase materially changed the system guarantees. The docs below reflect the current implementation, not the earlier behavior.
 
-Measures how well confidence matches accuracy.
+### 1. Cohorts are unique per week
 
-```
-Brier Score = (forecast - outcome)^2
+- Cohorts are keyed by a normalized weekly `started_at`
+- repeated or concurrent start attempts resolve to the same cohort
+- agent creation is idempotent per `(cohort_id, model_id)`
 
-Where:
-- forecast = implied confidence from bet size
-- outcome = 1 if correct, 0 if wrong
+### 2. Decisions are unique per agent / cohort / week
 
-Implied Confidence = bet_amount / max_possible_bet
-Max Possible Bet = cash_balance x 0.25
+- the database enforces a unique decision tuple
+- the engine claims a single per-week decision row before any model call begins
+- in-progress claims can be retried if they become stale
+- reruns overwrite the claimed row instead of creating duplicate decision records
 
-Score Range:
-- 0.00 = Perfect prediction
-- 0.25 = Random guessing
-- 1.00 = Completely wrong
-```
+### 3. Resolution is retry-safe
 
-| Score | Interpretation |
-|-------|----------------|
-| 0.00 - 0.10 | Excellent |
-| 0.10 - 0.20 | Good |
-| 0.20 - 0.25 | Fair |
-| 0.25+ | Poor |
+- settlements now happen before the market flips to local `resolved`
+- if one position settlement fails, the market stays `closed`
+- the next resolution pass can continue from the remaining open positions
 
-### 2. Portfolio Returns (P/L)
+### 4. Public health output is intentionally redacted
 
-Measures practical value generation.
+`/api/health` still exposes high-level subsystem status for monitoring, but it no longer leaks exact secret names or raw database error strings to anonymous callers.
 
-```
-P/L = Final Portfolio Value - Initial Balance ($10,000)
-Return % = (P/L / $10,000) x 100
+### 5. Admin export no longer shells raw user input
 
-Position Value:
-- YES positions: shares x current_YES_price
-- NO positions: shares x (1 - current_YES_price)
-
-Settlement:
-- Winning positions: shares x $1
-- Losing positions: $0
-```
-
-### Why Both Metrics?
-
-| Metric | Measures | Limitation |
-|--------|----------|------------|
-| Brier Score | Calibration quality | Ignores bet sizing strategy |
-| P/L | Practical value | Can be luck-driven |
-
-The ideal forecaster excels at both: confident when right, cautious when uncertain.
+The admin export endpoint still produces a ZIP archive of bounded CSV exports, but the archive filename is sanitized and the ZIP process is invoked without shell interpolation.
 
 ---
 
-## Architecture
+## Public Site Semantics
 
-```
-+-----------------------------------------------------------------------------+
-|                           FORECASTER ARENA                                   |
-+-----------------------------------------------------------------------------+
-|                                                                              |
-|  +--------------+     +--------------+     +--------------+                  |
-|  |  Polymarket  |---->|  Market Sync |---->|   SQLite     |                  |
-|  |     API      |     |   Service    |     |   Database   |                  |
-|  +--------------+     +--------------+     +------+-------+                  |
-|                                                   |                          |
-|  +--------------+     +--------------+            |                          |
-|  |  OpenRouter  |<----|   Decision   |<-----------+                          |
-|  |     API      |---->|    Engine    |            |                          |
-|  +--------------+     +--------------+            |                          |
-|                              |                    |                          |
-|                              v                    |                          |
-|                       +--------------+            |                          |
-|                       |    Trade     |------------+                          |
-|                       |  Execution   |            |                          |
-|                       +--------------+            |                          |
-|                                                   |                          |
-|  +--------------+     +--------------+            |                          |
-|  |  Resolution  |---->|   Scoring    |<-----------+                          |
-|  |   Service    |     |    Engine    |            |                          |
-|  +--------------+     +--------------+            |                          |
-|                                                   |                          |
-|                       +--------------+            |                          |
-|                       |   Next.js    |<-----------+                          |
-|                       |   Frontend   |                                       |
-|                       +--------------+                                       |
-|                                                                              |
-+-----------------------------------------------------------------------------+
-```
+The frontend is intentionally data-aware now:
+
+- the home hero badge can present:
+  - `Live Benchmark`
+  - `Synced Preview`
+  - `Awaiting First Cohort`
+- the markets count on the home page is fetched from `/api/markets`
+- the empty-data models page renders **all 7 models**, not 6
+- mobile filter controls on `/markets` wrap instead of overflowing
+- accessibility issues around contrast, heading order, and the mobile GitHub icon link were fixed
+
+This matters operationally because a fresh database now reads as a synchronized preview or empty benchmark state rather than pretending live cohorts already exist.
 
 ---
 
-## Tech Stack
+## Repository Map
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Framework** | Next.js 14 | React framework with App Router |
-| **Language** | TypeScript | Type safety and developer experience |
-| **Database** | SQLite + better-sqlite3 | Embedded, portable database |
-| **Styling** | Tailwind CSS | Utility-first CSS framework |
-| **Charts** | Recharts | React charting library |
-| **LLM API** | OpenRouter | Unified API for multiple LLMs |
-| **Market Data** | Polymarket Gamma API | Prediction market data |
+| Path | Purpose |
+|------|---------|
+| `app/` | Next.js app router pages and API routes |
+| `components/` | Reusable UI components and charts |
+| `lib/db/` | SQLite connection, schema, and query layer |
+| `lib/engine/` | Cohort, decision, execution, and resolution engines |
+| `lib/openrouter/` | OpenRouter client, prompts, parser |
+| `lib/polymarket/` | Polymarket fetch / transform / resolution helpers |
+| `lib/scoring/` | Brier and P&L calculations |
+| `tests/` | Vitest coverage for engines, routes, schema, and security |
+| `docs/` | Reference documentation and operational runbooks |
 
 ---
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm or yarn
-- OpenRouter API key
+- Node.js 20+
+- npm
+- `zip` available on the system path if you intend to use the admin export route
 
-### Installation
+### Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/setrf/forecasterarena.git
-cd forecasterarena
-
-# Install dependencies
 npm install
-
-# Copy environment variables
-cp .env.example .env.local
-
-# Edit .env.local with your keys
-nano .env.local
 ```
 
-### Environment Variables
+### Configure environment
+
+Create `.env.local` with the variables that apply to your environment:
 
 ```bash
-# Required
-OPENROUTER_API_KEY=sk-or-v1-...    # Get from openrouter.ai
-
-# Security
-CRON_SECRET=your-random-secret      # For cron job authentication
-ADMIN_PASSWORD=your-admin-password  # For admin dashboard
-
-# Optional
+OPENROUTER_API_KEY=...
+CRON_SECRET=...
+ADMIN_PASSWORD=...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_GITHUB_URL=https://github.com/setrf/forecasterarena
+DATABASE_PATH=data/forecaster.db
+BACKUP_PATH=backups
 ```
 
-### Development
+Notes:
+
+- in development, `CRON_SECRET` falls back to `dev-secret`
+- in development, `ADMIN_PASSWORD` falls back to `admin`
+- in production, missing `CRON_SECRET` or `ADMIN_PASSWORD` fail closed
+
+### Run locally
+
+Development:
 
 ```bash
-# Start development server
 npm run dev
-
-# Open http://localhost:3000
 ```
 
-### Production Build
+Production build:
 
 ```bash
-# Build for production
 npm run build
+npm run start
+```
 
-# Start production server
-npm start
+Typecheck:
+
+```bash
+npm run typecheck
+```
+
+Important repo-specific note:
+
+- this repo's `tsconfig.json` includes `.next/types/**/*.ts`
+- if `.next/types` is missing, run a successful `npm run build` first
+
+### Full verification
+
+```bash
+npm test
+npm run build
+npm run typecheck
 ```
 
 ---
 
-## Project Structure
+## Current Runtime Configuration
 
-```
-forecasterarena/
-|-- app/                          # Next.js App Router
-|   |-- page.tsx                  # Homepage
-|   |-- layout.tsx                # Root layout with header/footer
-|   |-- globals.css               # Global styles + CSS variables
-|   |-- models/
-|   |   |-- page.tsx              # Models list
-|   |   +-- [id]/page.tsx         # Model detail
-|   |-- cohorts/
-|   |   |-- page.tsx              # Cohorts list
-|   |   +-- [id]/page.tsx         # Cohort detail
-|   |-- markets/
-|   |   |-- page.tsx              # Markets list
-|   |   +-- [id]/page.tsx         # Market detail
-|   |-- methodology/page.tsx      # Methodology documentation
-|   |-- about/page.tsx            # About page
-|   |-- changelog/page.tsx        # Version history
-|   |-- admin/
-|   |   |-- page.tsx              # Admin dashboard
-|   |   |-- logs/page.tsx         # System logs
-|   |   +-- costs/page.tsx        # API costs
-|   +-- api/
-|       |-- leaderboard/          # Aggregate leaderboard
-|       |-- models/[id]/          # Model data
-|       |-- cohorts/[id]/         # Cohort data
-|       |-- markets/              # Markets list & detail
-|       |-- decisions/recent/     # Recent decisions
-|       |-- performance-data/     # Chart data
-|       |-- admin/                # Admin APIs
-|       +-- cron/                 # Scheduled jobs
-|           |-- sync-markets/
-|           |-- run-decisions/
-|           |-- start-cohort/
-|           |-- check-resolutions/
-|           |-- take-snapshots/
-|           +-- backup/
-|-- components/
-|   |-- charts/
-|   |   |-- PerformanceChart.tsx  # Multi-line time series
-|   |   |-- PnLBarChart.tsx       # P/L comparison bars
-|   |   +-- BrierBarChart.tsx     # Brier score bars
-|   +-- DecisionFeed.tsx          # Live decision feed
-|-- lib/
-|   |-- constants.ts              # App configuration
-|   |-- types.ts                  # TypeScript types
-|   |-- utils.ts                  # Utility functions
-|   |-- db/
-|   |   |-- index.ts              # Database connection
-|   |   |-- schema.ts             # Table definitions
-|   |   +-- queries.ts            # 52 query functions
-|   |-- engine/
-|   |   |-- cohort.ts             # Cohort management
-|   |   |-- decision.ts           # Decision orchestration
-|   |   |-- execution.ts          # Trade execution
-|   |   +-- resolution.ts         # Market resolution
-|   |-- scoring/
-|   |   |-- brier.ts              # Brier score calculation
-|   |   +-- pnl.ts                # P/L calculation
-|   |-- openrouter/
-|   |   |-- client.ts             # API client
-|   |   |-- parser.ts             # Response parser
-|   |   +-- prompts.ts            # Prompt templates
-|   +-- polymarket/
-|       |-- client.ts             # API client
-|       +-- types.ts              # Type definitions
-|-- docs/
-|   |-- METHODOLOGY_v1.md         # Complete methodology
-|   |-- ARCHITECTURE.md           # System architecture
-|   |-- DATABASE_SCHEMA.md        # Database documentation
-|   |-- PROMPT_DESIGN.md          # Prompt engineering
-|   |-- SCORING.md                # Scoring formulas
-|   |-- API_REFERENCE.md          # API documentation
-|   |-- DEPLOYMENT.md             # Deployment guide
-|   +-- DECISIONS.md              # Design decisions
-|-- data/                         # SQLite database (gitignored)
-|-- backups/                      # Database backups (gitignored)
-|-- .env.example                  # Environment template
-|-- package.json
-|-- tsconfig.json
-|-- tailwind.config.ts
-+-- next.config.mjs
-```
+### Benchmark constants
+
+| Setting | Current Value |
+|---------|---------------|
+| Initial balance | `$10,000` |
+| Minimum bet | `$50` |
+| Maximum single bet | `25%` of current cash |
+| Top markets fed to models | `500` |
+| OpenRouter temperature | `0` |
+| OpenRouter max tokens | `16,000` |
+| OpenRouter timeout | `40,000 ms` |
+| Malformed-response retries | `1` |
+
+### Current time ranges for performance data
+
+The `/api/performance-data` endpoint accepts:
+
+- `10M`
+- `1H`
+- `1D`
+- `1W`
+- `1M`
+- `3M`
+- `ALL`
+
+`cohort_id` is optional and scopes the chart to one cohort when provided.
 
 ---
 
-## API Reference
+## Cron Schedule
 
-### Public Endpoints
+These are the schedules implied by the current code comments and runtime expectations:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/leaderboard` | Aggregate leaderboard data |
-| GET | `/api/models/[id]` | Model performance details |
-| GET | `/api/cohorts/[id]` | Cohort details with agents |
-| GET | `/api/markets` | List markets with filtering |
-| GET | `/api/markets/[id]` | Market details with positions |
-| GET | `/api/decisions/recent` | Recent LLM decisions |
-| GET | `/api/performance-data` | Chart data |
+| Job | Route | Expected Schedule |
+|-----|-------|-------------------|
+| Sync markets | `/api/cron/sync-markets` | Every 5 minutes |
+| Start cohort | `/api/cron/start-cohort` | Sunday 00:00 UTC |
+| Run decisions | `/api/cron/run-decisions` | Sunday 00:05 UTC |
+| Check resolutions | `/api/cron/check-resolutions` | Hourly |
+| Take snapshots | `/api/cron/take-snapshots` | Every 10 minutes |
+| Create backup | `/api/cron/backup` | Saturday 23:00 UTC or another low-traffic window |
 
-### Admin Endpoints
+All cron routes require:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/admin/login` | Admin authentication |
-| DELETE | `/api/admin/login` | Logout |
-| GET | `/api/admin/stats` | System statistics |
-| GET | `/api/admin/logs` | System logs |
-| GET | `/api/admin/costs` | API cost breakdown |
-
-### Cron Endpoints
-
-| Method | Endpoint | Schedule | Description |
-|--------|----------|----------|-------------|
-| POST | `/api/cron/sync-markets` | Every 5m | Sync Polymarket data |
-| POST | `/api/cron/start-cohort` | Sunday 00:00 | Start new cohort |
-| POST | `/api/cron/run-decisions` | Sunday 00:05 | Run LLM decisions |
-| POST | `/api/cron/check-resolutions` | Hourly | Check market resolutions |
-| POST | `/api/cron/take-snapshots` | Every 10m | Portfolio snapshots & MTM |
-| POST | `/api/cron/backup` | Daily 02:00 UTC | Database backup |
-
-All cron endpoints require:
-```
+```http
 Authorization: Bearer {CRON_SECRET}
 ```
 
 ---
 
-## Cron Jobs
+## API Overview
 
-Set up cron jobs on your server:
+### Public routes
 
-```bash
-# Edit crontab
-crontab -e
+- `GET /api/health`
+- `GET /api/leaderboard`
+- `GET /api/performance-data`
+- `GET /api/markets`
+- `GET /api/markets/[id]`
+- `GET /api/models/[id]`
+- `GET /api/cohorts/[id]`
+- `GET /api/cohorts/[id]/models/[modelId]`
+- `GET /api/decisions/recent`
+- `GET /api/decisions/[id]`
 
-# Add these lines (adjust port 3010 to match your deployment):
+### Admin routes
 
-# Sync markets every 5 minutes
-*/5 * * * * curl -X POST http://localhost:3010/api/cron/sync-markets -H "Authorization: Bearer $CRON_SECRET"
+- `POST /api/admin/login`
+- `DELETE /api/admin/login`
+- `GET /api/admin/stats`
+- `GET /api/admin/costs`
+- `GET /api/admin/logs`
+- `POST /api/admin/action`
+- `POST /api/admin/export`
+- `GET /api/admin/export`
 
-# Start new cohort every Sunday at 00:00 UTC
-0 0 * * 0 curl -X POST http://localhost:3010/api/cron/start-cohort -H "Authorization: Bearer $CRON_SECRET"
+### Reference docs
 
-# Run decisions every Sunday at 00:05 UTC (runs after start-cohort)
-5 0 * * 0 curl -X POST http://localhost:3010/api/cron/run-decisions -H "Authorization: Bearer $CRON_SECRET"
-
-# Check resolutions every hour
-0 * * * * curl -X POST http://localhost:3010/api/cron/check-resolutions -H "Authorization: Bearer $CRON_SECRET"
-
-# Take snapshots every 10 minutes (mark-to-market, including closed-but-unresolved markets)
-*/10 * * * * curl -X POST http://localhost:3010/api/cron/take-snapshots -H "Authorization: Bearer $CRON_SECRET"
-
-# Database backup - Daily at 02:00 UTC
-0 2 * * * curl -X POST http://localhost:3010/api/cron/backup -H "Authorization: Bearer $CRON_SECRET"
-```
-
----
-
-## Configuration
-
-### Betting Constraints
-
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Initial Balance | $10,000 | Starting capital per agent |
-| Minimum Bet | $50 | Smallest allowed bet |
-| Maximum Bet | 25% of cash | Largest allowed bet |
-| Markets Shown | 500 | Top markets by volume |
-
-### LLM Settings
-
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Temperature | 0 | Deterministic outputs |
-| Max Tokens | 2,000 | Response length limit |
-| Retry Count | 1 | Retries on malformed response |
+- detailed endpoint contracts: [`docs/API_REFERENCE.md`](./docs/API_REFERENCE.md)
+- system design: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
+- operational runbook: [`docs/OPERATIONS.md`](./docs/OPERATIONS.md)
+- security posture: [`docs/SECURITY.md`](./docs/SECURITY.md)
+- schema details: [`docs/DATABASE_SCHEMA.md`](./docs/DATABASE_SCHEMA.md)
 
 ---
 
-## Deployment
+## Data Locations
 
-### DigitalOcean Droplet
+| Path | Meaning |
+|------|---------|
+| `data/forecaster.db` | Default SQLite database |
+| `backups/` | SQLite backup destination |
+| `backups/exports/` | Generated admin CSV ZIP exports |
 
-1. Create a droplet (Ubuntu 22.04, 2GB RAM minimum)
-2. SSH into the server
-3. Install Node.js 18+
-4. Clone the repository
-5. Install dependencies
-6. Set up environment variables
-7. Build and start with PM2
-8. Configure Nginx reverse proxy
-9. Set up SSL with Let's Encrypt
-10. Configure cron jobs
+Admin exports:
 
-Full deployment guide: [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
-
-### Quick Deploy
-
-```bash
-# On server
-git clone https://github.com/setrf/forecasterarena.git
-cd forecasterarena
-npm install
-cp .env.example .env.local
-# Edit .env.local
-npm run build
-pm2 start npm --name forecaster -- start
-```
+- are bounded to **7 days**
+- are capped at **50,000 rows per table**
+- default to exporting:
+  - `cohorts`
+  - `agents`
+  - `models`
+  - `markets`
+  - `decisions`
+  - `trades`
+  - `positions`
+  - `portfolio_snapshots`
+- are deleted after roughly **24 hours**
 
 ---
 
-## Documentation
+## Documentation Map
 
-| Document | Description |
-|----------|-------------|
-| [METHODOLOGY_v1.md](./docs/METHODOLOGY_v1.md) | Complete academic methodology |
-| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture diagrams |
-| [DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md) | All tables and relationships |
-| [PROMPT_DESIGN.md](./docs/PROMPT_DESIGN.md) | LLM prompt engineering |
-| [SCORING.md](./docs/SCORING.md) | Brier Score and P/L formulas |
-| [API_REFERENCE.md](./docs/API_REFERENCE.md) | Complete API documentation |
-| [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Step-by-step deployment |
-| [DEPLOYMENT_CHECKLIST.md](./docs/DEPLOYMENT_CHECKLIST.md) | Pre-deployment checklist |
-| [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) | Troubleshooting guide |
-| [OPERATIONS.md](./docs/OPERATIONS.md) | Operations runbook |
-| [DECISIONS.md](./docs/DECISIONS.md) | Design decision rationale |
+| Document | Focus |
+|----------|-------|
+| [`docs/API_REFERENCE.md`](./docs/API_REFERENCE.md) | Request/response contracts for every route |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | System structure, data flow, engine responsibilities |
+| [`docs/OPERATIONS.md`](./docs/OPERATIONS.md) | Production checks, cron procedures, operator queries |
+| [`docs/SECURITY.md`](./docs/SECURITY.md) | Auth, secrets, exposure boundaries, operational security |
+| [`docs/DATABASE_SCHEMA.md`](./docs/DATABASE_SCHEMA.md) | Tables, constraints, indexes, invariants |
+| [`docs/DECISIONS.md`](./docs/DECISIONS.md) | Decision semantics and reasoning format |
+| [`docs/SCORING.md`](./docs/SCORING.md) | P&L and Brier details |
+| [`docs/METHODOLOGY_v1.md`](./docs/METHODOLOGY_v1.md) | Benchmark methodology narrative |
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Areas for Contribution
-
-- Additional chart visualizations
-- Test coverage
-- Documentation improvements
-- Bug fixes
-- New features
-
----
-
-## Disclaimer
-
-**This is a research and educational project.**
-
-- All trading is **simulated** (paper trading)
-- No real money is ever at risk
-- This is **not financial advice**
-- Past performance does not predict future results
-- The benchmark evaluates LLM reasoning, not investment strategies
+1. run tests before committing
+2. update docs when behavior changes
+3. keep route docs aligned with actual request / response payloads
+4. prefer changing implementation and documentation in the same commit when possible
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- [Polymarket](https://polymarket.com) for market data
-- [OpenRouter](https://openrouter.ai) for unified LLM API access
-- The open-source community for the amazing tools
-
----
-
-<div align="center">
-
-**Built for the AI research community**
-
-[Back to Top](#forecaster-arena)
-
-</div>
+[MIT](./LICENSE)

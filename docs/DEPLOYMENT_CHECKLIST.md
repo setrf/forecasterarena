@@ -1,166 +1,157 @@
-# Pre-Deployment Checklist
+# Deployment Checklist
 
-Use this checklist before deploying Forecaster Arena to production.
+Use this checklist before and after deploying Forecaster Arena.
 
-## Pre-Deployment
+This checklist is intentionally aligned with the current implementation rather
+than a generic Next.js app.
 
-### Environment Variables
-- [ ] `OPENROUTER_API_KEY` is set and valid
-- [ ] `CRON_SECRET` is set (NOT 'dev-secret')
-- [ ] `ADMIN_PASSWORD` is set (NOT 'admin')
-- [ ] `NEXT_PUBLIC_SITE_URL` is set to production URL
-- [ ] `NODE_ENV` is set to 'production'
-- [ ] `DATABASE_PATH` is set (if custom location)
-- [ ] `BACKUP_PATH` is set (if custom location)
+---
 
-### Security
-- [ ] Default secrets are NOT being used (check console warnings)
-- [ ] `.env.local` is NOT committed to git
-- [ ] Database file permissions are set (600 or 640)
-- [ ] Backup directory permissions are set
-- [ ] SSL certificate is configured (Let's Encrypt)
+## 1. Release Readiness
 
-### Database
-- [ ] Database schema is up to date
-- [ ] All indexes are created
-- [ ] No orphaned records exist
-- [ ] Backup endpoint tested (`/api/cron/backup`)
-- [ ] Backup retention policy configured
+### Source Control
 
-### Build & Dependencies
-- [ ] `npm install` completes successfully
-- [ ] `npm run build` completes without errors
-- [ ] `tsc --noEmit` passes (no type errors)
-- [ ] `npm run lint` passes (no linting errors)
-- [ ] All dependencies are up to date
+- [ ] Local `main` is current with `origin/main`
+- [ ] Working tree is clean
+- [ ] Release commit is reviewed
 
-### Code Quality
-- [ ] All API endpoints have error handling
-- [ ] All database queries use parameterized statements
-- [ ] No hardcoded secrets in code
-- [ ] Health check endpoint works (`/api/health`)
+### Build Validation
 
-## Deployment Steps
+- [ ] `npm ci` completed successfully
+- [ ] `npm run build` passed
+- [ ] `npm run typecheck` passed after the build
+- [ ] `npm test` passed
 
-### 1. Server Setup
-- [ ] SSH access to DigitalOcean droplet
-- [ ] Node.js 20+ installed
-- [ ] Git installed
-- [ ] PM2 installed globally
-- [ ] Nginx installed
+### Configuration
 
-### 2. Application Setup
-- [ ] Repository cloned
-- [ ] `.env.local` created with production values
-- [ ] Dependencies installed (`npm install`)
-- [ ] Application built (`npm run build`)
-- [ ] Database initialized (first run creates it)
+- [ ] `OPENROUTER_API_KEY` is configured
+- [ ] `CRON_SECRET` is configured and strong
+- [ ] `ADMIN_PASSWORD` is configured and strong
+- [ ] `NEXT_PUBLIC_SITE_URL` points to the deployment URL
+- [ ] Optional `DATABASE_PATH` and `BACKUP_PATH` are correct for the host
 
-### 3. Process Management
-- [ ] PM2 ecosystem file created (`ecosystem.config.js`)
-- [ ] Application started with PM2
-- [ ] PM2 startup script installed (`pm2 startup`)
-- [ ] PM2 logs configured
+### Host Requirements
 
-### 4. Reverse Proxy
-- [ ] Nginx server block configured
-- [ ] SSL certificate installed (Let's Encrypt)
-- [ ] HTTP redirects to HTTPS
-- [ ] Nginx reloaded
+- [ ] `zip` is installed for admin exports
+- [ ] enough disk exists for SQLite, backups, and export archives
+- [ ] TLS / reverse proxy configuration is ready
 
-### 5. Cron Jobs
-- [ ] Crontab configured with all jobs
-- [ ] `CRON_SECRET` used in cron commands
-- [ ] Cron logs configured
-- [ ] Server timezone set to UTC
+---
 
-### 6. Monitoring
-- [ ] Health check endpoint accessible
-- [ ] System logs directory created
-- [ ] Log rotation configured
-- [ ] Uptime monitoring setup (optional)
+## 2. Security Readiness
 
-## Post-Deployment Verification
+- [ ] `.env.local` exists and is not committed
+- [ ] `.env.local` permissions are restricted
+- [ ] cron commands use the same `CRON_SECRET` as the app runtime
+- [ ] admin endpoints require login in the target environment
+- [ ] cron endpoints return `401` without valid auth
+- [ ] `/api/health` has been spot-checked to confirm it does not leak secret names
 
-### Functionality Tests
-- [ ] Homepage loads correctly
-- [ ] All navigation links work
-- [ ] Models page displays all 7 models
-- [ ] Cohorts page loads
-- [ ] Markets page loads and filters work
-- [ ] Market detail pages load
-- [ ] Admin dashboard accessible
+---
 
-### API Tests
-- [ ] `/api/health` returns 200 OK
-- [ ] `/api/leaderboard` returns data
-- [ ] `/api/models` returns all models
-- [ ] `/api/markets` returns markets
-- [ ] `/api/admin/stats` requires authentication
+## 3. Database Readiness
 
-### Cron Job Tests
-- [ ] `/api/cron/sync-markets` works (with auth)
-- [ ] `/api/cron/backup` creates backup
-- [ ] Cron jobs scheduled correctly
-- [ ] Cron logs are being written
+- [ ] target database file exists, or first boot creation is expected
+- [ ] latest backup exists before deploy
+- [ ] `PRAGMA integrity_check` passes on the target database
+- [ ] there are no known duplicate weekly cohorts or duplicate per-week
+      decisions that would conflict with current uniqueness constraints
 
-### Security Tests
-- [ ] Cron endpoints reject requests without auth
-- [ ] Admin endpoints require login
-- [ ] SSL certificate valid
-- [ ] No default secrets in use
+Recommended checks:
 
-## First Week Monitoring
+```bash
+sqlite3 /path/to/forecaster.db "PRAGMA integrity_check;"
+sqlite3 /path/to/forecaster.db "SELECT COUNT(*) FROM cohorts;"
+sqlite3 /path/to/forecaster.db "SELECT COUNT(*) FROM decisions;"
+```
 
-### Daily Checks
-- [ ] Application is running (PM2 status)
-- [ ] No error spikes in logs
-- [ ] Database size is reasonable
-- [ ] Backup created successfully
+---
 
-### Weekly Checks
-- [ ] Market sync runs successfully
-- [ ] Decision run executes (if Sunday)
-- [ ] New cohort created (if Sunday)
-- [ ] Snapshots taken daily
-- [ ] Resolutions checked hourly
+## 4. Scheduler Readiness
 
-## Troubleshooting
+- [ ] `sync-markets` cron is installed
+- [ ] `start-cohort` cron is installed
+- [ ] `run-decisions` cron is installed
+- [ ] `check-resolutions` cron is installed
+- [ ] `take-snapshots` cron is installed
+- [ ] `backup` cron is installed
+- [ ] host timezone and schedule assumptions are understood
 
-### Common Issues
+Recommended schedule:
 
-**Application won't start**
-- Check PM2 logs: `pm2 logs forecaster-arena`
-- Verify environment variables are set
-- Check database file permissions
+- [ ] `*/5 * * * *` sync markets
+- [ ] `0 0 * * 0` start cohort
+- [ ] `5 0 * * 0` run decisions
+- [ ] `0 * * * *` check resolutions
+- [ ] `*/10 * * * *` take snapshots
+- [ ] `0 23 * * 6` create backup (or another documented low-traffic backup slot)
 
-**Cron jobs not running**
-- Verify crontab: `crontab -l`
-- Check cron logs in `/home/forecaster/logs/`
-- Verify `CRON_SECRET` matches in cron and app
+---
 
-**Database errors**
-- Check database file exists and is readable
-- Verify database schema is up to date
-- Check for disk space issues
+## 5. Post-Deploy Verification
 
-**Nginx errors**
-- Check Nginx error logs: `sudo tail -f /var/log/nginx/error.log`
-- Verify SSL certificate is valid
-- Check Nginx config: `sudo nginx -t`
+### Application
 
-## Rollback Procedure
+- [ ] homepage loads
+- [ ] models page loads and renders all 7 models
+- [ ] markets page loads
+- [ ] cohorts page loads
+- [ ] admin login page loads
 
-If deployment fails:
+### API
 
-1. Stop PM2: `pm2 stop forecaster-arena`
-2. Restore previous version: `git checkout <previous-commit>`
-3. Rebuild: `npm run build`
-4. Restart: `pm2 restart forecaster-arena`
-5. Restore database backup if needed
+- [ ] `/api/health` returns the expected status for the environment
+- [ ] `/api/leaderboard` returns JSON
+- [ ] `/api/markets?limit=1` returns JSON
+- [ ] `/api/performance-data?range=1M` returns JSON
 
-## Support Contacts
+### Admin
 
-- GitHub Issues: https://github.com/setrf/forecasterarena/issues
-- Documentation: `docs/DEPLOYMENT.md`
+- [ ] login succeeds with the configured password
+- [ ] `/api/admin/stats` is blocked when not logged in
+- [ ] export creation works for a small cohort/time window
 
+### Cron
+
+- [ ] one cron route was manually exercised successfully
+- [ ] cron logs are being written
+- [ ] a failed unauthenticated cron call returns `401`
+
+---
+
+## 6. Observability Checks
+
+- [ ] PM2 process is online
+- [ ] PM2 logs show no startup crash loop
+- [ ] Nginx config tests cleanly
+- [ ] Nginx error log is quiet after traffic warm-up
+- [ ] system logs table is receiving expected operational events
+
+Suggested commands:
+
+```bash
+pm2 status
+pm2 logs forecaster-arena --lines 100
+sudo nginx -t
+sqlite3 /path/to/forecaster.db "SELECT event_type, severity, created_at FROM system_logs ORDER BY created_at DESC LIMIT 20;"
+```
+
+---
+
+## 7. First-Week Monitoring
+
+- [ ] market sync timestamps continue advancing
+- [ ] snapshots continue landing every 10 minutes
+- [ ] Sunday cohort start remains idempotent
+- [ ] Sunday decision run creates one weekly decision row per agent
+- [ ] resolution checks do not leave growing numbers of stale closed markets
+- [ ] backups are actually created on schedule
+
+---
+
+## 8. Rollback Preparedness
+
+- [ ] previous working commit is known
+- [ ] latest DB backup path is known
+- [ ] rollback command path is documented
+- [ ] the operator has verified they can restart PM2 and Nginx if required
