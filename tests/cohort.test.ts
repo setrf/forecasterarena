@@ -78,7 +78,7 @@ describe('engine/cohort', () => {
       const decisionTwo = queries.createDecision({
         agent_id: agent.id,
         cohort_id: cohort.id,
-        decision_week: 1,
+        decision_week: 2,
         prompt_system: 'system',
         prompt_user: 'user',
         action: 'HOLD'

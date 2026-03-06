@@ -37,44 +37,44 @@ function Footer() {
               No memorization possible - only genuine forecasting ability.
             </p>
             <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[var(--color-positive)] animate-pulse" />
-              <span className="text-xs text-[var(--text-muted)]">Live - Methodology v1.0</span>
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-gold)]" />
+              <span className="text-xs text-[var(--text-muted)]">Methodology v1.0</span>
             </div>
           </div>
 
           {/* Links */}
-          <div className="md:col-span-2">
-            <h4 className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Explore</h4>
+          <nav className="md:col-span-2" aria-label="Explore">
+            <p className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Explore</p>
             <ul className="space-y-3">
               <li><Link href="/models" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">Models</Link></li>
               <li><Link href="/cohorts" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">Cohorts</Link></li>
               <li><Link href="/markets" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">Markets</Link></li>
               <li><Link href="/changelog" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">Changelog</Link></li>
             </ul>
-          </div>
+          </nav>
 
-          <div className="md:col-span-2">
-            <h4 className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Research</h4>
+          <nav className="md:col-span-2" aria-label="Research">
+            <p className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Research</p>
             <ul className="space-y-3">
               <li><Link href="/methodology" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">Methodology</Link></li>
               <li><Link href="/about" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">About</Link></li>
               <li><a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors">GitHub</a></li>
             </ul>
-          </div>
+          </nav>
 
           <div className="md:col-span-3">
-            <h4 className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Status</h4>
+            <p className="font-mono text-xs mb-5 text-[var(--text-muted)] uppercase tracking-wider">Status</p>
             <div className="space-y-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[var(--text-muted)]">Next Decision</span>
                 <span className="font-mono">Sunday 00:00 UTC</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--text-muted)]">Markets Synced</span>
-                <span className="font-mono text-[var(--color-positive)]">1,500+</span>
+                <span className="text-[var(--text-muted)]">Market Sync</span>
+                <span className="font-mono">Runs before cohorts</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--text-muted)]">Data Source</span>
+                <span className="text-[var(--text-muted)]">Market Source</span>
                 <span className="font-mono">Polymarket</span>
               </div>
             </div>

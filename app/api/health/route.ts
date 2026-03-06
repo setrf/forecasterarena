@@ -11,6 +11,10 @@ import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+function errorCheck(message: string): { status: 'error'; message: string } {
+  return { status: 'error', message };
+}
+
 export async function GET() {
   const checks: Record<string, { status: 'ok' | 'error'; message?: string }> = {};
   let overallStatus: 'ok' | 'error' = 'ok';
@@ -25,10 +29,7 @@ export async function GET() {
     };
     if (checks.database.status === 'error') overallStatus = 'error';
   } catch (error) {
-    checks.database = {
-      status: 'error',
-      message: error instanceof Error ? error.message : 'Database connection failed'
-    };
+    checks.database = errorCheck('Database unavailable');
     overallStatus = 'error';
   }
   
@@ -45,7 +46,7 @@ export async function GET() {
   checks.environment = {
     status: missingEnvVars.length === 0 ? 'ok' : 'error',
     message: missingEnvVars.length > 0 
-      ? `Missing: ${missingEnvVars.join(', ')}` 
+      ? 'Required configuration is incomplete'
       : undefined
   };
   if (checks.environment.status === 'error') overallStatus = 'error';
@@ -63,15 +64,13 @@ export async function GET() {
     checks.data_integrity = {
       status: orphanedPositions.count === 0 ? 'ok' : 'error',
       message: orphanedPositions.count > 0 
-        ? `${orphanedPositions.count} orphaned positions found` 
+        ? 'Integrity issues detected'
         : undefined
     };
     if (checks.data_integrity.status === 'error') overallStatus = 'error';
   } catch (error) {
-    checks.data_integrity = {
-      status: 'error',
-      message: error instanceof Error ? error.message : 'Integrity check failed'
-    };
+    checks.data_integrity = errorCheck('Integrity check unavailable');
+    overallStatus = 'error';
   }
   
   return NextResponse.json({
@@ -82,4 +81,3 @@ export async function GET() {
     status: overallStatus === 'ok' ? 200 : 503
   });
 }
-

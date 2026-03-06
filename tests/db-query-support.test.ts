@@ -404,11 +404,11 @@ describe('db query modules - support and reporting', () => {
   it('covers cohort summary aggregation', async () => {
     await withModules(({ agents, cohorts, db, leaderboard, markets, models, positions, trades }) => {
       const cohortOne = cohorts.createCohort();
+      db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run('2025-01-01T00:00:00.000Z', cohortOne.id);
       const cohortTwo = cohorts.createCohort();
       const cohortOneAgents = agents.createAgentsForCohort(cohortOne.id);
       const cohortTwoAgents = agents.createAgentsForCohort(cohortTwo.id);
 
-      db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run('2025-01-01T00:00:00.000Z', cohortOne.id);
       db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run('2025-01-08T00:00:00.000Z', cohortTwo.id);
 
       const tradedMarket = createMarket(markets, { question: 'Summary market' });

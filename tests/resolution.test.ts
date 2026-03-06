@@ -69,6 +69,82 @@ describe('engine/resolution', () => {
     }
   });
 
+  it('keeps markets closed when any position settlement fails', async () => {
+    const fetchMarketById = vi.fn().mockResolvedValue({ id: 'pm-closed' });
+    const checkResolution = vi.fn().mockReturnValue({ resolved: true, winner: 'YES' });
+
+    vi.doMock('@/lib/polymarket/client', () => ({
+      fetchMarketById,
+      checkResolution
+    }));
+
+    let settleCalls = 0;
+    vi.doMock('@/lib/db/queries', async () => {
+      const actual = await vi.importActual<typeof import('@/lib/db/queries')>('@/lib/db/queries');
+      return {
+        ...actual,
+        settlePosition: vi.fn((positionId: string) => {
+          settleCalls += 1;
+          if (settleCalls === 2) {
+            throw new Error('settlement write failed');
+          }
+          return actual.settlePosition(positionId);
+        })
+      };
+    });
+
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const queries = await import('@/lib/db/queries');
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+      const modelRows = db.prepare(`
+        SELECT id FROM models
+        ORDER BY id ASC
+        LIMIT 2
+      `).all() as Array<{ id: string }>;
+
+      db.prepare(`
+        UPDATE models
+        SET is_active = CASE WHEN id IN (?, ?) THEN 1 ELSE 0 END
+      `).run(modelRows[0]!.id, modelRows[1]!.id);
+
+      const cohort = queries.createCohort();
+      const agents = queries.createAgentsForCohort(cohort.id);
+      const resolution = await import('@/lib/engine/resolution');
+
+      const market = queries.upsertMarket({
+        polymarket_id: `pm-resolution-${Date.now()}`,
+        question: 'Will partial settlement leave the market closed?',
+        close_date: '2030-01-01T00:00:00.000Z',
+        status: 'closed',
+        current_price: 0.61,
+        volume: 1000,
+        liquidity: 500
+      });
+
+      const firstPosition = queries.upsertPosition(agents[0]!.id, market.id, 'YES', 10, 0.5, 5);
+      const secondPosition = queries.upsertPosition(agents[1]!.id, market.id, 'YES', 8, 0.5, 4);
+
+      const result = await resolution.checkAllResolutions();
+
+      expect(result.markets_checked).toBe(1);
+      expect(result.markets_resolved).toBe(0);
+      expect(result.positions_settled).toBe(1);
+      expect(result.errors).toEqual([
+        expect.stringContaining('settlement write failed')
+      ]);
+      expect(queries.getMarketById(market.id)?.status).toBe('closed');
+      expect(queries.getPositionById(firstPosition.id)?.status).toBe('settled');
+      expect(queries.getPositionById(secondPosition.id)?.status).toBe('open');
+    } finally {
+      vi.doUnmock('@/lib/polymarket/client');
+      vi.doUnmock('@/lib/db/queries');
+      await ctx.cleanup();
+    }
+  });
+
   it('surfaces per-market fetch failures in the resolution summary', async () => {
     const fetchMarketById = vi.fn().mockRejectedValue(new Error('network down'));
     const checkResolution = vi.fn();

@@ -41,7 +41,19 @@ function formatPnL(value: number | null, hasData: boolean): string {
 }
 
 // Hero Section - Clean, centered, breathable
-function HeroSection() {
+function HeroSection({
+  hasRealData,
+  hasSyncedMarkets,
+}: {
+  hasRealData: boolean;
+  hasSyncedMarkets: boolean;
+}) {
+  const statusLabel = hasRealData
+    ? 'Live Benchmark'
+    : hasSyncedMarkets
+      ? 'Synced Preview'
+      : 'Awaiting First Cohort';
+
   return (
     <section className="relative overflow-hidden">
       {/* Background effects */}
@@ -58,8 +70,8 @@ function HeroSection() {
       <div className="container-medium mx-auto px-6 pt-20 pb-16 md:pt-32 md:pb-20 relative z-10 text-center">
         <div className="animate-fade-in">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--bg-card)] border border-[var(--border-subtle)] mb-6">
-            <span className="w-2 h-2 rounded-full bg-[var(--color-positive)] animate-pulse" />
-            <span className="text-sm text-[var(--text-secondary)]">Live Benchmark</span>
+            <span className={`w-2 h-2 rounded-full ${hasRealData ? 'bg-[var(--color-positive)] animate-pulse' : 'bg-[var(--accent-gold)]'}`} />
+            <span className="text-sm text-[var(--text-secondary)]">{statusLabel}</span>
           </div>
           
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] mb-6">
@@ -93,7 +105,19 @@ function HeroSection() {
 }
 
 // Live Stats Dashboard - Immediately below hero
-function LiveStatsDashboard({ leader, hasRealData }: { leader: LeaderboardEntry | null; hasRealData: boolean }) {
+function LiveStatsDashboard({
+  leader,
+  hasRealData,
+  marketCount,
+}: {
+  leader: LeaderboardEntry | null;
+  hasRealData: boolean;
+  marketCount: number | null;
+}) {
+  const formattedMarketCount = marketCount === null
+    ? 'N/A'
+    : marketCount.toLocaleString('en-US');
+
   return (
     <section className="border-y border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
       <div className="container-wide mx-auto">
@@ -125,16 +149,18 @@ function LiveStatsDashboard({ leader, hasRealData }: { leader: LeaderboardEntry 
           
           {/* Capital */}
           <div className="py-6 md:py-8 px-6 md:border-r border-[var(--border-subtle)] animate-fade-in delay-200">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Capital</p>
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Capacity</p>
             <p className="text-3xl md:text-4xl font-bold">$70K</p>
-            <p className="text-sm text-[var(--text-secondary)]">$10K per model</p>
+            <p className="text-sm text-[var(--text-secondary)]">7 models x $10K at launch</p>
           </div>
           
           {/* Markets */}
           <div className="py-6 md:py-8 pl-6 pr-6 animate-fade-in delay-300">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Markets</p>
-            <p className="text-3xl md:text-4xl font-bold">1,500+</p>
-            <p className="text-sm text-[var(--text-secondary)]">Via Polymarket</p>
+            <p className="text-3xl md:text-4xl font-bold">{formattedMarketCount}</p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              {marketCount && marketCount > 0 ? 'Synced from Polymarket' : 'Awaiting market sync'}
+            </p>
           </div>
         </div>
       </div>
@@ -428,17 +454,28 @@ export default function Home() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(emptyLeaderboard);
   const [hasRealData, setHasRealData] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+  const [marketCount, setMarketCount] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/leaderboard');
-        if (!res.ok) {
+        const [leaderboardRes, marketsRes] = await Promise.all([
+          fetch('/api/leaderboard'),
+          fetch('/api/markets?limit=1'),
+        ]);
+
+        if (!leaderboardRes.ok) {
           setLeaderboardError('Leaderboard data is temporarily unavailable.');
           return;
         }
 
-        const data = await res.json();
+        const [data, marketsData] = await Promise.all([
+          leaderboardRes.json(),
+          marketsRes.ok ? marketsRes.json() : Promise.resolve(null),
+        ]);
+
+        setMarketCount(marketsData?.stats?.total_markets ?? null);
+
         if (data.leaderboard && data.leaderboard.length > 0) {
           // Check if we have actual competition data (non-zero P/L or resolved bets)
           const hasActualData = data.leaderboard.some(
@@ -459,7 +496,7 @@ export default function Home() {
 
   return (
     <main>
-      <HeroSection />
+      <HeroSection hasRealData={hasRealData} hasSyncedMarkets={(marketCount ?? 0) > 0} />
       {leaderboardError && (
         <section className="container-wide mx-auto px-6 pt-6">
           <div className="rounded-xl border border-[rgba(251,113,133,0.3)] bg-[rgba(251,113,133,0.08)] px-4 py-3" role="status" aria-live="polite">
@@ -467,7 +504,7 @@ export default function Home() {
           </div>
         </section>
       )}
-      <LiveStatsDashboard leader={leaderboard[0] || null} hasRealData={hasRealData} />
+      <LiveStatsDashboard leader={leaderboard[0] || null} hasRealData={hasRealData} marketCount={marketCount} />
       <PerformanceChartSection />
       <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />
       <HowItWorks />

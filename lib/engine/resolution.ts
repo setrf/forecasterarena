@@ -276,13 +276,30 @@ async function checkMarketResolution(market: Market): Promise<MarketResolutionRe
       };
     }
 
-    // Update market in our database
-    resolveMarket(market.id, resolution.winner);
-    
-    console.log(`Market resolved: "${market.question.slice(0, 50)}..." → ${resolution.winner}`);
-    
-    // Settle positions
+    console.log(`Market resolved upstream: "${market.question.slice(0, 50)}..." → ${resolution.winner}`);
+
+    // Settle positions before marking the market resolved locally so partial
+    // failures can be retried on the next resolution pass.
     const settled = processResolvedMarket(market, resolution.winner);
+
+    if (settled.errors.length > 0) {
+      logSystemEvent('market_resolution_partial_failure', {
+        market_id: market.id,
+        polymarket_id: market.polymarket_id,
+        winning_outcome: resolution.winner,
+        positions_settled: settled.positions_settled,
+        errors: settled.errors
+      }, 'error');
+
+      return {
+        resolved: false,
+        positions_settled: settled.positions_settled,
+        errors: settled.errors
+      };
+    }
+
+    // Update market in our database only after all settlements succeed.
+    resolveMarket(market.id, resolution.winner);
     
     logSystemEvent('market_resolved', {
       market_id: market.id,

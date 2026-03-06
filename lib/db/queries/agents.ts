@@ -66,20 +66,15 @@ export function getAgentByCohortAndModel(cohortId: string, modelId: string): Age
 export function createAgentsForCohort(cohortId: string): Agent[] {
   const db = getDb();
   const models = getActiveModels();
-  const agents: Agent[] = [];
 
   for (const model of models) {
-    const id = generateId();
-
     db.prepare(`
-      INSERT INTO agents (id, cohort_id, model_id, cash_balance, total_invested, status)
+      INSERT OR IGNORE INTO agents (id, cohort_id, model_id, cash_balance, total_invested, status)
       VALUES (?, ?, ?, ?, 0, 'active')
-    `).run(id, cohortId, model.id, INITIAL_BALANCE);
-
-    agents.push(getAgentById(id)!);
+    `).run(generateId(), cohortId, model.id, INITIAL_BALANCE);
   }
 
-  return agents;
+  return getAgentsByCohort(cohortId);
 }
 
 export function updateAgentBalance(id: string, cashBalance: number, totalInvested: number): void {

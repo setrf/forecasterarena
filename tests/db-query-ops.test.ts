@@ -93,10 +93,9 @@ describe('db query modules - operations', () => {
       expect(cohorts.getCohortForCurrentWeek()).toBeUndefined();
 
       const cohortOne = cohorts.createCohort();
-      const cohortTwo = cohorts.createCohort();
-
+      expect(cohorts.createCohort().id).toBe(cohortOne.id);
       db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run('2020-01-01T00:00:00.000Z', cohortOne.id);
-      db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run('2030-01-01T00:00:00.000Z', cohortTwo.id);
+      const cohortTwo = cohorts.createCohort();
 
       expect(cohorts.getLatestCohortNumber()).toBe(2);
       expect(cohorts.getCohortById(cohortOne.id)?.id).toBe(cohortOne.id);
@@ -252,7 +251,7 @@ describe('db query modules - operations', () => {
       const newer = decisions.createDecision({
         agent_id: agent!.id,
         cohort_id: cohort.id,
-        decision_week: 1,
+        decision_week: 2,
         prompt_system: 'system',
         prompt_user: 'user',
         action: 'HOLD',
@@ -270,7 +269,8 @@ describe('db query modules - operations', () => {
 
       expect(older.retry_count).toBe(0);
       expect(newer.retry_count).toBe(2);
-      expect(decisions.getDecisionByAgentWeek(agent!.id, cohort.id, 1)?.id).toBe(newer.id);
+      expect(decisions.getDecisionByAgentWeek(agent!.id, cohort.id, 1)?.id).toBe(older.id);
+      expect(decisions.getDecisionByAgentWeek(agent!.id, cohort.id, 2)?.id).toBe(newer.id);
       expect(decisions.getDecisionsByAgent(agent!.id).map(decision => decision.id)).toEqual([newer.id, older.id]);
       expect(decisions.getDecisionsByAgent(agent!.id, 1).map(decision => decision.id)).toEqual([newer.id]);
       expect(decisions.getRecentDecisions(1).map(decision => decision.id)).toEqual([newer.id]);

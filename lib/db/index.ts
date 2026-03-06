@@ -272,5 +272,32 @@ export function withTransaction<T>(fn: () => T): T {
   return database.transaction(fn)();
 }
 
+/**
+ * Execute a function within an IMMEDIATE transaction.
+ *
+ * IMMEDIATE transactions acquire the write lock up front, which helps
+ * serialize check-then-write workflows across concurrent cron invocations.
+ */
+export function withImmediateTransaction<T>(fn: () => T): T {
+  const database = getDb();
+
+  if (database.inTransaction) {
+    return fn();
+  }
+
+  database.exec('BEGIN IMMEDIATE');
+
+  try {
+    const result = fn();
+    database.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (database.inTransaction) {
+      database.exec('ROLLBACK');
+    }
+    throw error;
+  }
+}
+
 // Export default database getter
 export default getDb;

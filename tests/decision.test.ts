@@ -185,6 +185,7 @@ describe('engine/decision', () => {
 
       const latestDecision = queries.getDecisionsByAgent(agent.id, 1)[0];
       expect(latestDecision.retry_count).toBe(2);
+      expect(queries.getTotalDecisionsForCohort(cohort.id)).toBe(1);
     } finally {
       vi.doUnmock('@/lib/openrouter/client');
       vi.doUnmock('@/lib/constants');
@@ -288,6 +289,7 @@ describe('engine/decision', () => {
       expect(secondRun.decisions[0].success).toBe(false);
       expect(callOpenRouterWithRetry).toHaveBeenCalledTimes(2);
       expect(executeBets).toHaveBeenCalledTimes(2);
+      expect(queries.getTotalDecisionsForCohort(cohort.id)).toBe(1);
     } finally {
       vi.doUnmock('@/lib/openrouter/client');
       vi.doUnmock('@/lib/engine/execution');

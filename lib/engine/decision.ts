@@ -13,15 +13,15 @@ import {
   getAgentsWithModelsByCohort,
   getTopMarketsByVolume,
   getPositionsWithMarkets,
-  createDecision,
-  getDecisionByAgentWeek,
-  getTradesByDecision
+  claimDecisionForProcessing,
+  finalizeDecision,
+  markDecisionAsError
 } from '../db/queries';
 import { callOpenRouterWithRetry, estimateCost } from '../openrouter/client';
 import { SYSTEM_PROMPT, buildUserPrompt, buildRetryPrompt } from '../openrouter/prompts';
 import { parseDecision, isValidDecision, getDefaultHoldDecision } from '../openrouter/parser';
 import { executeBets, executeSells } from './execution';
-import { TOP_MARKETS_COUNT, LLM_MAX_RETRIES } from '../constants';
+import { TOP_MARKETS_COUNT, LLM_MAX_RETRIES, LLM_TIMEOUT_MS } from '../constants';
 import { calculateWeekNumber } from '../utils';
 import type { AgentWithModel, Market } from '../types';
 
@@ -71,6 +71,11 @@ async function processAgentDecision(
     action: 'ERROR',
     success: false
   };
+  let claimedDecisionId: string | null = null;
+  let systemPrompt = SYSTEM_PROMPT;
+  let userPrompt = '';
+  let retryCount = 0;
+  let rawResponse: string | undefined;
   
   try {
     // Skip bankrupt agents
@@ -80,25 +85,22 @@ async function processAgentDecision(
       return result;
     }
 
-    // Idempotency guard: avoid duplicate decisions for rerun cron executions.
-    // If last attempt for this week was an ERROR, allow a retry.
-    // BET/SELL decisions that produced no trades are also retryable.
-    const existingDecision = getDecisionByAgentWeek(agent.id, cohortId, weekNumber);
-    if (existingDecision && existingDecision.action !== 'ERROR') {
-      const shouldRetryWithoutTrades = (
-        existingDecision.action === 'BET' || existingDecision.action === 'SELL'
-      ) && getTradesByDecision(existingDecision.id).length === 0;
+    const decisionClaim = claimDecisionForProcessing({
+      agent_id: agent.id,
+      cohort_id: cohortId,
+      decision_week: weekNumber,
+      stale_after_ms: LLM_TIMEOUT_MS * 2
+    });
 
-      if (!shouldRetryWithoutTrades) {
-        result.decision_id = existingDecision.id;
-        result.action = 'SKIPPED';
-        result.success = true;
-        return result;
-      }
-
-      result.decision_id = existingDecision.id;
-      result.error = 'Retrying decision because no trades were recorded';
+    if (decisionClaim.status === 'skipped') {
+      result.decision_id = decisionClaim.decision.id;
+      result.action = 'SKIPPED';
+      result.success = true;
+      return result;
     }
+
+    claimedDecisionId = decisionClaim.decision.id;
+    result.decision_id = claimedDecisionId;
     
     console.log(`Processing decision for ${agent.model.display_name}...`);
     
@@ -106,8 +108,7 @@ async function processAgentDecision(
     const positions = getPositionsWithMarkets(agent.id);
     
     // Build prompts
-    const systemPrompt = SYSTEM_PROMPT;
-    const userPrompt = buildUserPrompt(
+    userPrompt = buildUserPrompt(
       {
         id: agent.id,
         cohort_id: agent.cohort_id,
@@ -145,9 +146,9 @@ async function processAgentDecision(
       systemPrompt,
       userPrompt
     );
+    rawResponse = response.content;
     
     let parsed = parseDecision(response.content, agent.cash_balance);
-    let retryCount = 0;
     
     // Retry malformed responses up to configured max.
     while (!isValidDecision(parsed) && retryCount < LLM_MAX_RETRIES) {
@@ -165,6 +166,7 @@ async function processAgentDecision(
         retryPrompt
       );
       
+      rawResponse = response.content;
       parsed = parseDecision(response.content, agent.cash_balance);
       retryCount++;
     }
@@ -178,11 +180,8 @@ async function processAgentDecision(
     // Estimate cost
     const estimatedCost = estimateCost(response.usage, agent.model.openrouter_id);
     
-    // Log decision
-    const decision = createDecision({
-      agent_id: agent.id,
-      cohort_id: cohortId,
-      decision_week: weekNumber,
+    // Finalize the claimed row with the completed decision.
+    const decision = finalizeDecision(claimedDecisionId, {
       prompt_system: systemPrompt,
       prompt_user: userPrompt,
       raw_response: response.content,
@@ -193,7 +192,8 @@ async function processAgentDecision(
       tokens_input: response.usage.prompt_tokens,
       tokens_output: response.usage.completion_tokens,
       api_cost_usd: estimatedCost,
-      response_time_ms: response.response_time_ms
+      response_time_ms: response.response_time_ms,
+      error_message: null
     });
     
     result.decision_id = decision.id;
@@ -250,6 +250,15 @@ async function processAgentDecision(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     result.error = message;
+
+    if (claimedDecisionId) {
+      markDecisionAsError(claimedDecisionId, message, {
+        prompt_system: systemPrompt,
+        prompt_user: userPrompt,
+        raw_response: rawResponse,
+        retry_count: retryCount
+      });
+    }
     
     logSystemEvent('agent_decision_error', {
       agent_id: agent.id,

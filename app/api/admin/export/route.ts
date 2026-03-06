@@ -19,7 +19,7 @@ import { getDb } from '@/lib/db';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import { ensureAdminAuthenticated } from '@/lib/api/admin-route';
 
 export const dynamic = 'force-dynamic';
@@ -55,13 +55,11 @@ function csvEscape(value: unknown): string {
 }
 
 function writeCsv(filePath: string, columns: string[], rows: Record<string, unknown>[]): void {
-  const stream = fs.createWriteStream(filePath, { encoding: 'utf8' });
-  stream.write(columns.join(',') + '\n');
-  for (const row of rows) {
-    const line = columns.map((c) => csvEscape((row as any)[c])).join(',');
-    stream.write(line + '\n');
-  }
-  stream.end();
+  const lines = [
+    columns.join(','),
+    ...rows.map((row) => columns.map((c) => csvEscape((row as any)[c])).join(','))
+  ];
+  fs.writeFileSync(filePath, lines.join('\n') + '\n', 'utf8');
 }
 
 function cleanupOldExports() {
@@ -83,8 +81,37 @@ function cleanupOldExports() {
 }
 
 function safeFilename(cohortId: string): string {
+  const safeCohortId = cohortId
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 64) || 'cohort';
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  return `export-${cohortId}-${ts}.zip`;
+  return `export-${safeCohortId}-${ts}.zip`;
+}
+
+function createZipArchive(zipPath: string, files: string[]): void {
+  const result = spawnSync('zip', ['-j', zipPath, ...files], {
+    encoding: 'utf8'
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr?.trim() ||
+      result.stdout?.trim() ||
+      'Failed to create export archive'
+    );
+  }
+}
+
+function cleanupTempDir(tempDir: string): void {
+  if (!fs.existsSync(tempDir)) return;
+  fs.rmSync(tempDir, { recursive: true, force: true });
 }
 
 function buildQueries(includePrompts: boolean) {
@@ -251,18 +278,12 @@ async function handlePost(request: NextRequest) {
     ].join('\n');
     fs.writeFileSync(path.join(tempDir, 'README.txt'), readme, 'utf8');
 
-    const filename = safeFilename(cohortId);
+    const filename = path.basename(safeFilename(cohortId));
     const zipPath = path.join(EXPORTS_DIR, filename);
 
     // Zip the temp directory contents without nesting directories
     const filesToZip = fs.readdirSync(tempDir).map((f) => path.join(tempDir, f));
-    execSync(`zip -j ${zipPath} ${filesToZip.map((f) => `"${f}"`).join(' ')}`);
-
-    // Clean up temp dir
-    for (const f of filesToZip) {
-      fs.existsSync(f) && fs.unlinkSync(f);
-    }
-    fs.rmdirSync(tempDir);
+    createZipArchive(zipPath, filesToZip);
 
     logSystemEvent('admin_export_created', {
       cohort_id: cohortId,
@@ -287,6 +308,8 @@ async function handlePost(request: NextRequest) {
   } catch (error: any) {
     console.error('[Export] failed', error);
     return NextResponse.json({ error: error.message || 'Export failed' }, { status: 500 });
+  } finally {
+    cleanupTempDir(tempDir);
   }
 }
 

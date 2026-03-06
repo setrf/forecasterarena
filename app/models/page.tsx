@@ -74,9 +74,9 @@ export default function ModelsPage() {
     return pnlB - pnlA;
   });
 
-  const leader = sortedModels[0];
-  const leaderStats = stats.get(leader?.id);
-  const otherModels = sortedModels.slice(1);
+  const leader = hasRealData ? sortedModels[0] : null;
+  const leaderStats = leader ? stats.get(leader.id) : undefined;
+  const otherModels = hasRealData ? sortedModels.slice(1) : sortedModels;
 
   return (
     <div className="min-h-screen">
@@ -199,7 +199,7 @@ export default function ModelsPage() {
             const pnl = modelStats?.total_pnl ?? 0;
             const brier = modelStats?.avg_brier_score;
             const winRate = modelStats?.win_rate;
-            const rank = i + 2;
+            const rank = hasRealData ? i + 2 : i + 1;
             
             return (
               <Link

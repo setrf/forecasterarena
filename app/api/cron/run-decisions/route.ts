@@ -14,7 +14,7 @@ import { logSystemEvent } from '@/lib/db';
 import { cronUnauthorizedResponse, isCronAuthorized } from '@/lib/api/cron-auth';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 600; // 10 minutes max for LLM calls (7 models × ~1-2 min each)
+export const maxDuration = 600; // 10 minutes max; model calls are capped to fit the full sequential run
 
 export async function POST(request: NextRequest) {
   if (!isCronAuthorized(request)) {

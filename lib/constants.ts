@@ -51,9 +51,13 @@ export const LLM_TEMPERATURE = 0;
 export const LLM_MAX_TOKENS = 16000;
 
 /**
- * Request timeout in milliseconds
+ * Request timeout in milliseconds.
+ *
+ * The weekly decision cron processes models sequentially under a 10 minute
+ * route budget, so each individual model call must fail fast enough to keep
+ * the full run within that window.
  */
-export const LLM_TIMEOUT_MS = 600000; // 10 minutes to allow heavy contexts
+export const LLM_TIMEOUT_MS = 40000; // 40 seconds per model call
 
 /**
  * Number of retries for malformed responses

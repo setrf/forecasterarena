@@ -63,15 +63,20 @@ export function startNewCohort(): StartCohortResult {
     const result = withTransaction(() => {
       // Create cohort
       const cohort = dbCreateCohort();
+      const existingAgents = getAgentsByCohort(cohort.id);
 
-      // Create agents for all models
-      const agents = createAgentsForCohort(cohort.id);
+      // Create agents for all models if this cohort was newly created.
+      const agents = existingAgents.length > 0
+        ? existingAgents
+        : createAgentsForCohort(cohort.id);
 
-      logSystemEvent('cohort_started', {
-        cohort_id: cohort.id,
-        cohort_number: cohort.cohort_number,
-        num_agents: agents.length
-      });
+      if (existingAgents.length === 0) {
+        logSystemEvent('cohort_started', {
+          cohort_id: cohort.id,
+          cohort_number: cohort.cohort_number,
+          num_agents: agents.length
+        });
+      }
 
       return { cohort, agents };
     });
@@ -222,5 +227,4 @@ export function maybeStartNewCohort(force: boolean = false): StartCohortResult {
 
   return startNewCohort();
 }
-
 

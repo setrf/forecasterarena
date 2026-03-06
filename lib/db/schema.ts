@@ -316,6 +316,8 @@ CREATE INDEX IF NOT EXISTS idx_trades_executed ON trades(executed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_decisions_agent ON decisions(agent_id);
 CREATE INDEX IF NOT EXISTS idx_decisions_cohort ON decisions(cohort_id);
 CREATE INDEX IF NOT EXISTS idx_decisions_timestamp ON decisions(decision_timestamp DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_decisions_agent_cohort_week_unique
+  ON decisions(agent_id, cohort_id, decision_week);
 
 -- Portfolio Snapshots
 CREATE INDEX IF NOT EXISTS idx_snapshots_agent ON portfolio_snapshots(agent_id);
@@ -333,6 +335,7 @@ CREATE INDEX IF NOT EXISTS idx_markets_status_resolved ON markets(status, resolv
 -- Additional composite indexes for optimized queries
 CREATE INDEX IF NOT EXISTS idx_agents_status_balance ON agents(status, cash_balance DESC);
 CREATE INDEX IF NOT EXISTS idx_positions_agent_market ON positions(agent_id, market_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cohorts_started_unique ON cohorts(started_at);
 
 -- Brier Scores
 CREATE INDEX IF NOT EXISTS idx_brier_agent ON brier_scores(agent_id);

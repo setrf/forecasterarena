@@ -205,7 +205,7 @@ export async function callOpenRouterWithRetry(
   modelId: string,
   systemPrompt: string,
   userPrompt: string,
-  retries: number = 4,
+  retries: number = 0,
   delayMs: number = 3000
 ): Promise<OpenRouterResponse> {
   let lastError: Error | null = null;
@@ -267,5 +267,4 @@ export function estimateCost(usage: TokenUsage, modelId: string): number {
   
   return inputCost + outputCost;
 }
-
 
