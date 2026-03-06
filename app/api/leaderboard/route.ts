@@ -23,8 +23,7 @@ export async function GET() {
       updated_at: new Date().toISOString()
     });
 
-    // Cache for 5 minutes - leaderboard data doesn't change frequently
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+    response.headers.set('Cache-Control', 'no-store');
     return response;
 
   } catch (error) {
@@ -34,6 +33,5 @@ export async function GET() {
     );
   }
 }
-
 
 

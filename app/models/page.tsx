@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MODELS } from '@/lib/constants';
+import { hasLiveCompetitionData } from '@/lib/competition-state';
 
 interface ModelStats {
   model_id: string;
@@ -24,7 +25,7 @@ export default function ModelsPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch('/api/leaderboard');
+        const res = await fetch('/api/leaderboard', { cache: 'no-store' });
         if (!res.ok) {
           setError('Failed to load model rankings.');
           return;
@@ -33,11 +34,7 @@ export default function ModelsPage() {
         const data = await res.json();
         if (data.leaderboard && data.leaderboard.length > 0) {
           const statsMap = new Map<string, ModelStats>();
-          let foundRealData = false;
           for (const entry of data.leaderboard) {
-            if (entry.total_pnl !== 0 || entry.num_resolved_bets > 0) {
-              foundRealData = true;
-            }
             statsMap.set(entry.model_id, {
               model_id: entry.model_id,
               total_pnl: entry.total_pnl,
@@ -46,11 +43,12 @@ export default function ModelsPage() {
               num_resolved_bets: entry.num_resolved_bets
             });
           }
-          if (foundRealData) {
-            setStats(statsMap);
-            setHasRealData(true);
-          }
+          setStats(statsMap);
         }
+        setHasRealData(hasLiveCompetitionData({
+          leaderboard: data.leaderboard,
+          cohorts: data.cohorts
+        }));
         setError(null);
       } catch {
         setError('Failed to load model rankings.');

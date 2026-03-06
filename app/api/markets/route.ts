@@ -131,13 +131,11 @@ export async function GET(request: NextRequest) {
       updated_at: new Date().toISOString()
     });
 
-    // Cache for 5 minutes - markets data doesn't change frequently
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+    response.headers.set('Cache-Control', 'no-store');
     return response;
     
   } catch (error) {
     return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }
-
 

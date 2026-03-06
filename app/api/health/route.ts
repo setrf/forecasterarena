@@ -8,6 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { ADMIN_PASSWORD, CRON_SECRET, OPENROUTER_API_KEY } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,18 +35,12 @@ export async function GET() {
   }
   
   // Environment variables check
-  const requiredEnvVars = ['OPENROUTER_API_KEY', 'CRON_SECRET', 'ADMIN_PASSWORD'];
-  const missingEnvVars: string[] = [];
-  
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
-      missingEnvVars.push(envVar);
-    }
-  }
+  const configuredSecrets = [OPENROUTER_API_KEY, CRON_SECRET, ADMIN_PASSWORD];
+  const missingCount = configuredSecrets.filter((value) => !value).length;
   
   checks.environment = {
-    status: missingEnvVars.length === 0 ? 'ok' : 'error',
-    message: missingEnvVars.length > 0 
+    status: missingCount === 0 ? 'ok' : 'error',
+    message: missingCount > 0 
       ? 'Required configuration is incomplete'
       : undefined
   };

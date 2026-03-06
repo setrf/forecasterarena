@@ -147,7 +147,7 @@ export const MODELS = [
   },
   {
     id: 'qwen-3-next',
-    openrouterId: 'qwen/qwen3-235b-a22b-instruct-2507',
+    openrouterId: 'qwen/qwen3-235b-a22b-2507',
     displayName: 'Qwen 3',
     provider: 'Alibaba',
     color: '#06B6D4' // Cyan

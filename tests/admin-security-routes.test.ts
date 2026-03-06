@@ -78,6 +78,31 @@ describe('admin export route', () => {
 });
 
 describe('health route', () => {
+  it('treats development cron/admin fallbacks as configured', async () => {
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'development',
+      env: {
+        OPENROUTER_API_KEY: 'test-openrouter-key',
+        CRON_SECRET: undefined,
+        ADMIN_PASSWORD: undefined
+      }
+    });
+
+    try {
+      const route = await import('@/app/api/health/route');
+      const response = await route.GET();
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.checks.environment).toEqual({
+        status: 'ok',
+        message: undefined
+      });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('redacts exact missing secret names from the public health response', async () => {
     const ctx = await createIsolatedTestContext({
       nodeEnv: 'production',

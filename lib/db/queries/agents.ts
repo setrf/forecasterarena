@@ -115,7 +115,7 @@ export function calculateActualPortfolioValue(agentId: string): number {
   }
 
   const positionValueResult = db.prepare(`
-    SELECT COALESCE(SUM(current_value), 0) as total_position_value
+    SELECT COALESCE(SUM(COALESCE(current_value, total_cost)), 0) as total_position_value
     FROM positions
     WHERE agent_id = ? AND status = 'open'
   `).get(agentId) as { total_position_value: number };

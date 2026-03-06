@@ -92,7 +92,7 @@ The current active model roster is:
 | `claude-opus-4.5` | Claude Opus 4.5 | Anthropic | `anthropic/claude-opus-4.5` |
 | `deepseek-v3.1` | DeepSeek V3.2 | DeepSeek | `deepseek/deepseek-v3.2` |
 | `kimi-k2` | Kimi K2 | Moonshot AI | `moonshotai/kimi-k2-thinking` |
-| `qwen-3-next` | Qwen 3 | Alibaba | `qwen/qwen3-235b-a22b-instruct-2507` |
+| `qwen-3-next` | Qwen 3 | Alibaba | `qwen/qwen3-235b-a22b-2507` |
 
 Important note:
 

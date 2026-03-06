@@ -257,7 +257,7 @@ export function estimateCost(usage: TokenUsage, modelId: string): number {
     'x-ai/grok-4.1-fast': { input: 5, output: 15 },
     'deepseek/deepseek-v3.2': { input: 0.5, output: 2 },
     'moonshotai/kimi-k2-thinking': { input: 1, output: 4 },
-    'qwen/qwen3-235b-a22b-instruct-2507': { input: 1, output: 4 },
+    'qwen/qwen3-235b-a22b-2507': { input: 1, output: 4 },
   };
   
   const pricing = pricingPerMillion[modelId] || { input: 2, output: 8 };
@@ -267,4 +267,3 @@ export function estimateCost(usage: TokenUsage, modelId: string): number {
   
   return inputCost + outputCost;
 }
-

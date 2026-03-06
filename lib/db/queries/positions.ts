@@ -141,6 +141,8 @@ export function upsertPosition(
   if (existing) {
     const newShares = existing.shares + shares;
     const newCost = existing.total_cost + cost;
+    const existingCurrentValue = existing.current_value ?? existing.total_cost;
+    const newCurrentValue = existingCurrentValue + cost;
 
     if (newShares <= 0) {
       throw new Error(`Cannot calculate avg price: newShares is ${newShares}`);
@@ -148,9 +150,16 @@ export function upsertPosition(
 
     db.prepare(`
       UPDATE positions
-      SET shares = ?, avg_entry_price = ?, total_cost = ?
+      SET shares = ?, avg_entry_price = ?, total_cost = ?, current_value = ?, unrealized_pnl = ?
       WHERE id = ?
-    `).run(newShares, newCost / newShares, newCost, existing.id);
+    `).run(
+      newShares,
+      newCost / newShares,
+      newCost,
+      newCurrentValue,
+      newCurrentValue - newCost,
+      existing.id
+    );
 
     return getPositionById(existing.id)!;
   }
@@ -158,9 +167,11 @@ export function upsertPosition(
   const id = generateId();
 
   db.prepare(`
-    INSERT INTO positions (id, agent_id, market_id, side, shares, avg_entry_price, total_cost, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'open')
-  `).run(id, agentId, marketId, side, shares, price, cost);
+    INSERT INTO positions (
+      id, agent_id, market_id, side, shares, avg_entry_price, total_cost, current_value, unrealized_pnl, status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'open')
+  `).run(id, agentId, marketId, side, shares, price, cost, cost);
 
   return getPositionById(id)!;
 }
@@ -180,6 +191,9 @@ export function reducePosition(id: string, sharesToSell: number): void {
   const newShares = position.shares - sharesToSell;
   const costReduction = (sharesToSell / position.shares) * position.total_cost;
   const newCost = position.total_cost - costReduction;
+  const currentValue = position.current_value ?? position.total_cost;
+  const currentValueReduction = (sharesToSell / position.shares) * currentValue;
+  const newCurrentValue = currentValue - currentValueReduction;
 
   if (newShares <= 0) {
     db.prepare(`
@@ -192,9 +206,9 @@ export function reducePosition(id: string, sharesToSell: number): void {
 
   db.prepare(`
     UPDATE positions
-    SET shares = ?, total_cost = ?
+    SET shares = ?, total_cost = ?, current_value = ?, unrealized_pnl = ?
     WHERE id = ?
-  `).run(newShares, newCost, id);
+  `).run(newShares, newCost, newCurrentValue, newCurrentValue - newCost, id);
 }
 
 export function settlePosition(id: string): void {

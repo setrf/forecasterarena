@@ -61,7 +61,7 @@ export default function MarketsPage() {
       params.set('limit', '50');
       params.set('offset', reset ? '0' : String(offset));
 
-      const res = await fetch(`/api/markets?${params}`);
+      const res = await fetch(`/api/markets?${params}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (reset) {

@@ -96,7 +96,7 @@ export async function GET(
         SELECT MAX(snapshot_timestamp) FROM portfolio_snapshots WHERE agent_id = a1.id
       )
       LEFT JOIN (
-        SELECT agent_id, COALESCE(SUM(current_value), 0) as total_position_value
+        SELECT agent_id, COALESCE(SUM(COALESCE(current_value, total_cost)), 0) as total_position_value
         FROM positions
         WHERE status = 'open'
         GROUP BY agent_id
@@ -126,22 +126,39 @@ export async function GET(
 
     // Get cohort comparison stats
     const cohortStats = db.prepare(`
+      WITH latest_snapshots AS (
+        SELECT
+          ps.agent_id,
+          ps.total_pnl_percent,
+          ROW_NUMBER() OVER (PARTITION BY ps.agent_id ORDER BY ps.snapshot_timestamp DESC) as rn
+        FROM portfolio_snapshots ps
+      ),
+      open_position_values AS (
+        SELECT
+          p.agent_id,
+          COALESCE(SUM(COALESCE(p.current_value, p.total_cost)), 0) as total_position_value
+        FROM positions p
+        WHERE p.status = 'open'
+        GROUP BY p.agent_id
+      ),
+      current_agent_totals AS (
+        SELECT
+          a.id as agent_id,
+          COALESCE(
+            ls.total_pnl_percent,
+            ((a.cash_balance + COALESCE(op.total_position_value, 0) - ?) / ?) * 100
+          ) as total_pnl_percent
+        FROM agents a
+        LEFT JOIN latest_snapshots ls ON a.id = ls.agent_id AND ls.rn = 1
+        LEFT JOIN open_position_values op ON a.id = op.agent_id
+        WHERE a.cohort_id = ?
+      )
       SELECT
-        AVG(COALESCE(ps.total_pnl_percent, 0)) as avg_pnl_percent,
-        MAX(COALESCE(ps.total_pnl_percent, 0)) as best_pnl_percent,
-        MIN(COALESCE(ps.total_pnl_percent, 0)) as worst_pnl_percent
-      FROM agents a
-      LEFT JOIN (
-        SELECT agent_id, total_pnl_percent
-        FROM portfolio_snapshots
-        WHERE (agent_id, snapshot_timestamp) IN (
-          SELECT agent_id, MAX(snapshot_timestamp)
-          FROM portfolio_snapshots
-          GROUP BY agent_id
-        )
-      ) ps ON a.id = ps.agent_id
-      WHERE a.cohort_id = ?
-    `).get(cohortId) as {
+        AVG(total_pnl_percent) as avg_pnl_percent,
+        MAX(total_pnl_percent) as best_pnl_percent,
+        MIN(total_pnl_percent) as worst_pnl_percent
+      FROM current_agent_totals
+    `).get(INITIAL_BALANCE, INITIAL_BALANCE, cohortId) as {
       avg_pnl_percent: number;
       best_pnl_percent: number;
       worst_pnl_percent: number;

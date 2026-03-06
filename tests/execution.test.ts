@@ -338,6 +338,24 @@ describe('engine/execution - executeBet', () => {
       expect(updatedAgent.total_invested).toBeCloseTo(100, 6);
     });
   });
+
+  it('initializes mark-to-market values so portfolio value stays stable before snapshots', async () => {
+    await withFixture(async ({ execution, queries, agent }) => {
+      const market = createBinaryMarket(queries, { current_price: 0.4 });
+      const result = execution.executeBet(agent.id, {
+        market_id: market.id,
+        side: 'YES',
+        amount: 100
+      });
+
+      expect(result.success).toBe(true);
+
+      const position = queries.getPositionById(result.position_id!)!;
+      expect(position.current_value).toBeCloseTo(100, 6);
+      expect(position.unrealized_pnl).toBeCloseTo(0, 6);
+      expect(queries.calculateActualPortfolioValue(agent.id)).toBeCloseTo(10_000, 6);
+    });
+  });
 });
 
 describe('engine/execution - executeSell', () => {
@@ -634,6 +652,29 @@ describe('engine/execution - executeSell', () => {
       const position = queries.getPositionById(buy.position_id!)!;
       expect(position.status).toBe('open');
       expect(position.shares).toBeCloseTo(100, 6);
+    });
+  });
+
+  it('keeps remaining position mtm in sync after partial sells', async () => {
+    await withFixture(async ({ execution, queries, agent }) => {
+      const market = createBinaryMarket(queries, { current_price: 0.6 });
+      const buy = execution.executeBet(agent.id, {
+        market_id: market.id,
+        side: 'YES',
+        amount: 100
+      });
+      expect(buy.success).toBe(true);
+
+      const sell = execution.executeSell(agent.id, {
+        position_id: buy.position_id!,
+        percentage: 40
+      });
+      expect(sell.success).toBe(true);
+
+      const position = queries.getPositionById(buy.position_id!)!;
+      expect(position.current_value).toBeCloseTo(60, 6);
+      expect(position.unrealized_pnl).toBeCloseTo(0, 6);
+      expect(queries.calculateActualPortfolioValue(agent.id)).toBeCloseTo(10_000, 6);
     });
   });
 

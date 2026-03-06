@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MODELS, GITHUB_URL } from '@/lib/constants';
 import PerformanceChartComponent from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { hasLiveCompetitionData } from '@/lib/competition-state';
 
 // Types
 interface LeaderboardEntry {
@@ -285,7 +286,9 @@ function PerformanceChartSection() {
   useEffect(() => {
     async function fetchChartData() {
       try {
-        const res = await fetch(`/api/performance-data?range=${timeRange}`);
+        const res = await fetch(`/api/performance-data?range=${timeRange}`, {
+          cache: 'no-store'
+        });
         if (!res.ok) {
           setError('Performance data is temporarily unavailable.');
           return;
@@ -460,8 +463,8 @@ export default function Home() {
     async function fetchData() {
       try {
         const [leaderboardRes, marketsRes] = await Promise.all([
-          fetch('/api/leaderboard'),
-          fetch('/api/markets?limit=1'),
+          fetch('/api/leaderboard', { cache: 'no-store' }),
+          fetch('/api/markets?limit=1', { cache: 'no-store' }),
         ]);
 
         if (!leaderboardRes.ok) {
@@ -477,15 +480,12 @@ export default function Home() {
         setMarketCount(marketsData?.stats?.total_markets ?? null);
 
         if (data.leaderboard && data.leaderboard.length > 0) {
-          // Check if we have actual competition data (non-zero P/L or resolved bets)
-          const hasActualData = data.leaderboard.some(
-            (entry: LeaderboardEntry) => entry.total_pnl !== 0 || entry.num_resolved_bets > 0
-          );
-          if (hasActualData) {
-            setLeaderboard(data.leaderboard);
-            setHasRealData(true);
-          }
+          setLeaderboard(data.leaderboard);
         }
+        setHasRealData(hasLiveCompetitionData({
+          leaderboard: data.leaderboard,
+          cohorts: data.cohorts
+        }));
         setLeaderboardError(null);
       } catch {
         setLeaderboardError('Leaderboard data is temporarily unavailable.');
@@ -495,7 +495,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main>
+    <>
       <HeroSection hasRealData={hasRealData} hasSyncedMarkets={(marketCount ?? 0) > 0} />
       {leaderboardError && (
         <section className="container-wide mx-auto px-6 pt-6">
@@ -509,6 +509,6 @@ export default function Home() {
       <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />
       <HowItWorks />
       <CTASection />
-    </main>
+    </>
   );
 }

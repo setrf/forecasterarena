@@ -22,7 +22,7 @@ export default function CohortsPage() {
   useEffect(() => {
     async function fetchCohorts() {
       try {
-        const res = await fetch('/api/leaderboard');
+        const res = await fetch('/api/leaderboard', { cache: 'no-store' });
         if (!res.ok) {
           setError('Failed to load cohorts.');
           return;

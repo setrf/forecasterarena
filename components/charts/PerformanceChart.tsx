@@ -34,6 +34,7 @@ interface PerformanceChartProps {
 }
 
 const BASELINE = 10000;
+const EMPTY_STATE_BAR_HEIGHTS = [34, 46, 58, 42, 64, 50, 38];
 
 function formatCurrency(value: number): string {
   return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
@@ -437,12 +438,12 @@ export default function PerformanceChart({
 
         {/* Animated placeholder lines */}
         <div className="absolute inset-0 flex items-end px-12 pb-20 opacity-10">
-          {[...Array(7)].map((_, i) => (
+          {EMPTY_STATE_BAR_HEIGHTS.map((heightPercent, i) => (
             <div
               key={i}
               className="flex-1 mx-1 rounded-t"
               style={{
-                height: `${30 + Math.random() * 40}%`,
+                height: `${heightPercent}%`,
                 background: `linear-gradient(to top, var(--accent-gold), transparent)`,
                 animation: `pulse 2s ease-in-out infinite`,
                 animationDelay: `${i * 200}ms`

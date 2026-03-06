@@ -401,6 +401,51 @@ describe('db query modules - support and reporting', () => {
     });
   });
 
+  it('falls back to live position values when snapshots have not been taken yet', async () => {
+    await withModules(({ agents, cohorts, db, leaderboard, markets, models, positions }) => {
+      const activeModels = models.getActiveModels();
+      const allowedIds = activeModels.slice(0, 2).map(model => model.id);
+      db.prepare(
+        `UPDATE models SET is_active = CASE WHEN id IN (?, ?) THEN 1 ELSE 0 END`
+      ).run(allowedIds[0], allowedIds[1]);
+
+      const cohort = cohorts.createCohort();
+      const createdAgents = agents.createAgentsForCohort(cohort.id);
+      const agentOne = createdAgents.find(agent => agent.model_id === allowedIds[0])!;
+      const agentTwo = createdAgents.find(agent => agent.model_id === allowedIds[1])!;
+
+      const marketOne = createMarket(markets, { question: 'Fallback positive pnl' });
+      const marketTwo = createMarket(markets, { question: 'Fallback negative pnl' });
+
+      agents.updateAgentBalance(agentOne.id, 9_900, 100);
+      agents.updateAgentBalance(agentTwo.id, 9_800, 200);
+
+      const positionOne = positions.upsertPosition(agentOne.id, marketOne.id, 'YES', 250, 0.4, 100);
+      const positionTwo = positions.upsertPosition(agentTwo.id, marketTwo.id, 'YES', 400, 0.5, 200);
+
+      positions.updatePositionMTM(positionOne.id, 120, 20);
+      positions.updatePositionMTM(positionTwo.id, 180, -20);
+
+      const leaderboardEntries = leaderboard.getAggregateLeaderboard();
+
+      expect(leaderboardEntries).toHaveLength(2);
+      expect(leaderboardEntries[0]).toMatchObject({
+        model_id: allowedIds[0],
+        total_pnl: 20,
+        total_pnl_percent: 0.2,
+        num_cohorts: 1,
+        num_resolved_bets: 0
+      });
+      expect(leaderboardEntries[1]).toMatchObject({
+        model_id: allowedIds[1],
+        total_pnl: -20,
+        total_pnl_percent: -0.2,
+        num_cohorts: 1,
+        num_resolved_bets: 0
+      });
+    });
+  });
+
   it('covers cohort summary aggregation', async () => {
     await withModules(({ agents, cohorts, db, leaderboard, markets, models, positions, trades }) => {
       const cohortOne = cohorts.createCohort();

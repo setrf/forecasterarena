@@ -11,14 +11,28 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         ROW_NUMBER() OVER (PARTITION BY ps.agent_id ORDER BY ps.snapshot_timestamp DESC) as rn
       FROM portfolio_snapshots ps
     ),
+    open_position_values AS (
+      SELECT
+        p.agent_id,
+        COALESCE(SUM(COALESCE(p.current_value, p.total_cost)), 0) as total_position_value
+      FROM positions p
+      WHERE p.status = 'open'
+      GROUP BY p.agent_id
+    ),
     agent_stats AS (
       SELECT
         a.model_id,
         COUNT(DISTINCT a.id) as num_cohorts,
-        SUM(COALESCE(ls.total_pnl, 0)) as total_pnl,
+        SUM(
+          COALESCE(
+            ls.total_pnl,
+            a.cash_balance + COALESCE(op.total_position_value, 0) - ?
+          )
+        ) as total_pnl,
         SUM(COALESCE(ls.num_resolved_bets, 0)) as total_resolved_bets
       FROM agents a
       LEFT JOIN latest_snapshots ls ON a.id = ls.agent_id AND ls.rn = 1
+      LEFT JOIN open_position_values op ON a.id = op.agent_id
       GROUP BY a.model_id
     ),
     brier_stats AS (
@@ -68,7 +82,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
     LEFT JOIN win_stats w ON m.id = w.model_id
     WHERE m.is_active = 1 AND COALESCE(s.num_cohorts, 0) > 0
     ORDER BY total_pnl DESC
-  `).all(INITIAL_BALANCE) as LeaderboardEntry[];
+  `).all(INITIAL_BALANCE, INITIAL_BALANCE) as LeaderboardEntry[];
 
   return results;
 }

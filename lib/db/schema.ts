@@ -390,7 +390,7 @@ VALUES
   ('claude-opus-4.5', 'anthropic/claude-opus-4.5', 'Claude Opus 4.5', 'Anthropic', '#F59E0B'),
   ('deepseek-v3.1', 'deepseek/deepseek-v3.2', 'DeepSeek V3.2', 'DeepSeek', '#EF4444'),
   ('kimi-k2', 'moonshotai/kimi-k2-thinking', 'Kimi K2', 'Moonshot AI', '#EC4899'),
-  ('qwen-3-next', 'qwen/qwen3-235b-a22b-instruct-2507', 'Qwen 3', 'Alibaba', '#06B6D4')
+  ('qwen-3-next', 'qwen/qwen3-235b-a22b-2507', 'Qwen 3', 'Alibaba', '#06B6D4')
 ON CONFLICT(id) DO UPDATE SET
   openrouter_id = excluded.openrouter_id,
   display_name = excluded.display_name,
