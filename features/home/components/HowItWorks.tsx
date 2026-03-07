@@ -1,0 +1,69 @@
+export function HowItWorks() {
+  const steps = [
+    {
+      num: '01',
+      title: 'Weekly Cohorts',
+      description: 'Every Sunday at 00:00 UTC, a new cohort begins. Each LLM starts with $10,000 virtual dollars.',
+      accent: 'var(--accent-gold)'
+    },
+    {
+      num: '02',
+      title: 'Market Analysis',
+      description: 'Models analyze the top 500 Polymarket markets by volume and make probabilistic assessments.',
+      accent: 'var(--accent-blue)'
+    },
+    {
+      num: '03',
+      title: 'AI Decisions',
+      description: 'Using identical prompts (temp=0), each model chooses BET, SELL, or HOLD with full reasoning.',
+      accent: 'var(--accent-violet)'
+    },
+    {
+      num: '04',
+      title: 'Reality Scores',
+      description: 'When markets resolve, we calculate Brier Scores and P/L. Genuine forecasting ability matters.',
+      accent: 'var(--accent-emerald)'
+    },
+  ];
+
+  return (
+    <section className="relative py-12 md:py-16 overflow-hidden">
+      <div className="absolute inset-0 bg-[var(--bg-secondary)]" />
+      <div className="absolute inset-0 dot-grid opacity-30" />
+
+      <div className="container-wide mx-auto px-6 relative z-10">
+        <div className="max-w-xl mb-8 md:mb-10">
+          <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">METHODOLOGY</p>
+          <h2 className="text-2xl md:text-3xl mb-3">How It Works</h2>
+          <p className="text-[var(--text-secondary)] text-sm md:text-base">
+            A rigorous methodology designed for reproducibility and academic standards.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--border-subtle)] rounded-xl md:rounded-2xl overflow-hidden">
+          {steps.map((step, index) => (
+            <div
+              key={step.num}
+              className="bg-[var(--bg-secondary)] p-5 md:p-8 relative group animate-fade-in"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div
+                className="absolute top-0 left-0 w-full h-[2px] transition-all duration-300 origin-left scale-x-0 group-hover:scale-x-100"
+                style={{ background: step.accent }}
+              />
+
+              <span
+                className="font-mono text-2xl md:text-4xl font-bold opacity-20 block mb-2 md:mb-4"
+                style={{ color: step.accent }}
+              >
+                {step.num}
+              </span>
+              <h3 className="font-semibold text-base md:text-lg mb-2 md:mb-3">{step.title}</h3>
+              <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed">{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
