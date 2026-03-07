@@ -27,7 +27,7 @@ export type DownloadAdminExportSuccess = {
 
 export type ReadAdminExportDownloadSuccess = {
   filename: string;
-  fileData: Buffer;
+  fileData: ArrayBuffer;
 };
 
 export type AppResult<T> =

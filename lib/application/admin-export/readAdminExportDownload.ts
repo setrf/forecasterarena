@@ -8,11 +8,15 @@ export function readAdminExportDownload(file: string | null): AppResult<ReadAdmi
     return resolved;
   }
 
+  const bytes = fs.readFileSync(resolved.data.filePath);
+  const fileData = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(fileData).set(bytes);
+
   return {
     ok: true,
     data: {
       filename: resolved.data.filename,
-      fileData: fs.readFileSync(resolved.data.filePath)
+      fileData
     }
   };
 }

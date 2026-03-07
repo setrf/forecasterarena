@@ -8,28 +8,24 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { syncMarkets } from '@/lib/engine/market';
+import { runMarketSync } from '@/lib/application/cron';
+import { safeErrorMessage } from '@/lib/utils/security';
 import { cronUnauthorizedResponse, isCronAuthorized } from '@/lib/api/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  // Verify authentication
   if (!isCronAuthorized(request)) {
     return cronUnauthorizedResponse();
   }
 
-  try {
-    const result = await syncMarkets();
-
-    return NextResponse.json(result);
-
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
+  const result = await runMarketSync();
+  if (!result.ok) {
     return NextResponse.json(
-      { error: message },
-      { status: 500 }
+      { error: safeErrorMessage(result.error) },
+      { status: result.status }
     );
   }
+
+  return NextResponse.json(result.data);
 }
