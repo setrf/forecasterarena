@@ -1,7 +1,9 @@
 import { cleanResponse } from '@/lib/openrouter/parser/clean';
+import { getDefaultHoldDecision, isValidDecision } from '@/lib/openrouter/parser/parseDecision/defaults';
+import { parseBetDecision, parseSellDecision } from '@/lib/openrouter/parser/parseDecision/actions';
 import { isErrorDecision } from '@/lib/openrouter/parser/shared';
-import { parseActionItems, validateBet, validateEnvelope, validateSell } from '@/lib/openrouter/parser/validate';
-import type { BetInstruction, ParsedDecision, SellInstruction } from '@/lib/openrouter/parser/types';
+import { validateEnvelope } from '@/lib/openrouter/parser/validate';
+import type { ParsedDecision } from '@/lib/openrouter/parser/types';
 
 export function parseDecision(
   rawResponse: string,
@@ -17,52 +19,20 @@ export function parseDecision(
     }
 
     if (envelope.action === 'BET') {
-      const bets = parseActionItems<BetInstruction, BetInstruction>({
-        rawItems: parsed.bets,
-        emptyError: 'BET action requires non-empty bets array',
-        invalidPrefix: 'bet',
-        reasoning: envelope.reasoning,
-        validate: (bet) => validateBet(bet, agentBalance),
-        mapItem: (bet) => ({
-          market_id: bet.market_id,
-          side: bet.side,
-          amount: bet.amount
-        })
-      });
-
-      if (isErrorDecision(bets)) {
-        return bets;
-      }
-
-      return {
-        action: 'BET',
-        bets,
-        reasoning: envelope.reasoning
-      };
+      return parseBetDecision(
+        {
+          bets: parsed.bets,
+          reasoning: envelope.reasoning
+        },
+        agentBalance
+      );
     }
 
     if (envelope.action === 'SELL') {
-      const sells = parseActionItems<SellInstruction, SellInstruction>({
-        rawItems: parsed.sells,
-        emptyError: 'SELL action requires non-empty sells array',
-        invalidPrefix: 'sell',
-        reasoning: envelope.reasoning,
-        validate: validateSell,
-        mapItem: (sell) => ({
-          position_id: sell.position_id,
-          percentage: sell.percentage
-        })
-      });
-
-      if (isErrorDecision(sells)) {
-        return sells;
-      }
-
-      return {
-        action: 'SELL',
-        sells,
+      return parseSellDecision({
+        sells: parsed.sells,
         reasoning: envelope.reasoning
-      };
+      });
     }
 
     return {
@@ -78,13 +48,4 @@ export function parseDecision(
   }
 }
 
-export function isValidDecision(decision: ParsedDecision): boolean {
-  return decision.action !== 'ERROR';
-}
-
-export function getDefaultHoldDecision(reason: string): ParsedDecision {
-  return {
-    action: 'HOLD',
-    reasoning: `[SYSTEM DEFAULT] ${reason}`
-  };
-}
+export { getDefaultHoldDecision, isValidDecision };

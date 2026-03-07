@@ -1,0 +1,71 @@
+export const BENCHMARK_TABLES_SQL = `
+-- ============================================================================
+-- METHODOLOGY VERSIONS
+-- ============================================================================
+-- Tracks benchmark methodology versions for reproducibility.
+-- Each version is immutable once created.
+
+CREATE TABLE IF NOT EXISTS methodology_versions (
+  version TEXT PRIMARY KEY,                      -- 'v1', 'v2', etc.
+  title TEXT NOT NULL,                           -- Version title
+  description TEXT NOT NULL,                     -- Full description
+  changes_summary TEXT,                          -- Changes from previous
+  effective_from_cohort INTEGER,                 -- First cohort using this
+  document_hash TEXT,                            -- SHA256 of methodology doc
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- COHORTS
+-- ============================================================================
+-- Each cohort is a weekly competition instance.
+-- New cohort starts every Sunday at 00:00 UTC.
+-- Cohorts run until all bets resolve (no artificial time limit).
+
+CREATE TABLE IF NOT EXISTS cohorts (
+  id TEXT PRIMARY KEY,                           -- UUID
+  cohort_number INTEGER NOT NULL UNIQUE,         -- Sequential: 1, 2, 3...
+  started_at TEXT NOT NULL,                      -- ISO8601 timestamp
+  status TEXT NOT NULL DEFAULT 'active',         -- active | completed
+  completed_at TEXT,                             -- When all bets resolved
+  methodology_version TEXT NOT NULL DEFAULT 'v1',-- Version used
+  initial_balance REAL NOT NULL DEFAULT 10000.00,-- Starting balance
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (methodology_version) REFERENCES methodology_versions(version)
+);
+
+-- ============================================================================
+-- MODELS
+-- ============================================================================
+-- The 7 competing LLM models (reference table).
+-- Models are added but never deleted to preserve history.
+
+CREATE TABLE IF NOT EXISTS models (
+  id TEXT PRIMARY KEY,                           -- e.g., 'gpt-5.1'
+  openrouter_id TEXT NOT NULL UNIQUE,            -- OpenRouter API ID
+  display_name TEXT NOT NULL,                    -- Human-readable name
+  provider TEXT NOT NULL,                        -- e.g., 'OpenAI'
+  color TEXT,                                    -- Hex color for charts
+  is_active INTEGER DEFAULT 1,                   -- 1=active, 0=disabled
+  added_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- AGENTS
+-- ============================================================================
+-- An LLM instance within a specific cohort.
+-- Each cohort has exactly 7 agents (one per model).
+
+CREATE TABLE IF NOT EXISTS agents (
+  id TEXT PRIMARY KEY,                           -- UUID
+  cohort_id TEXT NOT NULL,                       -- Links to cohorts
+  model_id TEXT NOT NULL,                        -- Links to models
+  cash_balance REAL NOT NULL DEFAULT 10000.00,   -- Available cash
+  total_invested REAL NOT NULL DEFAULT 0.00,     -- Sum of open positions
+  status TEXT NOT NULL DEFAULT 'active',         -- active | bankrupt
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (cohort_id) REFERENCES cohorts(id),
+  FOREIGN KEY (model_id) REFERENCES models(id),
+  UNIQUE(cohort_id, model_id)                    -- One agent per model per cohort
+);
+`;
