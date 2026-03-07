@@ -156,6 +156,11 @@ That suite runs against a deterministic seeded SQLite database prepared specific
 - seeded dynamic detail routes
 - admin login and authenticated admin pages
 
+The browser layer currently has two seeded scenarios:
+
+- rich-data smoke coverage via `npm run test:e2e`
+- empty-state smoke coverage via `npm run test:e2e:empty`
+
 ---
 
 ## 4. Core Subsystems

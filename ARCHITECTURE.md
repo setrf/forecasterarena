@@ -56,6 +56,11 @@ After UI refactors, the minimum browser pass should verify:
 
 The Playwright suite uses a deterministic seeded SQLite database prepared before the Next.js dev server starts. That keeps browser tests stable and avoids depending on local `data/` files.
 
+Current browser commands:
+
+- `npm run test:e2e` for the seeded rich-data scenario
+- `npm run test:e2e:empty` for the empty-state scenario
+
 ## Practical Rule
 
 If a file starts doing more than one of these jobs, it should probably be split:

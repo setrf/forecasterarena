@@ -62,6 +62,10 @@ const checks = [
   { root: 'app/api/performance-data/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'components/DecisionFeed.tsx', maxLines: 40, extensions: new Set(['.tsx']) },
   { root: 'components/Navigation.tsx', maxLines: 80, extensions: new Set(['.tsx']) },
+  { root: 'playwright.config.ts', maxLines: 60, extensions: new Set(['.ts']) },
+  { root: 'playwright', maxLines: 140, extensions: new Set(['.ts']) },
+  { root: 'scripts/prepare-e2e-db.mjs', maxLines: 50, extensions: new Set(['.mjs']) },
+  { root: 'scripts/e2e-db', maxLines: 220, extensions: new Set(['.mjs']) },
   { root: 'features', maxLines: 350, extensions: new Set(['.ts', '.tsx']) }
 ];
 

@@ -23,6 +23,15 @@ const ACTIONS = [
     iconPath: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
   },
   {
+    action: 'check-cohorts',
+    title: 'Check Cohorts',
+    idleLabel: 'Complete cohorts with no open positions',
+    loadingLabel: 'Checking...',
+    borderClass: 'hover:border-[var(--accent-gold)]',
+    iconClass: 'group-hover:text-[var(--accent-gold)]',
+    iconPath: 'M5 13l4 4L19 7'
+  },
+  {
     action: 'backup',
     title: 'Create Backup',
     idleLabel: 'Backup database now',
@@ -38,7 +47,7 @@ export function AdminQuickActions({
   onExecuteAction
 }: AdminQuickActionsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
       {ACTIONS.map((item) => (
         <button
           key={item.action}

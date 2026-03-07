@@ -46,8 +46,9 @@ export function AdminExportSection({
 
       <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">Cohort ID</label>
+          <label htmlFor="admin-export-cohort-id" className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">Cohort ID</label>
           <input
+            id="admin-export-cohort-id"
             type="text"
             required
             value={exportState.cohortId}
@@ -58,8 +59,9 @@ export function AdminExportSection({
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">From (ISO)</label>
+            <label htmlFor="admin-export-from" className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">From (ISO)</label>
             <input
+              id="admin-export-from"
               type="text"
               required
               value={exportState.from}
@@ -69,8 +71,9 @@ export function AdminExportSection({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">To (ISO)</label>
+            <label htmlFor="admin-export-to" className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">To (ISO)</label>
             <input
+              id="admin-export-to"
               type="text"
               required
               value={exportState.to}

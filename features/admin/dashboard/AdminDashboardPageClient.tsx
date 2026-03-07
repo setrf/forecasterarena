@@ -12,6 +12,7 @@ export default function AdminDashboardPageClient() {
   const {
     password,
     isAuthenticated,
+    hasResolvedAuth,
     error,
     loading,
     stats,
@@ -27,6 +28,17 @@ export default function AdminDashboardPageClient() {
     executeAction,
     handleExport
   } = useAdminDashboardController();
+
+  if (!hasResolvedAuth) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
+        <div className="glass-card p-8 w-full max-w-md mx-auto text-center border border-[var(--border-medium)]">
+          <h1 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">Admin Dashboard</h1>
+          <p className="text-[var(--text-secondary)]">Checking admin session...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

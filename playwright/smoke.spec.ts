@@ -1,11 +1,5 @@
 import { expect, test } from '@playwright/test';
-
-const seededRoutes = {
-  model: '/models/gpt-5.1',
-  cohort: '/cohorts/cohort-e2e-1',
-  cohortModel: '/cohorts/cohort-e2e-1/models/gpt-5.1',
-  market: '/markets/market-e2e-fed'
-};
+import { seededRoutes } from './constants';
 
 test('public routes render the seeded benchmark state', async ({ page }) => {
   await page.goto('/');
@@ -52,35 +46,4 @@ test('mobile navigation drawer exposes the expected links', async ({ browser, ba
   await expect(mobileMenu).toContainText('About');
 
   await context.close();
-});
-
-test('admin login unlocks dashboard, costs, and logs', async ({ page }) => {
-  await page.goto('/admin');
-  await page.getByPlaceholder('Enter admin password').fill('admin');
-  await Promise.all([
-    page.waitForResponse((response) =>
-      response.url().includes('/api/admin/login') && response.request().method() === 'POST' && response.ok()
-    ),
-    page.getByRole('button', { name: 'Login' }).click()
-  ]);
-
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Admin Dashboard' })
-  ).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('link', { name: /System Logs/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /API Costs/i })).toBeVisible();
-
-  await page.goto('/admin/costs');
-  await expect(page.getByRole('heading', { level: 1, name: 'API Costs' })).toBeVisible();
-  await expect(page.getByText('$0.600')).toBeVisible();
-  await expect(page.getByText('Total Decisions')).toBeVisible();
-  await expect(page.locator('tbody tr').filter({ hasText: 'GPT-5.2' })).toHaveCount(1);
-  await expect(page.locator('tbody tr').filter({ hasText: 'Gemini 3 Pro' })).toHaveCount(1);
-
-  await page.goto('/admin/logs');
-  await expect(page.getByRole('heading', { level: 1, name: 'System Logs' })).toBeVisible();
-  await page.getByRole('button', { name: 'Warning', exact: true }).click();
-  await expect(page.getByText('admin_seed_warning')).toBeVisible();
-  await page.getByRole('button', { name: 'Error', exact: true }).click();
-  await expect(page.getByText('admin_seed_error')).toBeVisible();
 });

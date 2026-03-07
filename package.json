@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "env -u FORCE_COLOR NODE_DISABLE_COLORS=1 playwright test",
+    "test:e2e:empty": "env -u FORCE_COLOR NODE_DISABLE_COLORS=1 E2E_SEED_SCENARIO=empty playwright test playwright/empty-state.spec.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run test:coverage && npm run lint && npm run check:architecture && npm run check:queries && npm run build && npm run typecheck"
   },

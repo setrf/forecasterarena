@@ -7,6 +7,8 @@ export function getAdminActionSuccessMessage(
       return `Cohort #${data.cohort_number || 'new'} started successfully`;
     case 'sync-markets':
       return `Synced ${data.markets_added || 0} new, ${data.markets_updated || 0} updated`;
+    case 'check-cohorts':
+      return `Checked cohorts; ${data.cohorts_completed || 0} completed`;
     case 'backup':
       return 'Backup created successfully';
     default:

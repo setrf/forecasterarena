@@ -14,6 +14,7 @@ import type { AdminStats, ExportState, ResultMessage } from '@/features/admin/da
 export function useAdminDashboardController() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasResolvedAuth, setHasResolvedAuth] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -24,7 +25,37 @@ export function useAdminDashboardController() {
   const [exportResult, setExportResult] = useState<ResultMessage | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    let cancelled = false;
+
+    async function hydrateAdminSession() {
+      try {
+        const existingStats = await fetchAdminStats();
+        if (cancelled) {
+          return;
+        }
+
+        if (existingStats) {
+          setIsAuthenticated(true);
+          setStats(existingStats);
+        }
+      } catch (fetchError) {
+        console.error('Error restoring admin session:', fetchError);
+      } finally {
+        if (!cancelled) {
+          setHasResolvedAuth(true);
+        }
+      }
+    }
+
+    void hydrateAdminSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasResolvedAuth || !isAuthenticated || stats) {
       return;
     }
 
@@ -37,7 +68,7 @@ export function useAdminDashboardController() {
     }
 
     void loadStats();
-  }, [isAuthenticated]);
+  }, [hasResolvedAuth, isAuthenticated, stats]);
 
   async function refreshStats() {
     setStats(await fetchAdminStats());
@@ -52,6 +83,7 @@ export function useAdminDashboardController() {
       const result = await loginAdmin(password);
       if (result.success) {
         setIsAuthenticated(true);
+        setHasResolvedAuth(true);
       } else {
         setError(result.error);
       }
@@ -65,6 +97,7 @@ export function useAdminDashboardController() {
   async function handleLogout() {
     await logoutAdmin();
     setIsAuthenticated(false);
+    setHasResolvedAuth(true);
     setPassword('');
     setStats(null);
   }
@@ -104,6 +137,7 @@ export function useAdminDashboardController() {
   return {
     password,
     isAuthenticated,
+    hasResolvedAuth,
     error,
     loading,
     stats,
