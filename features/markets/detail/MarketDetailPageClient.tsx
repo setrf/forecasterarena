@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { MarketBrierScoresTable } from '@/features/markets/detail/components/MarketBrierScoresTable';
 import { MarketDetailHeader } from '@/features/markets/detail/components/MarketDetailHeader';
@@ -10,54 +9,14 @@ import { MarketPositionsTable } from '@/features/markets/detail/components/Marke
 import { MarketPriceCard } from '@/features/markets/detail/components/MarketPriceCard';
 import { MarketStatsGrid } from '@/features/markets/detail/components/MarketStatsGrid';
 import { MarketTradesTable } from '@/features/markets/detail/components/MarketTradesTable';
-import type {
-  MarketBrierScore,
-  MarketDetail,
-  MarketPosition,
-  MarketTrade
-} from '@/features/markets/detail/types';
+import { useMarketDetailData } from '@/features/markets/detail/useMarketDetailData';
 import { getMarketStatusBadge } from '@/features/markets/detail/utils';
 
 export default function MarketDetailPageClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
-  const [market, setMarket] = useState<MarketDetail | null>(null);
-  const [positions, setPositions] = useState<MarketPosition[]>([]);
-  const [trades, setTrades] = useState<MarketTrade[]>([]);
-  const [brierScores, setBrierScores] = useState<MarketBrierScore[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch(`/api/markets/${id}`);
-        if (!res.ok) {
-          setError(res.status === 404 ? 'Market not found' : 'Failed to load market');
-          return;
-        }
-
-        const data = await res.json() as {
-          market: MarketDetail;
-          positions?: MarketPosition[];
-          trades?: MarketTrade[];
-          brier_scores?: MarketBrierScore[];
-        };
-
-        setMarket(data.market);
-        setPositions(data.positions || []);
-        setTrades(data.trades || []);
-        setBrierScores(data.brier_scores || []);
-      } catch {
-        setError('Failed to load market');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, [id]);
+  const { market, positions, trades, brierScores, loading, error } = useMarketDetailData(id);
 
   if (loading) {
     return (
