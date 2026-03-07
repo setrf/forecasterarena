@@ -2,7 +2,7 @@
 
 Comprehensive route documentation for the current Forecaster Arena implementation.
 
-> Documentation status: updated for the current codebase on March 6, 2026.
+> Documentation status: updated for the current codebase on March 7, 2026.
 
 ---
 

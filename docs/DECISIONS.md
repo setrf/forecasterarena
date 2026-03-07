@@ -15,7 +15,7 @@ the current production code unless explicitly marked as superseded.
 
 ## Current System Snapshot
 
-As of March 6, 2026, the production codebase currently implements:
+As of March 7, 2026, the production codebase currently implements:
 
 - Weekly cohort creation at Sunday 00:00 UTC
 - One agent per active model per cohort
@@ -432,4 +432,3 @@ The following areas remain open for future design decisions:
 - Whether to add first-class migrations rather than schema-on-start
 - Whether to support historical benchmark versions with model roster versioning
 - Whether to provide signed export URLs instead of session-gated downloads
-

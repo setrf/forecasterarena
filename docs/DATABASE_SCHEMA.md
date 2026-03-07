@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 - Database engine: SQLite
 - Driver: `better-sqlite3`
@@ -534,4 +534,3 @@ HAVING COUNT(*) > 1;
 ```
 
 Resolve those before relying on the current uniqueness guarantees.
-

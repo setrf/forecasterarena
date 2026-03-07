@@ -87,8 +87,10 @@ git fetch origin
 git checkout main
 git pull --ff-only origin main
 npm ci
-npm run build
-npm run typecheck
+npm run check
+npm run test:e2e
+# run npm run test:e2e:empty as well when the release touches
+# empty-state or other browser-visible behavior
 ```
 
 Important implementation detail:
@@ -329,8 +331,8 @@ git fetch origin
 git checkout main
 git pull --ff-only origin main
 npm ci
-npm run build
-npm run typecheck
+npm run check
+npm run test:e2e
 pm2 restart forecaster-arena
 ```
 
@@ -356,6 +358,12 @@ npm run build
 npm run typecheck
 pm2 restart forecaster-arena
 ```
+
+Why rollback uses the narrower validation flow:
+
+- the goal is to restore service quickly with a known-good commit
+- `build` + `typecheck` is the minimum fast validation path
+- rerun `npm run check` and browser coverage after service is back if time allows
 
 If the problem is database corruption rather than code:
 

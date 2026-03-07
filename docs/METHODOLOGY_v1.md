@@ -3,7 +3,7 @@
 - Version: `v1`
 - Effective from: Cohort 1
 - Document status: Current implementation-aligned reference
-- Last updated: March 6, 2026
+- Last updated: March 7, 2026
 
 This document specifies the benchmark methodology implemented by Forecaster
 Arena today. It focuses on the measurement protocol rather than deployment or
