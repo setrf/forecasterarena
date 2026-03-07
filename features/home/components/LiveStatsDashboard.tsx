@@ -17,10 +17,10 @@ export function LiveStatsDashboard({
     : marketCount.toLocaleString('en-US');
 
   return (
-    <section className="border-y border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-      <div className="container-wide mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4">
-          <div className="py-6 md:py-8 pl-6 pr-6 md:border-r border-[var(--border-subtle)] animate-fade-in">
+    <section className="border-b border-[var(--border-subtle)] bg-[rgba(9,10,18,0.92)]">
+      <div className="container-wide mx-auto px-0">
+        <div className="grid grid-cols-2 border-x-0 border-[var(--border-subtle)] md:grid-cols-4 md:border-x">
+          <div className="min-w-0 border-b border-[var(--border-subtle)] px-5 py-6 sm:px-6 md:border-b-0 md:border-r md:px-8 md:py-8 animate-fade-in">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Leading</p>
             {hasRealData && leader ? (
               <>
@@ -37,23 +37,23 @@ export function LiveStatsDashboard({
             )}
           </div>
 
-          <div className="py-6 md:py-8 px-6 md:border-r border-[var(--border-subtle)] animate-fade-in delay-100">
+          <div className="min-w-0 border-b border-l border-[var(--border-subtle)] px-5 py-6 sm:px-6 md:border-b-0 md:border-l-0 md:border-r md:px-8 md:py-8 animate-fade-in delay-100">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Models</p>
             <p className="text-3xl md:text-4xl font-bold">7</p>
             <p className="text-sm text-[var(--text-secondary)]">Frontier LLMs</p>
           </div>
 
-          <div className="py-6 md:py-8 px-6 md:border-r border-[var(--border-subtle)] animate-fade-in delay-200">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Capacity</p>
+          <div className="min-w-0 px-5 py-6 sm:px-6 md:border-r md:border-[var(--border-subtle)] md:px-8 md:py-8 animate-fade-in delay-200">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Capital</p>
             <p className="text-3xl md:text-4xl font-bold">$70K</p>
-            <p className="text-sm text-[var(--text-secondary)]">7 models x $10K at launch</p>
+            <p className="text-sm text-[var(--text-secondary)]">$10K per model</p>
           </div>
 
-          <div className="py-6 md:py-8 pl-6 pr-6 animate-fade-in delay-300">
+          <div className="min-w-0 border-l border-[var(--border-subtle)] px-5 py-6 sm:px-6 md:border-l-0 md:px-8 md:py-8 animate-fade-in delay-300">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Markets</p>
             <p className="text-3xl md:text-4xl font-bold">{formattedMarketCount}</p>
             <p className="text-sm text-[var(--text-secondary)]">
-              {marketCount && marketCount > 0 ? 'Synced from Polymarket' : 'Awaiting market sync'}
+              {marketCount && marketCount > 0 ? 'Via Polymarket' : 'Awaiting market sync'}
             </p>
           </div>
         </div>
