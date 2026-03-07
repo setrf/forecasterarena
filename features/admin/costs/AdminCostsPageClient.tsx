@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -11,64 +10,12 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-
-interface CostByModel {
-  model_id: string;
-  model_name: string;
-  color: string;
-  total_cost: number;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  decision_count: number;
-}
-
-interface CostSummary {
-  total_cost: number;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  total_decisions: number;
-  avg_cost_per_decision: number;
-}
-
-function formatCost(value: number): string {
-  if (value < 0.01) return `$${value.toFixed(4)}`;
-  if (value < 1) return `$${value.toFixed(3)}`;
-  return `$${value.toFixed(2)}`;
-}
-
-function formatTokens(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(0)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-  return value.toString();
-}
+import type { CostByModel } from '@/features/admin/costs/types';
+import { useAdminCostsData } from '@/features/admin/costs/useAdminCostsData';
+import { formatCost, formatTokens } from '@/features/admin/costs/utils';
 
 export default function AdminCostsPageClient() {
-  const [costsByModel, setCostsByModel] = useState<CostByModel[]>([]);
-  const [summary, setSummary] = useState<CostSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchCosts() {
-      try {
-        const res = await fetch('/api/admin/costs');
-        if (!res.ok) return;
-        const data = await res.json() as {
-          costs_by_model?: CostByModel[];
-          summary?: CostSummary | null;
-        };
-        setCostsByModel(data.costs_by_model || []);
-        setSummary(data.summary || null);
-      } catch (error) {
-        console.error('Error fetching costs:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchCosts();
-  }, []);
-
-  const chartData = [...costsByModel].sort((a, b) => b.total_cost - a.total_cost);
+  const { costsByModel, summary, loading, chartData } = useAdminCostsData();
 
   return (
     <div>

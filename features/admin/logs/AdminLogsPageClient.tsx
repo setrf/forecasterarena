@@ -1,87 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import { formatRelativeTime } from '@/lib/utils';
-
-interface LogEntry {
-  id: string;
-  event_type: string;
-  event_data: string | null;
-  severity: string;
-  created_at: string;
-}
-
-type SeverityFilter = 'all' | 'info' | 'warning' | 'error';
-
-function getSeverityStyle(severity: string): { bg: string; text: string; dot: string } {
-  switch (severity) {
-    case 'error':
-      return {
-        bg: 'bg-[var(--accent-rose)]/10',
-        text: 'text-[var(--accent-rose)]',
-        dot: 'bg-[var(--accent-rose)]'
-      };
-    case 'warning':
-      return {
-        bg: 'bg-[var(--accent-amber)]/10',
-        text: 'text-[var(--accent-amber)]',
-        dot: 'bg-[var(--accent-amber)]'
-      };
-    default:
-      return {
-        bg: 'bg-[var(--accent-emerald)]/10',
-        text: 'text-[var(--accent-emerald)]',
-        dot: 'bg-[var(--accent-emerald)]'
-      };
-  }
-}
-
-function formatEventData(data: string | null): object | null {
-  if (!data) return null;
-
-  try {
-    return JSON.parse(data);
-  } catch {
-    return { raw: data };
-  }
-}
+import { useAdminLogsController } from '@/features/admin/logs/useAdminLogsController';
+import { formatEventData, getSeverityStyle } from '@/features/admin/logs/utils';
 
 export default function AdminLogsPageClient() {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [severity, setSeverity] = useState<SeverityFilter>('all');
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const fetchLogs = useCallback(async () => {
-    try {
-      const params = new URLSearchParams();
-      if (severity !== 'all') params.set('severity', severity);
-      params.set('limit', '100');
-
-      const res = await fetch(`/api/admin/logs?${params}`);
-      if (!res.ok) return;
-      const data = await res.json() as { logs?: LogEntry[] };
-      setLogs(data.logs || []);
-    } catch (error) {
-      console.error('Error fetching logs:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [severity]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
-
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const interval = setInterval(fetchLogs, 10_000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, fetchLogs]);
-
-  const errorCount = logs.filter((log) => log.severity === 'error').length;
-  const warningCount = logs.filter((log) => log.severity === 'warning').length;
+  const {
+    logs,
+    loading,
+    severity,
+    autoRefresh,
+    expandedId,
+    errorCount,
+    warningCount,
+    setSeverity,
+    setAutoRefresh,
+    fetchLogs,
+    toggleExpanded
+  } = useAdminLogsController();
 
   return (
     <div>
@@ -157,11 +93,11 @@ export default function AdminLogsPageClient() {
               <div
                 key={log.id}
                 className="p-4 hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
-                onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                onClick={() => toggleExpanded(log.id)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    setExpandedId(isExpanded ? null : log.id);
+                    toggleExpanded(log.id);
                   }
                 }}
                 role="button"
