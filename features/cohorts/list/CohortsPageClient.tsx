@@ -1,0 +1,80 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { CohortCardsSection } from '@/features/cohorts/list/components/CohortCardsSection';
+import { CohortHowItWorks } from '@/features/cohorts/list/components/CohortHowItWorks';
+import { CohortsHero } from '@/features/cohorts/list/components/CohortsHero';
+import type { CohortSummary } from '@/features/cohorts/list/types';
+import { getNextSundayLabel } from '@/features/cohorts/list/utils';
+
+export default function CohortsPageClient() {
+  const [cohorts, setCohorts] = useState<CohortSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchCohorts() {
+      try {
+        const response = await fetch('/api/leaderboard', { cache: 'no-store' });
+        if (!response.ok) {
+          setError('Failed to load cohorts.');
+          return;
+        }
+
+        const json = await response.json();
+        setCohorts(json.cohorts || []);
+        setError(null);
+      } catch {
+        setError('Failed to load cohorts.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCohorts();
+  }, []);
+
+  const activeCohorts = useMemo(
+    () => cohorts.filter((cohort) => cohort.status === 'active'),
+    [cohorts]
+  );
+  const completedCohorts = useMemo(
+    () => cohorts.filter((cohort) => cohort.status === 'completed'),
+    [cohorts]
+  );
+  const nextSundayLabel = useMemo(() => getNextSundayLabel(), []);
+
+  return (
+    <div className="min-h-screen">
+      <CohortsHero nextSundayLabel={nextSundayLabel} />
+
+      <section className="container-wide mx-auto px-6 py-12">
+        {error && (
+          <div className="mb-8 rounded-xl border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] px-4 py-3 text-sm text-[var(--accent-rose)]">
+            {error}
+          </div>
+        )}
+
+        <CohortCardsSection
+          title="Active Cohorts"
+          cohorts={activeCohorts}
+          loading={loading}
+          emptyTitle="No Active Cohort"
+          emptyDescription={`Next cohort starts ${nextSundayLabel} at 00:00 UTC`}
+          variant="active"
+        />
+
+        <CohortCardsSection
+          title="Completed Cohorts"
+          cohorts={completedCohorts}
+          loading={loading}
+          emptyTitle="No Completed Cohorts"
+          emptyDescription="Past cohorts will appear here after all bets resolve"
+          variant="completed"
+        />
+
+        <CohortHowItWorks />
+      </section>
+    </div>
+  );
+}

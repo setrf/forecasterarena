@@ -1,0 +1,9 @@
+export interface CohortSummary {
+  id: string;
+  cohort_number: number;
+  started_at: string;
+  status: string;
+  num_agents: number;
+  total_markets_traded: number;
+  methodology_version: string;
+}
