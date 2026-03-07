@@ -7,25 +7,17 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAggregateLeaderboard, getCohortSummaries } from '@/lib/db/queries';
+import { getLeaderboardData } from '@/lib/application/leaderboard';
 import { safeErrorMessage } from '@/lib/utils/security';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const leaderboard = getAggregateLeaderboard();
-    const cohorts = getCohortSummaries();
-
-    const response = NextResponse.json({
-      leaderboard,
-      cohorts,
-      updated_at: new Date().toISOString()
-    });
+    const response = NextResponse.json(getLeaderboardData());
 
     response.headers.set('Cache-Control', 'no-store');
     return response;
-
   } catch (error) {
     return NextResponse.json(
       { error: safeErrorMessage(error) },
@@ -33,5 +25,4 @@ export async function GET() {
     );
   }
 }
-
 

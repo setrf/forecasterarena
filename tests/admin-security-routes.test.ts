@@ -9,6 +9,7 @@ afterEach(() => {
   fs.rmSync(EXPORTS_DIR, { recursive: true, force: true });
   vi.doUnmock('child_process');
   vi.doUnmock('@/lib/api/admin-route');
+  vi.doUnmock('@/lib/application/health');
   vi.doUnmock('@/lib/db');
   vi.resetModules();
 });
@@ -78,6 +79,34 @@ describe('admin export route', () => {
 });
 
 describe('health route', () => {
+  it('adapts application health reports into public status codes', async () => {
+    const getHealthHttpStatus = vi.fn((status: 'ok' | 'error') => (
+      status === 'ok' ? 200 : 503
+    ));
+    const payload = {
+      status: 'error' as const,
+      timestamp: '2026-03-06T00:00:00.000Z',
+      checks: {
+        database: { status: 'error' as const, message: 'Database unavailable' },
+        environment: { status: 'ok' as const, message: undefined },
+        data_integrity: { status: 'ok' as const, message: undefined }
+      }
+    };
+
+    vi.doMock('@/lib/application/health', () => ({
+      getHealthReport: () => payload,
+      getHealthHttpStatus
+    }));
+
+    const route = await import('@/app/api/health/route');
+    const response = await route.GET();
+
+    expect(getHealthHttpStatus).toHaveBeenCalledOnce();
+    expect(getHealthHttpStatus).toHaveBeenCalledWith('error');
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual(payload);
+  });
+
   it('treats development cron/admin fallbacks as configured', async () => {
     const ctx = await createIsolatedTestContext({
       nodeEnv: 'development',

@@ -1,7 +1,31 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
+afterEach(() => {
+  vi.doUnmock('@/lib/application/leaderboard');
+  vi.resetModules();
+});
+
 describe('public data routes', () => {
+  it('adapts leaderboard application data into a no-store response', async () => {
+    const payload = {
+      leaderboard: [{ model_id: 'model-1', total_pnl: 123 }],
+      cohorts: [{ id: 'cohort-1', cohort_number: 1 }],
+      updated_at: '2026-03-06T00:00:00.000Z'
+    };
+
+    vi.doMock('@/lib/application/leaderboard', () => ({
+      getLeaderboardData: () => payload
+    }));
+
+    const route = await import('@/app/api/leaderboard/route');
+    const response = await route.GET();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.json()).toEqual(payload);
+  });
+
   it('marks leaderboard responses as no-store', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
