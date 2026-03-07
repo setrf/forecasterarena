@@ -314,4 +314,25 @@ describe('engine/resolution', () => {
       expect(queries.getPositionById(positionTwo.id)?.status).toBe('settled');
     });
   });
+
+  it('re-exports handleCancelledMarket from the settlement module path', async () => {
+    await withResolutionFixture(async ({ agent, queries }) => {
+      const settlement = await import('@/lib/engine/resolution/settlement');
+      const market = queries.upsertMarket({
+        polymarket_id: `pm-cancel-${Date.now()}-settlement`,
+        question: 'Will settlement continue exporting cancellation handling?',
+        close_date: '2030-01-01T00:00:00.000Z',
+        status: 'closed',
+        current_price: 0.45,
+        volume: 1000,
+        liquidity: 500
+      });
+
+      const position = queries.upsertPosition(agent.id, market.id, 'YES', 4, 0.5, 2);
+
+      expect(settlement.handleCancelledMarket(market.id)).toBe(1);
+      expect(queries.getMarketById(market.id)?.resolution_outcome).toBe('CANCELLED');
+      expect(queries.getPositionById(position.id)?.status).toBe('settled');
+    });
+  });
 });

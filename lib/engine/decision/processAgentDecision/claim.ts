@@ -3,10 +3,15 @@ import { LLM_TIMEOUT_MS } from '@/lib/constants';
 import type { AgentDecisionResult } from '@/lib/engine/decision/types';
 import type { AgentWithModel } from '@/lib/types';
 
-interface DecisionClaimOutcome {
-  claimedDecisionId: string | null;
-  skippedResult?: AgentDecisionResult;
-}
+type DecisionClaimOutcome =
+  | {
+      status: 'claimed';
+      claimedDecisionId: string;
+    }
+  | {
+      status: 'skipped';
+      skippedResult: AgentDecisionResult;
+    };
 
 export function claimAgentDecisionForProcessing(
   agent: AgentWithModel,
@@ -16,7 +21,7 @@ export function claimAgentDecisionForProcessing(
 ): DecisionClaimOutcome {
   if (agent.status === 'bankrupt') {
     return {
-      claimedDecisionId: null,
+      status: 'skipped',
       skippedResult: {
         ...result,
         action: 'SKIPPED',
@@ -34,7 +39,7 @@ export function claimAgentDecisionForProcessing(
 
   if (decisionClaim.status === 'skipped') {
     return {
-      claimedDecisionId: null,
+      status: 'skipped',
       skippedResult: {
         ...result,
         decision_id: decisionClaim.decision.id,
@@ -45,6 +50,7 @@ export function claimAgentDecisionForProcessing(
   }
 
   return {
+    status: 'claimed',
     claimedDecisionId: decisionClaim.decision.id
   };
 }

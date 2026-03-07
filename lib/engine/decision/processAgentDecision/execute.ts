@@ -28,15 +28,11 @@ export async function processAgentDecision(
 
   try {
     const decisionClaim = claimAgentDecisionForProcessing(agent, cohortId, weekNumber, result);
-    if (decisionClaim.skippedResult) {
+    if (decisionClaim.status === 'skipped') {
       return decisionClaim.skippedResult;
     }
 
     const decisionId = decisionClaim.claimedDecisionId;
-    if (!decisionId) {
-      throw new Error('Claimed decision id missing');
-    }
-
     claimedDecisionId = decisionId;
     result.decision_id = decisionId;
 
