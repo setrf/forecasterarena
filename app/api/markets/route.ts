@@ -1,13 +1,5 @@
-/**
- * Markets List API Endpoint
- *
- * Returns paginated list of markets with filtering options.
- *
- * @route GET /api/markets
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { listMarkets, type MarketSortOption } from '@/lib/application/markets';
 import { parseIntParam, safeErrorMessage } from '@/lib/utils/security';
 
 export const dynamic = 'force-dynamic';
@@ -16,126 +8,19 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const status = searchParams.get('status') || 'active';
-    const category = searchParams.get('category');
-    const search = searchParams.get('search');
-    const sort = searchParams.get('sort') || 'volume';
-    const withCohortBets = searchParams.get('cohort_bets') === 'true';
-    const limit = parseIntParam(searchParams.get('limit'), 50, 100);
-    const offset = parseIntParam(searchParams.get('offset'), 0);
-    
-    const db = getDb();
-    
-    // Build WHERE clause
-    const conditions: string[] = [];
-    const params: (string | number)[] = [];
-    
-    if (status !== 'all') {
-      conditions.push('m.status = ?');
-      params.push(status);
-    }
-    
-    if (category) {
-      conditions.push('m.category = ?');
-      params.push(category);
-    }
-    
-    if (search) {
-      conditions.push('m.question LIKE ?');
-      params.push(`%${search}%`);
-    }
-    
-    // Filter for markets with bets from current cohort
-    if (withCohortBets) {
-      conditions.push(`EXISTS (
-        SELECT 1 FROM positions p
-        JOIN agents a ON p.agent_id = a.id
-        JOIN cohorts c ON a.cohort_id = c.id
-        WHERE p.market_id = m.id
-        AND c.status = 'active'
-        AND p.status = 'open'
-      )`);
-    }
-    
-    const whereClause = conditions.length > 0 
-      ? 'WHERE ' + conditions.join(' AND ')
-      : '';
-    
-    // Build ORDER BY clause
-    let orderBy = 'volume DESC NULLS LAST';
-    switch (sort) {
-      case 'close_date': orderBy = 'close_date ASC'; break;
-      case 'created': orderBy = 'first_seen_at DESC'; break;
-      case 'volume': 
-      default: orderBy = 'volume DESC NULLS LAST';
-    }
-    
-    // Get total count
-    const countQuery = `SELECT COUNT(*) as total FROM markets m ${whereClause}`;
-    const countResult = db.prepare(countQuery).get(...params) as { total: number };
-    const total = countResult.total;
-    
-    // Get markets with position counts
-    const query = `
-      SELECT 
-        m.*,
-        (SELECT COUNT(DISTINCT p.agent_id) FROM positions p WHERE p.market_id = m.id AND p.status = 'open') as positions_count
-      FROM markets m
-      ${whereClause}
-      ORDER BY ${orderBy}
-      LIMIT ? OFFSET ?
-    `;
-    
-    const markets = db.prepare(query).all(...params, limit, offset);
-    
-    // Get categories for filter dropdown
-    const categories = db.prepare(`
-      SELECT DISTINCT category
-      FROM markets
-      WHERE category IS NOT NULL
-      ORDER BY category
-    `).all() as { category: string }[];
-
-    // Get aggregate stats (independent of filters)
-    const statsQuery = `
-      SELECT
-        COUNT(*) as total_markets,
-        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_markets,
-        (SELECT COUNT(DISTINCT m.id)
-         FROM markets m
-         WHERE EXISTS (
-           SELECT 1 FROM positions p
-           WHERE p.market_id = m.id
-           AND p.status = 'open'
-         )
-        ) as markets_with_positions
-      FROM markets
-    `;
-    const stats = db.prepare(statsQuery).get() as {
-      total_markets: number;
-      active_markets: number;
-      markets_with_positions: number;
-    };
-
-    const response = NextResponse.json({
-      markets,
-      total,
-      has_more: offset + limit < total,
-      categories: categories.map(c => c.category),
-      stats: {
-        total_markets: stats.total_markets,
-        active_markets: stats.active_markets,
-        markets_with_positions: stats.markets_with_positions,
-        categories_count: categories.length
-      },
-      updated_at: new Date().toISOString()
-    });
+    const response = NextResponse.json(listMarkets({
+      status: searchParams.get('status') || 'active',
+      category: searchParams.get('category'),
+      search: searchParams.get('search'),
+      sort: (searchParams.get('sort') || 'volume') as MarketSortOption,
+      withCohortBets: searchParams.get('cohort_bets') === 'true',
+      limit: parseIntParam(searchParams.get('limit'), 50, 100),
+      offset: parseIntParam(searchParams.get('offset'), 0)
+    }));
 
     response.headers.set('Cache-Control', 'no-store');
     return response;
-    
   } catch (error) {
     return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }
-
