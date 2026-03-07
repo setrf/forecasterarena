@@ -5,6 +5,7 @@ const checks = [
   { root: 'lib', maxLines: 550, extensions: new Set(['.ts', '.tsx']) },
   { root: 'lib/db/queries.ts', maxLines: 25, extensions: new Set(['.ts']) },
   { root: 'app/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/models/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'features', maxLines: 350, extensions: new Set(['.ts', '.tsx']) }
 ];
 
