@@ -3,7 +3,36 @@ import path from 'path';
 
 const checks = [
   { root: 'lib', maxLines: 550, extensions: new Set(['.ts', '.tsx']) },
-  { root: 'lib/db/queries.ts', maxLines: 25, extensions: new Set(['.ts']) }
+  { root: 'lib/db/queries.ts', maxLines: 25, extensions: new Set(['.ts']) },
+  { root: 'app/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'features', maxLines: 350, extensions: new Set(['.ts', '.tsx']) }
+];
+
+const boundaryRules = [
+  {
+    root: 'features',
+    extensions: new Set(['.ts', '.tsx']),
+    disallow: [
+      { prefix: '@/app/', reason: 'feature modules must not import route files directly' }
+    ]
+  },
+  {
+    root: 'lib/application',
+    extensions: new Set(['.ts', '.tsx']),
+    disallow: [
+      { prefix: 'next/', reason: 'application modules must stay framework-agnostic' },
+      { prefix: '@/app/', reason: 'application modules must not depend on route handlers or pages' }
+    ]
+  },
+  {
+    root: 'app/api/cohorts',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'cohort routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'cohort routes must go through the application layer' },
+      { prefix: '@/lib/db/queries', reason: 'cohort routes must go through the application layer' }
+    ]
+  }
 ];
 
 function walk(dirPath, extensions) {
@@ -30,6 +59,23 @@ function countLines(filePath) {
   return fs.readFileSync(filePath, 'utf8').split('\n').length;
 }
 
+function collectImports(filePath) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const imports = [];
+  const patterns = [
+    /from\s+['"]([^'"]+)['"]/g,
+    /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      imports.push(match[1]);
+    }
+  }
+
+  return imports;
+}
+
 const violations = [];
 
 for (const check of checks) {
@@ -49,11 +95,45 @@ for (const check of checks) {
   }
 }
 
+for (const rule of boundaryRules) {
+  const absoluteRoot = path.join(process.cwd(), rule.root);
+  if (!fs.existsSync(absoluteRoot)) {
+    continue;
+  }
+
+  const stats = fs.statSync(absoluteRoot);
+  const files = stats.isDirectory() ? walk(absoluteRoot, rule.extensions) : [absoluteRoot];
+
+  for (const filePath of files) {
+    const imports = collectImports(filePath);
+
+    for (const importPath of imports) {
+      const disallowed = rule.disallow.find(({ prefix }) => importPath.startsWith(prefix));
+      if (!disallowed) {
+        continue;
+      }
+
+      violations.push({
+        file: path.relative(process.cwd(), filePath),
+        importPath,
+        reason: disallowed.reason
+      });
+    }
+  }
+}
+
 if (violations.length > 0) {
-  console.error('Architecture check failed. Oversized files detected:');
+  console.error('Architecture check failed. Violations detected:');
   for (const violation of violations) {
+    if ('lineCount' in violation) {
+      console.error(
+        `- ${violation.file}: ${violation.lineCount} lines (max ${violation.maxLines})`
+      );
+      continue;
+    }
+
     console.error(
-      `- ${violation.file}: ${violation.lineCount} lines (max ${violation.maxLines})`
+      `- ${violation.file}: disallowed import "${violation.importPath}" (${violation.reason})`
     );
   }
   process.exit(1);
