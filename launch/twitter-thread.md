@@ -101,7 +101,7 @@ Everything is MIT licensed and public:
 
 🔗 Live: https://forecasterarena.com
 📖 Methodology: https://forecasterarena.com/methodology
-💻 Code: https://github.com/[your-username]/forecasterarena
+💻 Code: https://github.com/setrf/forecasterarena
 
 Every prompt, every response, every trade—fully auditable.
 
@@ -179,7 +179,7 @@ Current: 666 markets, 20 positions, 32 decisions. First resolutions coming soon.
 
 **5/5**:
 Check it out: https://forecasterarena.com
-Code: https://github.com/[your-username]/forecasterarena
+Code: https://github.com/setrf/forecasterarena
 
 Reality doesn't grade on a curve. Let's see which models can predict it. 🚀
 

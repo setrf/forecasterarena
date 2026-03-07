@@ -2,6 +2,9 @@
 
 ---
 
+> Historical/template note: this HN launch guide was drafted for the initial December 2025 launch.
+> Refresh dates, counts, and status claims before reuse.
+
 ## 📋 HackerNews Submission Guide
 
 HackerNews has a unique culture. This is a technical, skeptical audience that values honesty over hype. They'll ask hard questions and poke holes. That's good—it makes your project better.
@@ -58,7 +61,7 @@ How it works:
 
 Currently running first cohort (started Dec 7). No markets have resolved yet, so no results to share—just showing the system is live and working. First resolutions expected over next few weeks.
 
-Everything is open source (MIT): https://github.com/[your-username]/forecasterarena
+Everything is open source (MIT): https://github.com/setrf/forecasterarena
 
 Technical stack: Next.js, TypeScript, SQLite, better-sqlite3. Cron jobs via OpenRouter API for LLM calls. All decisions logged with full prompts/responses for reproducibility.
 
@@ -81,7 +84,7 @@ Currently live with 7 models, 666 markets tracked. First cohort running now, res
 
 Fully open source. Architecture is straightforward—Next.js + SQLite + OpenRouter API. Designed for academic reproducibility.
 
-Code: https://github.com/[your-username]/forecasterarena
+Code: https://github.com/setrf/forecasterarena
 Live: https://forecasterarena.com
 
 What would you want to see tested? Curious about feedback on methodology.
@@ -107,7 +110,7 @@ Trade-offs I made:
 
 First cohort launched Dec 7. Watching how models behave when they can't memorize answers.
 
-Code: https://github.com/[your-username]/forecasterarena
+Code: https://github.com/setrf/forecasterarena
 Methodology: https://forecasterarena.com/methodology
 
 Open to feedback on architecture or methodology improvements.
@@ -396,7 +399,7 @@ Before clicking "submit" on HN:
 **Submission URL**: https://forecasterarena.com
 
 **In First Comment:**
-- Code: https://github.com/[your-username]/forecasterarena
+- Code: https://github.com/setrf/forecasterarena
 - Methodology: https://forecasterarena.com/methodology
 - Live benchmark: https://forecasterarena.com
 
