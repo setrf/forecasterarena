@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { MODELS } from '@/lib/constants';
+import type { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { useModelDetailData } from '@/features/models/detail/useModelDetailData';
 import { ModelCohortPerformancePanel } from '@/features/models/detail/components/ModelCohortPerformancePanel';
 import { ModelDetailHeader } from '@/features/models/detail/components/ModelDetailHeader';
 import { ModelDetailNotFound } from '@/features/models/detail/components/ModelDetailNotFound';
@@ -10,50 +12,16 @@ import { ModelPerformanceSection } from '@/features/models/detail/components/Mod
 import { ModelRecentDecisionsPanel } from '@/features/models/detail/components/ModelRecentDecisionsPanel';
 import { ModelStatsGrid } from '@/features/models/detail/components/ModelStatsGrid';
 import { DecisionReasoningModal } from '@/features/models/detail/components/DecisionReasoningModal';
-import type { ModelDecision, ModelDetailData } from '@/features/models/detail/types';
+import type { ModelDecision } from '@/features/models/detail/types';
 import { createModelChartData } from '@/features/models/detail/utils';
-import type { TimeRange } from '@/components/charts/TimeRangeSelector';
 
 export default function ModelDetailPageClient() {
   const params = useParams<{ id: string }>();
   const modelId = params.id;
   const model = MODELS.find((entry) => entry.id === modelId);
-  const [data, setData] = useState<ModelDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedDecision, setSelectedDecision] = useState<ModelDecision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    async function fetchData() {
-      try {
-        const response = await fetch(`/api/models/${modelId}`);
-        if (!response.ok || isCancelled) {
-          return;
-        }
-
-        const json = await response.json() as ModelDetailData;
-        if (!isCancelled) {
-          setData(json);
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          console.error('Error fetching model data:', error);
-        }
-      } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchData();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [modelId]);
+  const { data, loading } = useModelDetailData(modelId);
 
   if (!model) {
     return <ModelDetailNotFound message="Model Not Found" />;

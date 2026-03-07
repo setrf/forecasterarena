@@ -1,0 +1,54 @@
+import type {
+  AgentStats,
+  Cohort,
+  CohortStats,
+  Decision
+} from '@/features/cohorts/detail/types';
+
+interface CohortDetailPayload {
+  cohort: Cohort;
+  agents: AgentStats[];
+  stats: CohortStats | null;
+  equity_curves: Record<string, Array<{ date: string; value: number }>>;
+  recent_decisions: Decision[];
+}
+
+export type CohortDetailLoadResult =
+  | {
+      status: 'ok';
+      data: {
+        cohort: Cohort;
+        agents: AgentStats[];
+        stats: CohortStats | null;
+        equityCurves: Record<string, Array<{ date: string; value: number }>>;
+        decisions: Decision[];
+      };
+    }
+  | {
+      status: 'error';
+      error: string;
+    };
+
+export async function fetchCohortDetailData(
+  cohortId: string
+): Promise<CohortDetailLoadResult> {
+  const response = await fetch(`/api/cohorts/${cohortId}`);
+  if (!response.ok) {
+    return {
+      status: 'error',
+      error: response.status === 404 ? 'Cohort not found' : 'Failed to load cohort'
+    };
+  }
+
+  const payload = await response.json() as CohortDetailPayload;
+  return {
+    status: 'ok',
+    data: {
+      cohort: payload.cohort,
+      agents: payload.agents,
+      stats: payload.stats,
+      equityCurves: payload.equity_curves,
+      decisions: payload.recent_decisions
+    }
+  };
+}
