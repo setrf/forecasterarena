@@ -3,67 +3,36 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { DesktopNavigationLinks } from '@/components/navigation/DesktopNavigationLinks';
+import { MobileNavigationMenu } from '@/components/navigation/MobileNavigationMenu';
+import { isNavActive } from '@/components/navigation/utils';
 import { GITHUB_URL } from '@/lib/constants';
-
-const navLinks = [
-  { href: '/models', label: 'Models' },
-  { href: '/cohorts', label: 'Cohorts' },
-  { href: '/markets', label: 'Markets' },
-  { href: '/methodology', label: 'Methodology' },
-];
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
-    return pathname.startsWith(href);
-  };
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border-subtle)]">
-      {/* Blur background */}
       <div className="absolute inset-0 bg-[var(--bg-primary)]/80 backdrop-blur-xl" />
-      
+
       <div className="container-wide mx-auto px-6 h-16 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-10">
-          {/* Logo */}
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className={`font-semibold text-lg transition-colors ${
-              pathname === '/' ? 'text-[var(--accent-gold)]' : 'hover:text-[var(--accent-gold)]'
+              isNavActive(pathname, '/') ? 'text-[var(--accent-gold)]' : 'hover:text-[var(--accent-gold)]'
             }`}
           >
             Forecaster Arena
           </Link>
-          
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map(link => (
-              <Link 
-                key={link.href}
-                href={link.href} 
-                className={`nav-link ${isActive(link.href) ? 'nav-link-active' : ''}`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+
+          <DesktopNavigationLinks pathname={pathname} />
         </div>
-        
+
         <div className="flex items-center gap-3">
-          {/* About link - desktop only */}
-          <Link 
-            href="/about" 
-            className={`nav-link hidden sm:block ${isActive('/about') ? 'nav-link-active' : ''}`}
-          >
-            About
-          </Link>
-          
-          {/* GitHub button */}
-          <a 
-            href={GITHUB_URL} 
+          <a
+            href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="View Forecaster Arena on GitHub"
@@ -74,10 +43,9 @@ export function Navigation() {
             </svg>
             <span className="hidden sm:inline">GitHub</span>
           </a>
-          
-          {/* Mobile menu button */}
+
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={() => setMobileMenuOpen((current) => !current)}
             className="md:hidden p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
             aria-label="Toggle menu"
           >
@@ -93,44 +61,12 @@ export function Navigation() {
           </button>
         </div>
       </div>
-      
-      {/* Mobile menu */}
-      <div 
-        className={`md:hidden absolute top-full left-0 right-0 bg-[var(--bg-primary)]/95 backdrop-blur-xl border-b border-[var(--border-subtle)] transition-all duration-300 ${
-          mobileMenuOpen 
-            ? 'opacity-100 translate-y-0' 
-            : 'opacity-0 -translate-y-4 pointer-events-none'
-        }`}
-      >
-        <nav className="container-wide mx-auto px-6 py-4 flex flex-col gap-1">
-          {navLinks.map(link => (
-            <Link 
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className={`px-4 py-3 rounded-lg transition-colors ${
-                isActive(link.href) 
-                  ? 'bg-[var(--accent-gold-dim)] text-[var(--accent-gold)]' 
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link 
-            href="/about"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`px-4 py-3 rounded-lg transition-colors ${
-              isActive('/about') 
-                ? 'bg-[var(--accent-gold-dim)] text-[var(--accent-gold)]' 
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            About
-          </Link>
-        </nav>
-      </div>
+
+      <MobileNavigationMenu
+        pathname={pathname}
+        mobileMenuOpen={mobileMenuOpen}
+        onNavigate={() => setMobileMenuOpen(false)}
+      />
     </header>
   );
 }
-

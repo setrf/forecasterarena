@@ -1,28 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { formatRelativeTime } from '@/lib/utils';
-
-interface Decision {
-  id: string;
-  agent_id: string;
-  cohort_id: string;
-  decision_week: number;
-  decision_timestamp: string;
-  action: string;
-  reasoning: string | null;
-  model_display_name: string;
-  model_color: string;
-  cohort_number?: number;
-}
-
-interface DecisionFeedProps {
-  limit?: number;
-  showCohort?: boolean;
-  autoRefresh?: boolean;
-  className?: string;
-  decisions?: Decision[];
-}
+import { DecisionFeedContent } from '@/components/decision-feed/DecisionFeedContent';
+import { DecisionFeedLoading } from '@/components/decision-feed/DecisionFeedLoading';
+import type { DecisionFeedProps } from '@/components/decision-feed/types';
+import { useDecisionFeedData } from '@/components/decision-feed/useDecisionFeedData';
 
 export default function DecisionFeed({
   limit = 10,
@@ -31,178 +12,24 @@ export default function DecisionFeed({
   className = '',
   decisions: initialDecisions
 }: DecisionFeedProps) {
-  const [decisions, setDecisions] = useState<Decision[]>(initialDecisions || []);
-  const [loading, setLoading] = useState(!initialDecisions);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (initialDecisions) {
-      setDecisions(initialDecisions);
-      setLoading(false);
-      return;
-    }
-
-    async function fetchDecisions() {
-      try {
-        const res = await fetch(`/api/decisions/recent?limit=${limit}`);
-        if (res.ok) {
-          const data = await res.json();
-          setDecisions(data.decisions || []);
-        }
-      } catch (error) {
-        console.error('Error fetching decisions:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchDecisions();
-
-    if (autoRefresh) {
-      const interval = setInterval(fetchDecisions, 30000); // 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [limit, autoRefresh, initialDecisions]);
-
-  function toggleExpanded(id: string): void {
-    setExpandedId(current => current === id ? null : id);
-  }
-
-  function getActionStyle(action: string): { bg: string; text: string } {
-    switch (action) {
-      case 'BET': return { bg: 'bg-[var(--accent-emerald)]/20', text: 'text-[var(--accent-emerald)]' };
-      case 'SELL': return { bg: 'bg-[var(--accent-amber)]/20', text: 'text-[var(--accent-amber)]' };
-      case 'HOLD': return { bg: 'bg-[var(--text-muted)]/20', text: 'text-[var(--text-muted)]' };
-      case 'ERROR': return { bg: 'bg-[var(--accent-rose)]/20', text: 'text-[var(--accent-rose)]' };
-      default: return { bg: 'bg-[var(--text-muted)]/20', text: 'text-[var(--text-muted)]' };
-    }
-  }
+  const { decisions, loading, expandedId, toggleExpanded } = useDecisionFeedData({
+    limit,
+    autoRefresh,
+    initialDecisions
+  });
 
   if (loading) {
-    return (
-      <div className={`space-y-3 ${className}`}>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="p-4 bg-[var(--bg-tertiary)] rounded-lg animate-pulse">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-3 h-3 rounded-full bg-[var(--border-medium)]" />
-              <div className="h-4 w-24 bg-[var(--border-medium)] rounded" />
-            </div>
-            <div className="h-3 w-full bg-[var(--border-medium)] rounded" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (decisions.length === 0) {
-    return (
-      <div className={`text-center py-8 text-[var(--text-muted)] ${className}`}>
-        <svg className="w-10 h-10 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-        <p className="text-sm">No decisions yet</p>
-        <p className="text-xs mt-1">Decisions are made every Sunday</p>
-      </div>
-    );
+    return <DecisionFeedLoading className={className} />;
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      {decisions.map((decision) => {
-        const actionStyle = getActionStyle(decision.action);
-        const isExpanded = expandedId === decision.id;
-        const hasReasoning = decision.reasoning && decision.reasoning.trim().length > 0;
-        const reasoningId = `decision-reasoning-${decision.id}`;
-
-        return (
-          <div
-            key={decision.id}
-            className={`p-4 bg-[var(--bg-tertiary)] rounded-lg transition-colors ${hasReasoning ? 'cursor-pointer hover:bg-[var(--bg-secondary)]' : ''}`}
-            onClick={() => hasReasoning && toggleExpanded(decision.id)}
-            onKeyDown={(event) => {
-              if (!hasReasoning) return;
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                toggleExpanded(decision.id);
-              }
-            }}
-            role={hasReasoning ? 'button' : undefined}
-            tabIndex={hasReasoning ? 0 : undefined}
-            aria-expanded={hasReasoning ? isExpanded : undefined}
-            aria-controls={hasReasoning ? reasoningId : undefined}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: decision.model_color }}
-                />
-                <span className="font-medium text-sm">{decision.model_display_name}</span>
-                <span className={`px-2 py-0.5 text-xs font-medium rounded ${actionStyle.bg} ${actionStyle.text}`}>
-                  {decision.action}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--text-muted)]">
-                  {formatRelativeTime(decision.decision_timestamp)}
-                </span>
-                {hasReasoning && (
-                  <svg
-                    className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                )}
-              </div>
-            </div>
-
-            {/* Meta */}
-            <div className="flex items-center gap-3 text-xs text-[var(--text-muted)] mb-2">
-              {showCohort && (
-                <span>Cohort #{decision.cohort_number}</span>
-              )}
-              <span>Week {decision.decision_week}</span>
-            </div>
-
-            {/* Reasoning - Preview or Full */}
-            {hasReasoning && (
-              <div className="mt-2">
-                {!isExpanded ? (
-                  <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
-                    {decision.reasoning}
-                  </p>
-                ) : (
-                  <div
-                    id={reasoningId}
-                    className="bg-[var(--bg-primary)] rounded-lg p-3 border border-[var(--border-subtle)]"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <svg className="w-4 h-4 text-[var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      <span className="text-xs font-medium text-[var(--text-secondary)]">Model Reasoning</span>
-                    </div>
-                    <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">
-                      {decision.reasoning}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* No reasoning indicator */}
-            {!hasReasoning && (
-              <p className="text-sm text-[var(--text-muted)] italic">No reasoning provided</p>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <DecisionFeedContent
+      decisions={decisions}
+      expandedId={expandedId}
+      showCohort={showCohort}
+      className={className}
+      onToggleExpanded={toggleExpanded}
+    />
   );
 }
-
 
