@@ -33,6 +33,15 @@ const boundaryRules = [
       { prefix: '@/lib/db/', reason: 'cohort routes must go through the application layer' },
       { prefix: '@/lib/db/queries', reason: 'cohort routes must go through the application layer' }
     ]
+  },
+  {
+    root: 'app/api/models',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'model routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'model routes must go through the application layer' },
+      { prefix: '@/lib/db/queries', reason: 'model routes must go through the application layer' }
+    ]
   }
 ];
 
