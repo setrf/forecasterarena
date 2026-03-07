@@ -4,8 +4,20 @@ import path from 'path';
 const checks = [
   { root: 'lib', maxLines: 550, extensions: new Set(['.ts', '.tsx']) },
   { root: 'lib/db/queries.ts', maxLines: 25, extensions: new Set(['.ts']) },
+  { root: 'lib/application/cohorts.ts', maxLines: 25, extensions: new Set(['.ts']) },
+  { root: 'lib/utils.ts', maxLines: 25, extensions: new Set(['.ts']) },
+  { root: 'lib/engine/decision.ts', maxLines: 40, extensions: new Set(['.ts']) },
+  { root: 'lib/engine/execution.ts', maxLines: 40, extensions: new Set(['.ts']) },
+  { root: 'lib/engine/resolution.ts', maxLines: 40, extensions: new Set(['.ts']) },
   { root: 'app/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/admin/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/cohorts/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/cohorts/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/cohorts/[id]/models/[modelId]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/markets/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/markets/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/models/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/models/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'features', maxLines: 350, extensions: new Set(['.ts', '.tsx']) }
 ];
 
