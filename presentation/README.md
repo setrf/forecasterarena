@@ -24,7 +24,7 @@ google-chrome index.html
 
 ### Option 2: Serve with Python
 ```bash
-cd /root/Projects/apps/forecasterarena/presentation
+cd /path/to/forecasterarena/presentation
 python3 -m http.server 8080
 # Then open: http://localhost:8080
 ```
@@ -32,7 +32,7 @@ python3 -m http.server 8080
 ### Option 3: Deploy to Your VPS
 ```bash
 # Copy to nginx directory
-sudo cp -r /root/Projects/apps/forecasterarena/presentation /var/www/apps/forecaster-presentation
+sudo cp -r /path/to/forecasterarena/presentation /var/www/apps/forecaster-presentation
 # Access at: http://your-domain.com/apps/forecaster-presentation/
 ```
 

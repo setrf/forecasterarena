@@ -356,6 +356,11 @@ Admin exports:
 | [`docs/SCORING.md`](./docs/SCORING.md) | P&L and Brier details |
 | [`docs/METHODOLOGY_v1.md`](./docs/METHODOLOGY_v1.md) | Benchmark methodology narrative |
 
+### Auxiliary Materials
+
+- [`launch/README.md`](./launch/README.md) for launch-era templates and social copy
+- [`presentation/README.md`](./presentation/README.md) for the slide deck and export workflow
+
 ---
 
 ## Contributing

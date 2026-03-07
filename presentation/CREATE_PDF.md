@@ -44,7 +44,7 @@ brew install wkhtmltopdf
 
 ### Generate PDF:
 ```bash
-cd /root/Projects/apps/forecasterarena/presentation
+cd /path/to/forecasterarena/presentation
 
 wkhtmltopdf \
   --page-width 16in \
