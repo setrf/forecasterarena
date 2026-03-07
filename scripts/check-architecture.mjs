@@ -5,25 +5,46 @@ const checks = [
   { root: 'lib', maxLines: 550, extensions: new Set(['.ts', '.tsx']) },
   { root: 'lib/db/queries.ts', maxLines: 25, extensions: new Set(['.ts']) },
   { root: 'lib/db/index.ts', maxLines: 20, extensions: new Set(['.ts']) },
+  { root: 'lib/application/cron.ts', maxLines: 25, extensions: new Set(['.ts']) },
   { root: 'lib/application/cohorts.ts', maxLines: 25, extensions: new Set(['.ts']) },
   { root: 'lib/openrouter/client.ts', maxLines: 20, extensions: new Set(['.ts']) },
   { root: 'lib/openrouter/prompts.ts', maxLines: 20, extensions: new Set(['.ts']) },
   { root: 'lib/utils.ts', maxLines: 25, extensions: new Set(['.ts']) },
   { root: 'lib/engine/cohort.ts', maxLines: 20, extensions: new Set(['.ts']) },
   { root: 'lib/engine/decision.ts', maxLines: 40, extensions: new Set(['.ts']) },
+  { root: 'lib/engine/decision/processAgentDecision.ts', maxLines: 175, extensions: new Set(['.ts']) },
   { root: 'lib/engine/execution.ts', maxLines: 40, extensions: new Set(['.ts']) },
+  { root: 'lib/engine/execution/bet.ts', maxLines: 80, extensions: new Set(['.ts']) },
+  { root: 'lib/engine/execution/sell.ts', maxLines: 80, extensions: new Set(['.ts']) },
   { root: 'lib/engine/resolution.ts', maxLines: 40, extensions: new Set(['.ts']) },
   { root: 'lib/scoring/pnl.ts', maxLines: 20, extensions: new Set(['.ts']) },
   { root: 'app/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/admin/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/api/admin/action/route.ts', maxLines: 60, extensions: new Set(['.ts']) },
+  { root: 'app/api/admin/costs/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'app/api/admin/export/route.ts', maxLines: 80, extensions: new Set(['.ts']) },
+  { root: 'app/api/admin/login/route.ts', maxLines: 60, extensions: new Set(['.ts']) },
+  { root: 'app/api/admin/logs/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/admin/stats/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/cron/backup/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/cron/check-resolutions/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/cron/run-decisions/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/cron/start-cohort/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/cron/sync-markets/route.ts', maxLines: 40, extensions: new Set(['.ts']) },
+  { root: 'app/api/cron/take-snapshots/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'app/cohorts/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/cohorts/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/cohorts/[id]/models/[modelId]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/api/decisions/[id]/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/health/route.ts', maxLines: 40, extensions: new Set(['.ts']) },
+  { root: 'app/api/leaderboard/route.ts', maxLines: 40, extensions: new Set(['.ts']) },
   { root: 'app/markets/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/markets/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/api/markets/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/markets/[id]/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'app/models/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/models/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/api/performance-data/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'features', maxLines: 350, extensions: new Set(['.ts', '.tsx']) }
 ];
 
@@ -68,6 +89,91 @@ const boundaryRules = [
       { prefix: '@/lib/db', reason: 'admin export routes must go through the application layer' },
       { prefix: '@/lib/db/', reason: 'admin export routes must go through the application layer' },
       { prefix: '@/lib/db/queries', reason: 'admin export routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/admin/action',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db/', reason: 'admin action routes must go through the application layer' },
+      { prefix: '@/lib/engine/', reason: 'admin action routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/admin/costs',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'admin cost routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'admin cost routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/admin/logs',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'admin log routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'admin log routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/admin/stats',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'admin stats routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'admin stats routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/cron',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'cron routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'cron routes must go through the application layer' },
+      { prefix: '@/lib/db/queries', reason: 'cron routes must go through the application layer' },
+      { prefix: '@/lib/engine/', reason: 'cron routes must go through the application layer' },
+      { prefix: '@/lib/scoring/', reason: 'cron routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/decisions',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'decision routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'decision routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/health',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'health routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'health routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/leaderboard',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'leaderboard routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'leaderboard routes must go through the application layer' },
+      { prefix: '@/lib/db/queries', reason: 'leaderboard routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/markets',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'market routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'market routes must go through the application layer' },
+      { prefix: '@/lib/db/queries', reason: 'market routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/performance-data',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'performance routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'performance routes must go through the application layer' }
     ]
   }
 ];

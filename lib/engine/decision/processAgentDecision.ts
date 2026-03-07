@@ -2,12 +2,12 @@ import { logSystemEvent } from '@/lib/db';
 import {
   claimDecisionForProcessing,
   finalizeDecision,
-  getPositionsWithMarkets,
   markDecisionAsError
 } from '@/lib/db/queries';
 import { LLM_MAX_RETRIES, LLM_TIMEOUT_MS } from '@/lib/constants';
-import { executeBets, executeSells } from '@/lib/engine/execution';
-import { SYSTEM_PROMPT, buildRetryPrompt, buildUserPrompt } from '@/lib/openrouter/prompts';
+import { buildDecisionUserPrompt } from '@/lib/engine/decision/buildDecisionUserPrompt';
+import { executeDecisionTrades } from '@/lib/engine/decision/executeDecisionTrades';
+import { SYSTEM_PROMPT, buildRetryPrompt } from '@/lib/openrouter/prompts';
 import { callOpenRouterWithRetry, estimateCost } from '@/lib/openrouter/client';
 import { getDefaultHoldDecision, isValidDecision, parseDecision } from '@/lib/openrouter/parser';
 import type { AgentWithModel, Market } from '@/lib/types';
@@ -63,36 +63,7 @@ export async function processAgentDecision(
 
     console.log(`Processing decision for ${agent.model.display_name}...`);
 
-    const positions = getPositionsWithMarkets(agent.id);
-    userPrompt = buildUserPrompt(
-      {
-        id: agent.id,
-        cohort_id: agent.cohort_id,
-        model_id: agent.model_id,
-        cash_balance: agent.cash_balance,
-        total_invested: agent.total_invested,
-        status: agent.status,
-        created_at: ''
-      },
-      positions.map((position) => {
-        const normalizedSide = position.side.toUpperCase();
-        const yesPrice = position.current_price ?? 0.5;
-        const currentPriceForPrompt = normalizedSide === 'NO' ? (1 - yesPrice) : yesPrice;
-
-        return {
-          id: position.id,
-          market_question: position.market_question,
-          side: position.side,
-          shares: position.shares,
-          avg_entry_price: position.avg_entry_price,
-          current_price: currentPriceForPrompt,
-          current_value: position.current_value || 0,
-          unrealized_pnl: position.unrealized_pnl || 0
-        };
-      }),
-      markets,
-      weekNumber
-    );
+    userPrompt = buildDecisionUserPrompt(agent, markets, weekNumber);
 
     let response = await callOpenRouterWithRetry(
       agent.model.openrouter_id,
@@ -146,25 +117,11 @@ export async function processAgentDecision(
     result.decision_id = decision.id;
     result.action = parsed.action;
 
-    let tradesExecuted = 0;
-    let executionErrors: string[] = [];
-    let attemptedTrades = 0;
-
-    if (parsed.action === 'BET' && parsed.bets) {
-      const betResults = executeBets(agent.id, parsed.bets, decision.id);
-      attemptedTrades = parsed.bets.length;
-      tradesExecuted = betResults.filter((entry) => entry.success).length;
-      executionErrors = betResults
-        .filter((entry) => !entry.success && entry.error)
-        .map((entry) => entry.error as string);
-    } else if (parsed.action === 'SELL' && parsed.sells) {
-      const sellResults = executeSells(agent.id, parsed.sells, decision.id);
-      attemptedTrades = parsed.sells.length;
-      tradesExecuted = sellResults.filter((entry) => entry.success).length;
-      executionErrors = sellResults
-        .filter((entry) => !entry.success && entry.error)
-        .map((entry) => entry.error as string);
-    }
+    const {
+      attemptedTrades,
+      tradesExecuted,
+      executionErrors
+    } = executeDecisionTrades(agent.id, parsed, decision.id);
 
     result.trades_executed = tradesExecuted;
 
