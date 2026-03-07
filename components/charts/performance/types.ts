@@ -1,0 +1,23 @@
+import type { TimeRange } from '@/components/charts/TimeRangeSelector';
+
+export type { TimeRange };
+
+export interface ModelConfig {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface PerformanceDataPoint {
+  date: string;
+  [modelId: string]: number | string;
+}
+
+export interface PerformanceChartProps {
+  data: PerformanceDataPoint[];
+  models: ModelConfig[];
+  height?: number;
+  showLegend?: boolean;
+  showGrid?: boolean;
+  timeRange?: TimeRange;
+}
