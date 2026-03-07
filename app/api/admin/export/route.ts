@@ -13,26 +13,33 @@
  *  - Streams a previously generated export (admin-auth required)
  */
 
-import fs from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureAdminAuthenticated } from '@/lib/api/admin-route';
-import { createAdminExport, resolveAdminExportDownload } from '@/lib/application/admin-export';
+import { createAdminExport, readAdminExportDownload } from '@/lib/application/admin-export';
 
 export const dynamic = 'force-dynamic';
 
 function ensureAuth() {
   return ensureAdminAuthenticated();
 }
+
+function jsonErrorResponse(status: number, error: string) {
+  return NextResponse.json({ error }, { status });
+}
+
+async function readRequestBody(request: NextRequest): Promise<unknown> {
+  return request.json().catch(() => ({}));
+}
+
 async function handlePost(request: NextRequest) {
   const authResponse = ensureAuth();
   if (authResponse) {
     return authResponse;
   }
 
-  const body = await request.json().catch(() => ({}));
-  const result = createAdminExport(body);
+  const result = createAdminExport(await readRequestBody(request));
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
+    return jsonErrorResponse(result.status, result.error);
   }
 
   return NextResponse.json({
@@ -49,13 +56,12 @@ async function handleGet(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const result = resolveAdminExportDownload(searchParams.get('file'));
+  const result = readAdminExportDownload(searchParams.get('file'));
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
+    return jsonErrorResponse(result.status, result.error);
   }
 
-  const data = fs.readFileSync(result.data.filePath);
-  return new NextResponse(data, {
+  return new NextResponse(result.data.fileData, {
     status: 200,
     headers: {
       'Content-Type': 'application/zip',

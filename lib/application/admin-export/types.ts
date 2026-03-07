@@ -25,6 +25,11 @@ export type DownloadAdminExportSuccess = {
   filename: string;
 };
 
+export type ReadAdminExportDownloadSuccess = {
+  filename: string;
+  fileData: Buffer;
+};
+
 export type AppResult<T> =
   | { ok: true; data: T }
   | { ok: false; status: number; error: string };

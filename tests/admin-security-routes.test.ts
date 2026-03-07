@@ -76,6 +76,64 @@ describe('admin export route', () => {
       await ctx.cleanup();
     }
   });
+
+  it('returns validation errors from the export application service unchanged', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      vi.doMock('@/lib/api/admin-route', () => ({
+        ensureAdminAuthenticated: () => null
+      }));
+
+      const route = await import('@/app/api/admin/export/route');
+      const response = await route.POST(new Request('http://localhost/api/admin/export', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          cohort_id: 'cohort-1',
+          from: '2026-03-01T00:00:00.000Z',
+          to: '2026-03-02T00:00:00.000Z',
+          tables: ['invalid-table']
+        })
+      }) as any);
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        error: 'No valid tables requested'
+      });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('streams a generated export download with zip headers', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+    const filename = 'export-cohort-1-2026-03-01T00-00-00-000Z.zip';
+    const filePath = path.join(EXPORTS_DIR, filename);
+
+    try {
+      vi.doMock('@/lib/api/admin-route', () => ({
+        ensureAdminAuthenticated: () => null
+      }));
+
+      fs.mkdirSync(EXPORTS_DIR, { recursive: true });
+      fs.writeFileSync(filePath, 'zip payload', 'utf8');
+
+      const route = await import('@/app/api/admin/export/route');
+      const response = await route.GET(
+        new Request(`http://localhost/api/admin/export?file=${encodeURIComponent(filename)}`) as any
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('application/zip');
+      expect(response.headers.get('Content-Disposition')).toBe(
+        `attachment; filename="${filename}"`
+      );
+      expect(await response.text()).toBe('zip payload');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
 });
 
 describe('health route', () => {
