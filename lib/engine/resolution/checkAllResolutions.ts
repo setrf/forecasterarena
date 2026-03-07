@@ -1,26 +1,8 @@
-/**
- * Market Resolution Engine
- *
- * Handles checking for resolved markets and settling positions.
- *
- * @module engine/resolution
- */
-
 import { logSystemEvent } from '@/lib/db';
 import { getClosedMarkets } from '@/lib/db/queries';
 import { checkMarketResolution } from '@/lib/engine/resolution/checkMarketResolution';
-import { handleCancelledMarket } from '@/lib/engine/resolution/settlement';
 import type { ResolutionCheckResult } from '@/lib/engine/resolution/types';
-
-async function wait(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export { handleCancelledMarket } from '@/lib/engine/resolution/settlement';
-export type {
-  MarketResolutionResult,
-  ResolutionCheckResult
-} from '@/lib/engine/resolution/types';
+import { sleep } from '@/lib/utils';
 
 export async function checkAllResolutions(): Promise<ResolutionCheckResult> {
   console.log('Checking for market resolutions...');
@@ -37,11 +19,11 @@ export async function checkAllResolutions(): Promise<ResolutionCheckResult> {
 
   for (const market of closedMarkets) {
     try {
-      result.markets_checked++;
+      result.markets_checked += 1;
 
       const marketResult = await checkMarketResolution(market);
       if (marketResult.resolved) {
-        result.markets_resolved++;
+        result.markets_resolved += 1;
       }
 
       result.positions_settled += marketResult.positions_settled;
@@ -49,7 +31,7 @@ export async function checkAllResolutions(): Promise<ResolutionCheckResult> {
         ...marketResult.errors.map((error) => `Market ${market.id}: ${error}`)
       );
 
-      await wait(200);
+      await sleep(200);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       result.errors.push(`Market ${market.id}: ${message}`);
