@@ -395,6 +395,20 @@ describe('cohort shared application queries', () => {
         total_amount: 6.5,
         implied_confidence: 0.65
       });
+      const holdDecision = queries.createDecision({
+        agent_id: agent.id,
+        cohort_id: cohort.id,
+        decision_week: 2,
+        prompt_system: 'system-hold',
+        prompt_user: 'user-hold',
+        action: 'HOLD',
+        reasoning: 'No trade this week'
+      });
+      db.prepare(`
+        UPDATE decisions
+        SET decision_timestamp = ?
+        WHERE id = ?
+      `).run('2026-03-11T00:00:00.000Z', holdDecision.id);
       queries.resolveMarket(resolvedMarket.id, 'YES');
 
       queries.createPortfolioSnapshot({
@@ -441,19 +455,29 @@ describe('cohort shared application queries', () => {
       });
 
       const recentDecisions = shared.getRecentCohortDecisions(db, cohort.id);
-      expect(recentDecisions).toHaveLength(1);
+      expect(recentDecisions).toHaveLength(2);
       expect(recentDecisions[0]).toMatchObject({
+        id: holdDecision.id,
+        action: 'HOLD',
+        model_display_name: expect.any(String)
+      });
+      expect(recentDecisions[1]).toMatchObject({
         id: decision.id,
         model_display_name: expect.any(String)
       });
 
       const agentDecisions = shared.getAgentDecisionsWithMarkets(db, agent.id);
-      expect(agentDecisions).toHaveLength(1);
+      expect(agentDecisions).toHaveLength(2);
       expect(agentDecisions[0]).toMatchObject({
+        id: holdDecision.id,
+        reasoning: 'No trade this week',
+        markets: []
+      });
+      expect(agentDecisions[1]).toMatchObject({
         id: decision.id,
         reasoning: 'Shared query coverage'
       });
-      expect(agentDecisions[0].markets).toEqual([
+      expect(agentDecisions[1].markets).toEqual([
         expect.objectContaining({
           market_id: resolvedMarket.id,
           market_question: 'Will the decision trade resolve correctly?'
