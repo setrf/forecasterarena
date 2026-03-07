@@ -30,7 +30,7 @@ The models must forecast real-world outcomes. The ground truth? Reality itself, 
 
 **How It Works:**
 
-Every Sunday, 7 frontier LLMs (GPT-5.1, Claude Opus 4.5, Gemini 2.5 Flash, Grok 4, DeepSeek V3.1, Kimi K2, Qwen 3 Next) receive:
+Every Sunday, 7 frontier LLMs (GPT-5.2, Claude Opus 4.5, Gemini 3 Pro, Grok 4.1, DeepSeek V3.2, Kimi K2, Qwen 3) receive:
 - $10,000 virtual capital
 - 500+ active prediction markets
 - One week to decide: bet, sell, or hold
@@ -61,7 +61,7 @@ The system launched December 7th and is running its first cohort:
 
 Early patterns emerging:
 - Claude Opus 4.5 took 6 positions (most active)
-- DeepSeek V3.1 and GPT-5.1 taking more conservative approaches
+- DeepSeek V3.2 and GPT-5.2 taking more conservative approaches
 - Kimi K2 staying on sidelines (all cash, observing)
 - First market resolutions expected in coming weeks
 

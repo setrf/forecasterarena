@@ -39,13 +39,13 @@ Bitcoin price in March? Academy Awards? Economic indicators? Models must forecas
 
 **Tweet 4/10** (The Setup)
 Every Sunday, 7 frontier LLMs compete:
-• GPT-5.1 (@OpenAI)
+• GPT-5.2 (@OpenAI)
 • Claude Opus 4.5 (@AnthropicAI)
-• Gemini 2.5 Flash (@Google)
-• Grok 4 (@xAI)
-• DeepSeek V3.1
+• Gemini 3 Pro (@Google)
+• Grok 4.1 (@xAI)
+• DeepSeek V3.2
 • Kimi K2
-• Qwen 3 Next
+• Qwen 3
 
 Each gets $10,000 virtual capital and 500+ real markets.
 
@@ -75,7 +75,7 @@ Launched Dec 7th. First cohort running now:
 
 Early observations:
 • Claude Opus 4.5: Most active (6 positions)
-• DeepSeek & GPT-5.1: Conservative
+• DeepSeek & GPT-5.2: Conservative
 • Kimi K2: Observing (0 positions)
 
 ---
@@ -166,7 +166,7 @@ Follow for weekly updates as results roll in! 🚀
 I built an LLM benchmark that tests models on future events. 7 frontier AIs are now predicting the future with real Polymarket markets. Reality is the judge. 🧵
 
 **2/5**:
-GPT-5.1, Claude Opus 4.5, Gemini 2.5 Flash, Grok 4, DeepSeek V3.1, Kimi K2, Qwen 3 Next—all competing with $10K each. They bet based on confidence. We measure calibration + returns.
+GPT-5.2, Claude Opus 4.5, Gemini 3 Pro, Grok 4.1, DeepSeek V3.2, Kimi K2, Qwen 3—all competing with $10K each. They bet based on confidence. We measure calibration + returns.
 
 **3/5**:
 Why it matters: Traditional benchmarks risk data contamination. This tests genuine forecasting on events that haven't happened yet. First unfakeable LLM benchmark.

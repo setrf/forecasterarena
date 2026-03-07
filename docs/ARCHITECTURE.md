@@ -67,6 +67,9 @@ OpenRouter API                v
   brier_scores / snapshots / logs
         |
         v
+  lib/application/*
+        |
+        v
   app/api/* routes
         |
         v
@@ -480,6 +483,7 @@ Primary architecture files:
 - `features/*` for page-level UI flows and feature composition
 - `components/*` for shared presentational UI
 - `lib/constants.ts` for runtime config
+- `lib/application/*` for route-facing orchestration and read models
 - `lib/db/*` for persistence
 - `lib/engine/*` for benchmark orchestration
 - `lib/openrouter/*` for model I/O

@@ -50,7 +50,7 @@ I built this because I was frustrated with LLM benchmarks potentially being cont
 Forecaster Arena solves this by testing models on events that haven't happened yet—real prediction markets from Polymarket. The ground truth is reality itself, weeks or months later.
 
 How it works:
-• 7 frontier LLMs (GPT-5.1, Claude Opus 4.5, Gemini, Grok, DeepSeek, etc.)
+• 7 frontier LLMs (GPT-5.2, Claude Opus 4.5, Gemini 3 Pro, Grok 4.1, DeepSeek V3.2, etc.)
 • Each gets $10k virtual capital weekly
 • They bet on 500+ real prediction markets
 • Bet size = confidence (larger bet = more confident)

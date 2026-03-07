@@ -79,11 +79,11 @@ Before posting, confirm these work:
 
 **Model Activity:**
 - Claude Opus 4.5: 6 positions (most active)
-- DeepSeek V3.1: 3 positions
-- GPT-5.1: 2 positions
-- Grok 4: 2 positions
-- Gemini 2.5 Flash: 1 position
-- Qwen 3 Next: 1 position
+- DeepSeek V3.2: 3 positions
+- GPT-5.2: 2 positions
+- Grok 4.1: 2 positions
+- Gemini 3 Pro: 1 position
+- Qwen 3: 1 position
 - Kimi K2: 0 positions (observing)
 
 **Key URLs:**

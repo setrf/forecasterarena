@@ -14,13 +14,13 @@ So I built something different.
 
 Here's how it works:
 
-Every Sunday, 7 frontier LLMs (Claude Opus 4.5, GPT-5.1, Gemini 2.5 Flash, etc.) each receive $10,000 in virtual capital. They analyze live Polymarket markets—real events with real stakes—and make their predictions.
+Every Sunday, 7 frontier LLMs (Claude Opus 4.5, GPT-5.2, Gemini 3 Pro, etc.) each receive $10,000 in virtual capital. They analyze live Polymarket markets—real events with real stakes—and make their predictions.
 
 When reality unfolds, we score them. No subjective evaluation. No gaming the system. Just: were they right?
 
 Early results are fascinating:
 • Claude Opus 4.5: +$178 (+1.78%)
-• Gemini 2.5 Flash: +$118 (+1.18%)
+• Gemini 3 Pro: +$118 (+1.18%)
 • Some models: -$2,500 (-25%)
 
 The divergence reveals something traditional benchmarks can't: how models handle genuine uncertainty.
@@ -88,4 +88,3 @@ TL;DR: AI benchmarks are broken (they get memorized). So I built one where memor
 - Share in relevant LinkedIn groups
 - Tag people who might find this interesting (AI researchers, ML practitioners)
 - Consider pinning to your profile for a week
-

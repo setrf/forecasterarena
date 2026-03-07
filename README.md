@@ -144,12 +144,15 @@ This matters operationally because a fresh database now reads as a synchronized 
 | Path | Purpose |
 |------|---------|
 | `app/` | Next.js app router pages and API routes |
+| `features/` | Page-level feature modules, client shells, hooks, and feature-specific UI composition |
 | `components/` | Reusable UI components and charts |
+| `lib/application/` | Application-layer orchestration for routes, read models, cron flows, and admin operations |
 | `lib/db/` | SQLite connection, schema, and query layer |
 | `lib/engine/` | Cohort, decision, execution, and resolution engines |
 | `lib/openrouter/` | OpenRouter client, prompts, parser |
 | `lib/polymarket/` | Polymarket fetch / transform / resolution helpers |
 | `lib/scoring/` | Brier and P&L calculations |
+| `playwright/` | Checked-in browser smoke and interaction coverage |
 | `tests/` | Vitest coverage for engines, routes, schema, and security |
 | `docs/` | Reference documentation and operational runbooks |
 

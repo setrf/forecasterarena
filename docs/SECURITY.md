@@ -1,6 +1,6 @@
 # Forecaster Arena Security Notes
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 This document describes the security posture implemented in the repository today. It is intentionally concrete: it describes what the code actually does, where the trust boundaries are, and which limitations still exist.
 
@@ -94,12 +94,11 @@ Security consequences:
 
 ## 4. Rate Limiting
 
-Implemented in `middleware.ts` and partially duplicated in `app/api/admin/login/route.ts`.
+Implemented in `middleware.ts`.
 
 Current limits:
 
 - `POST /api/admin/login`: 5 requests per minute per IP in middleware
-- `POST /api/admin/login`: 5 attempts per 10 minutes per IP in route-local store
 - `POST /api/cron/*`: 10 requests per minute per IP
 - non-login `GET/POST /api/admin/*`: 30 requests per minute per IP
 
