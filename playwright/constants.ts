@@ -1,8 +1,10 @@
 export const seededRoutes = {
+  leaderModel: '/models/kimi-k2',
   model: '/models/gpt-5.1',
   cohort: '/cohorts/cohort-e2e-1',
   cohortModel: '/cohorts/cohort-e2e-1/models/gpt-5.1',
-  market: '/markets/market-e2e-fed'
+  market: '/markets/market-e2e-fed',
+  decision: '/decisions/decision-gpt-fed'
 };
 
 export const seededExportWindow = {
