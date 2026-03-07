@@ -1,6 +1,10 @@
 /**
  * Backfill Portfolio Snapshots for Historical Data Gap
  *
+ * Historical one-off maintenance script for the Dec 8, 2025 snapshot gap.
+ * It is not part of the normal runtime or current operator workflow.
+ * See docs/OPERATIONS.md for the active snapshot schedule and procedures.
+ *
  * Gap Period: Dec 8, 2025 00:00:02 → 19:10:01 (19 hours)
  * Cause: Schema migration from daily to 10-minute snapshots
  *

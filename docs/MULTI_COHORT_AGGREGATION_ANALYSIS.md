@@ -1,5 +1,9 @@
 # Multi-Cohort Aggregation - Deep Analysis & Fix Plan
 
+> Historical document: this analysis captures the December 14, 2025 state
+> before the multi-cohort fixes landed. It is useful for historical context,
+> not for describing the current implementation.
+
 **Date**: December 14, 2025
 **Status**: CRITICAL - Bugs found in aggregation logic
 **Priority**: MUST FIX before Sunday

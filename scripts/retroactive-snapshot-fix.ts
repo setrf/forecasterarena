@@ -1,6 +1,10 @@
 /**
  * Retroactive Snapshot Correction
  *
+ * Historical one-off maintenance script for late-resolved December 2025 markets.
+ * It is not part of the normal runtime or current operator workflow.
+ * See docs/OPERATIONS.md for the active snapshot and resolution procedures.
+ *
  * Problem: Markets were resolved late (Dec 31) but closed much earlier (Dec 7-30).
  * Historical snapshots between market close and resolution date are incorrect
  * because they used mark-to-market valuations instead of settlement values.

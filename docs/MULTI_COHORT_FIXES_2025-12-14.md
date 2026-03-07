@@ -1,5 +1,9 @@
 # Multi-Cohort Aggregation Fixes - Applied December 14, 2025
 
+> Historical document: this write-up describes the December 14, 2025 fix pass
+> against an earlier project structure. It is not the authoritative source for
+> current architecture or file ownership.
+
 **Status**: ✅ COMPLETED AND VERIFIED
 **Build**: ✅ SUCCESSFUL
 **Tests**: ✅ VERIFIED WITH LIVE DATA

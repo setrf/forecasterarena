@@ -1,5 +1,11 @@
 # Forecaster Arena - Comprehensive Pre-Cohort Audit Report
 
+> Historical document: this report reflects the December 14, 2025 audit state
+> and references file paths, cron assumptions, and unresolved issues from that
+> point in time. It is not the authoritative description of the current
+> codebase. Use `README.md` and the current-reference docs listed in
+> `docs/README.md` for present-day behavior.
+
 **Date**: December 14, 2025
 **Auditor**: Automated Code Analysis
 **Next Cohort**: Sunday, December 21, 2025 at 00:00 UTC

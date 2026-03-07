@@ -1,8 +1,8 @@
 /**
  * Take Snapshots Cron Endpoint
  * 
- * Takes daily portfolio snapshots for all agents.
- * Schedule: Daily at 00:00 UTC
+ * Takes timestamped mark-to-market portfolio snapshots for all agents.
+ * Intended external schedule: every 10 minutes
  * 
  * @route POST /api/cron/take-snapshots
  */

@@ -2,7 +2,7 @@
  * Check Resolutions Cron Endpoint
  * 
  * Checks for resolved markets and settles positions.
- * Schedule: Every 10 minutes
+ * Intended external schedule: every hour
  * 
  * @route POST /api/cron/check-resolutions
  */
