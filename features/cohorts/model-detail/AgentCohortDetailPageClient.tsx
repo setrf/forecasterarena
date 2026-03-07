@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { useAgentCohortDetailData } from '@/features/cohorts/model-detail/useAgentCohortDetailData';
 import { AgentCohortBreadcrumbs } from '@/features/cohorts/model-detail/components/AgentCohortBreadcrumbs';
 import { AgentCohortDetailNotFound } from '@/features/cohorts/model-detail/components/AgentCohortDetailNotFound';
 import { AgentCohortHeader } from '@/features/cohorts/model-detail/components/AgentCohortHeader';
@@ -22,38 +23,9 @@ export default function AgentCohortDetailPageClient() {
   const cohortId = params.id;
   const modelId = params.modelId;
 
-  const [data, setData] = useState<AgentCohortData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error } = useAgentCohortDetailData(cohortId, modelId);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await fetch(`/api/cohorts/${cohortId}/models/${modelId}`);
-        if (!response.ok) {
-          if (response.status === 404) {
-            const payload = await response.json();
-            setError(payload.error || 'Not found');
-          } else {
-            setError('Failed to load data');
-          }
-          return;
-        }
-
-        const json = await response.json();
-        setData(json);
-      } catch (fetchError) {
-        setError('Failed to load data');
-        console.error(fetchError);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, [cohortId, modelId]);
 
   const chartData = useMemo(() => createAgentCohortChartData(data, modelId), [data, modelId]);
   const chartModels = data?.model ? [{

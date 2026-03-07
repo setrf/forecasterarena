@@ -1,64 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useDecisionDetailData } from '@/features/decisions/detail/useDecisionDetailData';
+import type { Trade } from '@/features/decisions/detail/types';
 import { formatDisplayDateTime } from '@/lib/utils';
-
-interface Decision {
-  id: string;
-  market_id: string;
-  agent_id: string;
-  parsed_response: string;
-  reasoning: string;
-  created_at: string;
-  model_name: string;
-  model_color: string;
-  model_provider: string;
-}
-
-interface Trade {
-  id: string;
-  trade_type: string;
-  side: string;
-  shares: number;
-  price: number;
-  total_amount: number;
-  executed_at: string;
-  market_question: string;
-  market_slug: string | null;
-  market_event_slug: string | null;
-  market_id: string;
-}
 
 export default function DecisionDetailPageClient() {
   const params = useParams<{ id: string }>();
   const id = params.id;
-  const [decision, setDecision] = useState<Decision | null>(null);
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch(`/api/decisions/${id}`);
-        if (!res.ok) {
-          setError('Decision not found');
-          return;
-        }
-        const data = await res.json() as { decision: Decision; trades?: Trade[] };
-        setDecision(data.decision);
-        setTrades(data.trades || []);
-      } catch {
-        setError('Failed to load decision');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, [id]);
+  const { data, loading, error } = useDecisionDetailData(id);
+  const decision = data?.decision ?? null;
+  const trades = data?.trades ?? [];
 
   if (loading) {
     return (
@@ -86,14 +39,13 @@ export default function DecisionDetailPageClient() {
     decisionJson = { action: 'UNKNOWN', error: 'Failed to parse decision JSON' };
   }
 
-  const primaryMarketQuestion = trades.length > 0
-    ? trades[0].market_question
-    : 'General Strategy / Hold';
+  const primaryTrade: Trade | null = trades[0] ?? null;
+  const primaryMarketQuestion = primaryTrade?.market_question || 'General Strategy / Hold';
 
   return (
     <div className="container-wide mx-auto px-6 py-12">
       <Link
-        href={trades.length > 0 ? `/markets/${trades[0].market_id}` : '/markets'}
+        href={primaryTrade ? `/markets/${primaryTrade.market_id}` : '/markets'}
         className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
