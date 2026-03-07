@@ -6,6 +6,7 @@ import { MODELS, GITHUB_URL } from '@/lib/constants';
 import PerformanceChartComponent from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
 import { hasLiveCompetitionData } from '@/lib/competition-state';
+import { formatDecimal, formatRatePercent, formatSignedUsd } from '@/lib/format/display';
 
 // Types
 interface LeaderboardEntry {
@@ -34,12 +35,6 @@ const emptyLeaderboard: LeaderboardEntry[] = MODELS.map((model) => ({
   num_resolved_bets: 0,
   win_rate: null,
 }));
-
-function formatPnL(value: number | null, hasData: boolean): string {
-  if (!hasData || value === null) return 'N/A';
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
 
 // Hero Section - Clean, centered, breathable
 function HeroSection({
@@ -129,7 +124,7 @@ function LiveStatsDashboard({
             {hasRealData && leader ? (
               <>
                 <p className={`text-3xl md:text-4xl font-bold ${leader.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {formatPnL(leader.total_pnl, true)}
+                  {formatSignedUsd(leader.total_pnl)}
                 </p>
                 <p className="text-sm text-[var(--text-secondary)]">{leader.display_name}</p>
               </>
@@ -223,19 +218,19 @@ function LeaderboardPreview({ data, hasRealData }: { data: LeaderboardEntry[]; h
               <div>
                 <p className="text-sm text-[var(--text-muted)] mb-1">Total P/L</p>
                 <p className={`text-2xl font-bold ${!hasRealData ? 'text-[var(--text-muted)]' : entry.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {formatPnL(entry.total_pnl, hasRealData)}
+                  {hasRealData ? formatSignedUsd(entry.total_pnl) : 'N/A'}
                 </p>
               </div>
               
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border-subtle)]">
                 <div>
                   <p className="text-xs text-[var(--text-muted)] mb-1">Brier Score</p>
-                  <p className="font-mono text-sm">{entry.avg_brier_score?.toFixed(3) || 'N/A'}</p>
+                  <p className="font-mono text-sm">{formatDecimal(entry.avg_brier_score, { decimals: 3 })}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[var(--text-muted)] mb-1">Win Rate</p>
                   <p className="font-mono text-sm">
-                    {entry.win_rate != null ? `${(entry.win_rate * 100).toFixed(0)}%` : 'N/A'}
+                    {formatRatePercent(entry.win_rate, { decimals: 0 })}
                   </p>
                 </div>
               </div>
@@ -266,7 +261,7 @@ function LeaderboardPreview({ data, hasRealData }: { data: LeaderboardEntry[]; h
               </div>
               <div className="text-right">
                 <p className={`font-mono ${!hasRealData ? 'text-[var(--text-muted)]' : entry.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {formatPnL(entry.total_pnl, hasRealData)}
+                  {hasRealData ? formatSignedUsd(entry.total_pnl) : 'N/A'}
                 </p>
               </div>
             </Link>

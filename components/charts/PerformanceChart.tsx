@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { formatDisplayDateTime, parseUTCTimestamp } from '@/lib/utils';
+import { formatPercentDeltaFromBaseline, formatSignedUsd, formatUsd } from '@/lib/format/display';
 
 interface ModelConfig {
   id: string;
@@ -37,19 +38,15 @@ const BASELINE = 10000;
 const EMPTY_STATE_BAR_HEIGHTS = [34, 46, 58, 42, 64, 50, 38];
 
 function formatCurrency(value: number): string {
-  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  return formatUsd(value);
 }
 
 function formatPercent(value: number): string {
-  const pct = ((value - BASELINE) / BASELINE) * 100;
-  const sign = pct >= 0 ? '+' : '';
-  return `${sign}${pct.toFixed(1)}%`;
+  return formatPercentDeltaFromBaseline(value, BASELINE, 1);
 }
 
 function formatPercentAxis(value: number): string {
-  const pct = ((value - BASELINE) / BASELINE) * 100;
-  const sign = pct >= 0 ? '+' : '';
-  return `${sign}${pct.toFixed(0)}%`;
+  return formatPercentDeltaFromBaseline(value, BASELINE, 0);
 }
 
 function formatDateTime(dateStr: string): string {
@@ -171,7 +168,7 @@ function PremiumTooltip({ active, payload, label, models, showPercent, previousD
                   {showPercent ? formatPercent(entry.value) : formatCurrency(entry.value)}
                 </div>
                 <div className={`text-xs font-mono ${pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
+                  {formatSignedUsd(pnl)}
                 </div>
               </div>
             </div>

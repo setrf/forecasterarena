@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MODELS } from '@/lib/constants';
 import { hasLiveCompetitionData } from '@/lib/competition-state';
+import { formatDecimal, formatRatePercent, formatSignedUsd } from '@/lib/format/display';
 
 interface ModelStats {
   model_id: string;
@@ -58,12 +59,6 @@ export default function ModelsPage() {
     }
     fetchStats();
   }, []);
-
-  function formatPnL(value: number | null, hasData: boolean): string {
-    if (!hasData || value === null) return 'N/A';
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  }
 
   // Sort models by P/L
   const sortedModels = [...MODELS].sort((a, b) => {
@@ -133,21 +128,19 @@ export default function ModelsPage() {
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Total P/L</p>
                       <p className={`text-2xl md:text-3xl font-bold ${!hasRealData ? 'text-[var(--text-muted)]' : (leaderStats?.total_pnl ?? 0) >= 0 ? 'text-positive' : 'text-negative'}`}>
-                        {formatPnL(leaderStats?.total_pnl ?? null, hasRealData)}
+                        {hasRealData ? formatSignedUsd(leaderStats?.total_pnl ?? null) : 'N/A'}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Brier Score</p>
                       <p className="text-2xl md:text-3xl font-mono">
-                        {hasRealData && leaderStats?.avg_brier_score != null ? leaderStats.avg_brier_score.toFixed(3) : 'N/A'}
+                        {hasRealData ? formatDecimal(leaderStats?.avg_brier_score, { decimals: 3 }) : 'N/A'}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Win Rate</p>
                       <p className="text-2xl md:text-3xl font-mono">
-                        {hasRealData && leaderStats?.win_rate != null
-                          ? `${(leaderStats.win_rate * 100).toFixed(0)}%`
-                          : 'N/A'}
+                        {hasRealData ? formatRatePercent(leaderStats?.win_rate, { decimals: 0 }) : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -243,23 +236,19 @@ export default function ModelsPage() {
                   <div>
                     <p className="text-xs text-[var(--text-muted)] mb-1">P/L</p>
                     <p className={`font-semibold ${!hasRealData ? 'text-[var(--text-muted)]' : pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                      {loading ? '...' : formatPnL(hasRealData ? pnl : null, hasRealData)}
+                      {loading ? '...' : hasRealData ? formatSignedUsd(pnl) : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--text-muted)] mb-1">Brier</p>
                     <p className="font-mono text-sm">
-                      {loading ? '...' : (hasRealData && brier != null) ? brier.toFixed(3) : 'N/A'}
+                      {loading ? '...' : hasRealData ? formatDecimal(brier, { decimals: 3 }) : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--text-muted)] mb-1">Win %</p>
                     <p className="font-mono text-sm">
-                      {loading
-                        ? '...'
-                        : (hasRealData && winRate != null)
-                          ? `${(winRate * 100).toFixed(0)}%`
-                          : 'N/A'}
+                      {loading ? '...' : hasRealData ? formatRatePercent(winRate, { decimals: 0 }) : 'N/A'}
                     </p>
                   </div>
                 </div>

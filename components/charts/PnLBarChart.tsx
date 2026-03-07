@@ -11,6 +11,7 @@ import {
   Cell,
   ReferenceLine,
 } from 'recharts';
+import { formatSignedPercent, formatSignedUsd } from '@/lib/format/display';
 
 interface PnLData {
   model_id: string;
@@ -28,13 +29,11 @@ interface PnLBarChartProps {
 }
 
 function formatCurrency(value: number): string {
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}$${Math.abs(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  return formatSignedUsd(value);
 }
 
 function formatPercent(value: number): string {
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${value.toFixed(1)}%`;
+  return formatSignedPercent(value, { decimals: 1 });
 }
 
 interface CustomTooltipProps {
@@ -177,6 +176,5 @@ export default function PnLBarChart({
     </ResponsiveContainer>
   );
 }
-
 
 

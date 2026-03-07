@@ -8,6 +8,7 @@ import DecisionFeed from '@/components/DecisionFeed';
 import { MODELS } from '@/lib/constants';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
 import { formatDisplayDate } from '@/lib/utils';
+import { formatDecimal, formatSignedPercent, formatSignedUsd, formatUsd } from '@/lib/format/display';
 
 interface Cohort {
   id: string;
@@ -143,20 +144,6 @@ export default function CohortDetailPage() {
     );
   }
 
-  function formatCurrency(value: number): string {
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  }
-
-  function formatPnL(value: number): string {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${formatCurrency(value)}`;
-  }
-
-  function formatPercent(value: number): string {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
-  }
-
   return (
     <div className="container-wide mx-auto px-6 py-12">
       {/* Back link */}
@@ -198,7 +185,7 @@ export default function CohortDetailPage() {
         </div>
         <div className="stat-card">
           <div className="stat-value font-mono">
-            {stats?.avg_brier_score?.toFixed(4) || 'N/A'}
+            {formatDecimal(stats?.avg_brier_score)}
           </div>
           <div className="stat-label">Avg Brier</div>
         </div>
@@ -266,21 +253,21 @@ export default function CohortDetailPage() {
                       )}
                     </div>
                   </td>
-                  <td className="text-right font-mono">{formatCurrency(agent.cash_balance)}</td>
-                  <td className="text-right font-mono">{formatCurrency(agent.total_invested)}</td>
-                  <td className="text-right font-mono font-medium">{formatCurrency(agent.total_value)}</td>
+                  <td className="text-right font-mono">{formatUsd(agent.cash_balance)}</td>
+                  <td className="text-right font-mono">{formatUsd(agent.total_invested)}</td>
+                  <td className="text-right font-mono font-medium">{formatUsd(agent.total_value)}</td>
                   <td className="text-right font-mono">
                     <span className={agent.total_pnl >= 0 ? 'text-positive' : 'text-negative'}>
-                      {formatPnL(agent.total_pnl)}
+                      {formatSignedUsd(agent.total_pnl)}
                     </span>
                   </td>
                   <td className="text-right font-mono">
                     <span className={agent.total_pnl_percent >= 0 ? 'text-positive' : 'text-negative'}>
-                      {formatPercent(agent.total_pnl_percent)}
+                      {formatSignedPercent(agent.total_pnl_percent)}
                     </span>
                   </td>
                   <td className="text-right font-mono hidden md:table-cell">
-                    {agent.brier_score?.toFixed(4) || 'N/A'}
+                    {formatDecimal(agent.brier_score)}
                   </td>
                   <td className="text-right hidden lg:table-cell text-[var(--text-muted)]">
                     {agent.trade_count}

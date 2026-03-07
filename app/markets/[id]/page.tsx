@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { formatDisplayDate, formatDisplayDateTime } from '@/lib/utils';
+import { formatDecimal, formatProbabilityPercent, formatSignedUsd, formatUsd } from '@/lib/format/display';
 
 interface Market {
   id: string;
@@ -119,13 +120,7 @@ export default function MarketDetailPage() {
   }
 
   function formatPrice(price: number | null): string {
-    if (price === null) return '50%';
-    return `${(price * 100).toFixed(1)}%`;
-  }
-
-  function formatCurrency(value: number | null): string {
-    if (value === null) return 'N/A';
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return formatProbabilityPercent(price);
   }
 
   function getStatusBadge(status: string): { class: string; label: string } {
@@ -206,11 +201,11 @@ export default function MarketDetailPage() {
       {/* Info Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="stat-card">
-          <div className="stat-value">{formatCurrency(market.volume)}</div>
+          <div className="stat-value">{formatUsd(market.volume)}</div>
           <div className="stat-label">Volume</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{formatCurrency(market.liquidity)}</div>
+          <div className="stat-value">{formatUsd(market.liquidity)}</div>
           <div className="stat-label">Liquidity</div>
         </div>
         <div className="stat-card">
@@ -276,11 +271,11 @@ export default function MarketDetailPage() {
                     </td>
                     <td className="text-right font-mono py-3 px-4">{pos.shares.toFixed(2)}</td>
                     <td className="text-right font-mono py-3 px-4">{formatPrice(pos.avg_entry_price)}</td>
-                    <td className="text-right font-mono py-3 px-4">{formatCurrency(pos.total_cost)}</td>
-                    <td className="text-right font-mono py-3 px-4">{formatCurrency(pos.current_value)}</td>
+                    <td className="text-right font-mono py-3 px-4">{formatUsd(pos.total_cost)}</td>
+                    <td className="text-right font-mono py-3 px-4">{formatUsd(pos.current_value)}</td>
                     <td className="text-right font-mono py-3 px-4">
                       <span className={(pos.unrealized_pnl ?? 0) >= 0 ? 'text-positive' : 'text-negative'}>
-                        {pos.unrealized_pnl !== null ? `${pos.unrealized_pnl >= 0 ? '+' : ''}${formatCurrency(pos.unrealized_pnl)}` : 'N/A'}
+                        {formatSignedUsd(pos.unrealized_pnl)}
                       </span>
                     </td>
                   </tr>
@@ -325,7 +320,7 @@ export default function MarketDetailPage() {
                         {score.actual_outcome === 1 ? 'Correct' : 'Wrong'}
                       </span>
                     </td>
-                    <td className="text-right font-mono">{score.brier_score.toFixed(4)}</td>
+                    <td className="text-right font-mono">{formatDecimal(score.brier_score)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -391,7 +386,7 @@ export default function MarketDetailPage() {
                     <td>{trade.side}</td>
                     <td className="text-right font-mono">{trade.shares.toFixed(2)}</td>
                     <td className="text-right font-mono">{formatPrice(trade.price)}</td>
-                    <td className="text-right font-mono">{formatCurrency(trade.total_amount)}</td>
+                    <td className="text-right font-mono">{formatUsd(trade.total_amount)}</td>
                   </tr>
                 ))}
               </tbody>

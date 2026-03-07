@@ -7,6 +7,13 @@ import { MODELS } from '@/lib/constants';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
 import { formatDisplayDate } from '@/lib/utils';
+import {
+  formatDecimal,
+  formatRatePercent,
+  formatSignedPercent,
+  formatSignedUsd,
+  formatUsd
+} from '@/lib/format/display';
 
 interface CohortPerformance {
   cohort_id: string;
@@ -110,20 +117,6 @@ export default function ModelDetailPage() {
     );
   }
 
-  function formatCurrency(value: number): string {
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  }
-
-  function formatPnL(value: number): string {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${formatCurrency(value)}`;
-  }
-
-  function formatPercent(value: number): string {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
-  }
-
   // Calculate aggregate stats
   const totalPnl = data?.total_pnl ?? 0;
   const avgPnlPercent = data?.avg_pnl_percent ?? 0;
@@ -165,25 +158,25 @@ export default function ModelDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
         <div className="stat-card">
           <div className={`stat-value ${totalPnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-            {loading ? '...' : formatPnL(totalPnl)}
+            {loading ? '...' : formatSignedUsd(totalPnl, { decimals: 2 })}
           </div>
           <div className="stat-label">Total P/L</div>
         </div>
         <div className="stat-card">
           <div className={`stat-value ${avgPnlPercent >= 0 ? 'text-positive' : 'text-negative'}`}>
-            {loading ? '...' : formatPercent(avgPnlPercent)}
+            {loading ? '...' : formatSignedPercent(avgPnlPercent)}
           </div>
           <div className="stat-label">Avg Return</div>
         </div>
         <div className="stat-card">
           <div className="stat-value font-mono">
-            {loading ? '...' : avgBrier?.toFixed(4) || 'N/A'}
+            {loading ? '...' : formatDecimal(avgBrier)}
           </div>
           <div className="stat-label">Avg Brier Score</div>
         </div>
         <div className="stat-card">
           <div className="stat-value">
-            {loading ? '...' : winRate != null ? `${(winRate * 100).toFixed(1)}%` : 'N/A'}
+            {loading ? '...' : formatRatePercent(winRate)}
           </div>
           <div className="stat-label">Win Rate</div>
         </div>
@@ -247,17 +240,17 @@ export default function ModelDetailPage() {
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-[var(--text-muted)]">Value</p>
-                      <p className="font-mono">{formatCurrency(cohort.total_value)}</p>
+                      <p className="font-mono">{formatUsd(cohort.total_value, { decimals: 2 })}</p>
                     </div>
                     <div>
                       <p className="text-[var(--text-muted)]">P/L</p>
                       <p className={`font-mono ${cohort.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                        {formatPnL(cohort.total_pnl)}
+                        {formatSignedUsd(cohort.total_pnl, { decimals: 2 })}
                       </p>
                     </div>
                     <div>
                       <p className="text-[var(--text-muted)]">Brier</p>
-                      <p className="font-mono">{cohort.brier_score?.toFixed(4) || 'N/A'}</p>
+                      <p className="font-mono">{formatDecimal(cohort.brier_score)}</p>
                     </div>
                   </div>
                 </div>

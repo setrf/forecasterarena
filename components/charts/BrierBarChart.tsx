@@ -11,6 +11,7 @@ import {
   Cell,
   ReferenceLine,
 } from 'recharts';
+import { formatDecimal } from '@/lib/format/display';
 
 interface BrierData {
   model_id: string;
@@ -55,7 +56,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
       <div className="space-y-1 text-sm">
         <div className="flex justify-between gap-4">
           <span className="text-[var(--text-muted)]">Brier Score:</span>
-          <span className="font-mono">{data.brier_score.toFixed(4)}</span>
+          <span className="font-mono">{formatDecimal(data.brier_score)}</span>
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-[var(--text-muted)]">Rating:</span>
@@ -103,7 +104,7 @@ export default function BrierBarChart({
         <XAxis
           type="number"
           domain={[0, 0.5]}
-          tickFormatter={(v) => v.toFixed(2)}
+          tickFormatter={(v) => formatDecimal(v, { decimals: 2 })}
           stroke="var(--text-muted)"
           tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
           axisLine={{ stroke: 'var(--border-subtle)' }}
@@ -141,6 +142,5 @@ export default function BrierBarChart({
     </ResponsiveContainer>
   );
 }
-
 
 

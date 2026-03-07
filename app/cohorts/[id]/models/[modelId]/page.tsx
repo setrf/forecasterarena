@@ -5,7 +5,14 @@ import { useEffect, useState, useMemo, type KeyboardEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
-import { formatDisplayDate, formatDisplayDateTime } from '@/lib/utils';
+import { formatDisplayDate } from '@/lib/utils';
+import {
+  formatDecimal,
+  formatRatePercent,
+  formatSignedPercent,
+  formatSignedUsd,
+  formatUsd
+} from '@/lib/format/display';
 
 interface Cohort {
   id: string;
@@ -207,35 +214,11 @@ export default function AgentCohortDetailPage() {
     );
   }
 
-  function formatCurrency(value: number): string {
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  }
-
-  function formatPnL(value: number): string {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${formatCurrency(value)}`;
-  }
-
-  function formatPercent(value: number): string {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
-  }
-
   function formatDate(dateStr: string): string {
     return formatDisplayDate(dateStr, {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
-    });
-  }
-
-  function formatDateTime(dateStr: string): string {
-    return formatDisplayDateTime(dateStr, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
     });
   }
 
@@ -289,25 +272,25 @@ export default function AgentCohortDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <div className="stat-card">
           <div className="stat-value">
-            {formatCurrency(data.agent.total_value)}
+            {formatUsd(data.agent.total_value)}
           </div>
           <div className="stat-label">Portfolio Value</div>
         </div>
         <div className="stat-card">
           <div className={`stat-value ${data.agent.total_pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-            {formatPnL(data.agent.total_pnl)}
+            {formatSignedUsd(data.agent.total_pnl)}
           </div>
           <div className="stat-label">P/L</div>
         </div>
         <div className="stat-card">
           <div className={`stat-value ${data.agent.total_pnl_percent >= 0 ? 'text-positive' : 'text-negative'}`}>
-            {formatPercent(data.agent.total_pnl_percent)}
+            {formatSignedPercent(data.agent.total_pnl_percent)}
           </div>
           <div className="stat-label">Return</div>
         </div>
         <div className="stat-card">
           <div className="stat-value font-mono">
-            {data.agent.brier_score?.toFixed(4) || 'N/A'}
+            {formatDecimal(data.agent.brier_score)}
           </div>
           <div className="stat-label">Brier Score</div>
         </div>
@@ -321,11 +304,11 @@ export default function AgentCohortDetailPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
         <div className="stat-card">
-          <div className="stat-value">{formatCurrency(data.agent.cash_balance)}</div>
+          <div className="stat-value">{formatUsd(data.agent.cash_balance)}</div>
           <div className="stat-label">Cash Balance</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{formatCurrency(data.agent.total_invested)}</div>
+          <div className="stat-value">{formatUsd(data.agent.total_invested)}</div>
           <div className="stat-label">Invested</div>
         </div>
         <div className="stat-card">
@@ -338,7 +321,7 @@ export default function AgentCohortDetailPage() {
         </div>
         <div className="stat-card">
           <div className="stat-value">
-            {data.stats.win_rate != null ? `${(data.stats.win_rate * 100).toFixed(1)}%` : 'N/A'}
+            {formatRatePercent(data.stats.win_rate)}
           </div>
           <div className="stat-label">Win Rate</div>
         </div>
@@ -388,7 +371,7 @@ export default function AgentCohortDetailPage() {
               <p className="font-medium">
                 {data.agent.rank} of {data.agent.total_agents}
                 <span className={data.agent.total_pnl_percent >= 0 ? 'text-positive' : 'text-negative'}>
-                  {' '}({formatPercent(data.agent.total_pnl_percent)})
+                  {' '}({formatSignedPercent(data.agent.total_pnl_percent)})
                 </span>
               </p>
             </div>
@@ -414,7 +397,7 @@ export default function AgentCohortDetailPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm">{data.model.display_name}</span>
                 <span className={`font-mono ${data.agent.total_pnl_percent >= 0 ? 'text-positive' : 'text-negative'}`}>
-                  {formatPercent(data.agent.total_pnl_percent)}
+                  {formatSignedPercent(data.agent.total_pnl_percent)}
                 </span>
               </div>
               <div className="h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
@@ -428,7 +411,7 @@ export default function AgentCohortDetailPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-[var(--text-muted)]">Cohort Average</span>
                 <span className="font-mono text-[var(--text-muted)]">
-                  {formatPercent(data.stats.cohort_avg_pnl_percent)}
+                  {formatSignedPercent(data.stats.cohort_avg_pnl_percent)}
                 </span>
               </div>
               <div className="h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
@@ -441,11 +424,11 @@ export default function AgentCohortDetailPage() {
             <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-[var(--border-primary)]">
               <div>
                 <p className="text-sm text-[var(--text-muted)]">Cohort Best</p>
-                <p className="font-mono text-positive">{formatPercent(data.stats.cohort_best_pnl_percent)}</p>
+                <p className="font-mono text-positive">{formatSignedPercent(data.stats.cohort_best_pnl_percent)}</p>
               </div>
               <div>
                 <p className="text-sm text-[var(--text-muted)]">Cohort Worst</p>
-                <p className="font-mono text-negative">{formatPercent(data.stats.cohort_worst_pnl_percent)}</p>
+                <p className="font-mono text-negative">{formatSignedPercent(data.stats.cohort_worst_pnl_percent)}</p>
               </div>
             </div>
           </div>
@@ -498,7 +481,7 @@ export default function AgentCohortDetailPage() {
                             • {market.market_question}
                           </span>
                           <span className="font-mono text-[var(--text-muted)]">
-                            {market.side} - {formatCurrency(market.total_amount)}
+                            {market.side} - {formatUsd(market.total_amount)}
                           </span>
                         </div>
                       ))}
@@ -582,7 +565,7 @@ export default function AgentCohortDetailPage() {
                         <td className="text-right font-mono">{position.shares.toFixed(0)}</td>
                         <td className="text-right font-mono">{(position.avg_entry_price * 100).toFixed(1)}%</td>
                         <td className={`text-right font-mono ${unrealizedPnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                          {formatPnL(unrealizedPnl)}
+                          {formatSignedUsd(unrealizedPnl)}
                         </td>
                       </tr>
                     );
@@ -655,7 +638,7 @@ export default function AgentCohortDetailPage() {
                           </span>
                         </td>
                         <td className={`text-right font-mono text-sm ${pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-                          {position.outcome === 'PENDING' ? '-' : formatPnL(pnl)}
+                          {position.outcome === 'PENDING' ? '-' : formatSignedUsd(pnl)}
                         </td>
                       </tr>
                     );
@@ -719,7 +702,7 @@ export default function AgentCohortDetailPage() {
                           {trade.side}
                         </span>
                       </td>
-                      <td className="text-right font-mono">{formatCurrency(trade.total_amount)}</td>
+                      <td className="text-right font-mono">{formatUsd(trade.total_amount)}</td>
                       <td className="text-right text-[var(--text-muted)]">{trade.decision_week}</td>
                     </tr>
                   );
