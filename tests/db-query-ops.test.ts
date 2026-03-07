@@ -278,6 +278,156 @@ describe('db query modules - operations', () => {
     });
   });
 
+  it('covers in-progress decision claims and error finalization defaults', async () => {
+    await withModules(({ agents, cohorts, decisions }) => {
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+
+      const inProgress = decisions.createDecision({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'ERROR',
+        error_message: '__IN_PROGRESS__'
+      });
+
+      const skippedClaim = decisions.claimDecisionForProcessing({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        stale_after_ms: 60_000
+      });
+
+      expect(skippedClaim).toMatchObject({
+        status: 'skipped',
+        decision: {
+          id: inProgress.id,
+          error_message: '__IN_PROGRESS__'
+        }
+      });
+
+      const failed = decisions.createDecision({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 2,
+        prompt_system: 'original-system',
+        prompt_user: 'original-user',
+        action: 'BET'
+      });
+
+      const errored = decisions.markDecisionAsError(failed.id, 'request failed');
+
+      expect(errored).toMatchObject({
+        id: failed.id,
+        action: 'ERROR',
+        prompt_system: '__IN_PROGRESS__',
+        prompt_user: '__IN_PROGRESS__',
+        error_message: 'request failed'
+      });
+    });
+  });
+
+  it('covers claimed retry paths for stale in-progress and trade-less actionable decisions', async () => {
+    await withModules(({ agents, cohorts, db, decisions }) => {
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+
+      const actionableWithoutTrades = decisions.createDecision({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'BET',
+        reasoning: 'initial reasoning'
+      });
+
+      const retriedActionable = decisions.claimDecisionForProcessing({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        stale_after_ms: 60_000
+      });
+
+      expect(retriedActionable).toMatchObject({
+        status: 'claimed',
+        retryReason: 'Retrying decision because no trades were recorded',
+        decision: {
+          id: actionableWithoutTrades.id,
+          prompt_system: '__IN_PROGRESS__',
+          prompt_user: '__IN_PROGRESS__',
+          reasoning: 'Retrying decision because no trades were recorded',
+          error_message: '__IN_PROGRESS__'
+        }
+      });
+
+      const staleInProgress = decisions.createDecision({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 2,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'ERROR',
+        reasoning: 'stalled reasoning',
+        error_message: '__IN_PROGRESS__'
+      });
+
+      db.prepare('UPDATE decisions SET decision_timestamp = ? WHERE id = ?').run(
+        '2020-01-01T00:00:00.000Z',
+        staleInProgress.id
+      );
+
+      const retriedStale = decisions.claimDecisionForProcessing({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 2,
+        stale_after_ms: 1_000
+      });
+
+      expect(retriedStale).toMatchObject({
+        status: 'claimed',
+        retryReason: 'Retrying stale in-progress decision',
+        decision: {
+          id: staleInProgress.id,
+          prompt_system: '__IN_PROGRESS__',
+          prompt_user: '__IN_PROGRESS__',
+          reasoning: 'stalled reasoning',
+          error_message: '__IN_PROGRESS__'
+        }
+      });
+
+      const retryableError = decisions.createDecision({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 3,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'ERROR',
+        reasoning: 'previous error reasoning',
+        error_message: 'request timed out'
+      });
+
+      const reclaimedError = decisions.claimDecisionForProcessing({
+        agent_id: agent!.id,
+        cohort_id: cohort.id,
+        decision_week: 3,
+        stale_after_ms: 60_000
+      });
+
+      expect(reclaimedError.status).toBe('claimed');
+      expect(reclaimedError.retryReason).toBeUndefined();
+      expect(reclaimedError.decision).toMatchObject({
+        id: retryableError.id,
+        prompt_system: '__IN_PROGRESS__',
+        prompt_user: '__IN_PROGRESS__',
+        reasoning: 'previous error reasoning',
+        error_message: '__IN_PROGRESS__'
+      });
+    });
+  });
+
   it('covers trade queries with and without limits', async () => {
     await withModules(({ agents, cohorts, db, decisions, markets, positions, trades }) => {
       const cohort = cohorts.createCohort();
@@ -353,6 +503,28 @@ describe('db query modules - operations', () => {
       const openPosition = positions.upsertPosition(agent!.id, activeMarket.id, 'YES', 10, 0.4, 4);
       const mergedPosition = positions.upsertPosition(agent!.id, activeMarket.id, 'YES', 5, 0.8, 4);
       const closedMarketPosition = positions.upsertPosition(agent!.id, closedMarket.id, 'NO', 8, 0.3, 2.4);
+      const nullCurrentValueMergeMarket = createMarket(markets, {
+        question: 'Null current value merge market'
+      });
+      const nullCurrentValueReduceMarket = createMarket(markets, {
+        question: 'Null current value reduce market'
+      });
+      const nullCurrentValueMergePosition = positions.upsertPosition(
+        agent!.id,
+        nullCurrentValueMergeMarket.id,
+        'YES',
+        4,
+        0.5,
+        2
+      );
+      const nullCurrentValueReducePosition = positions.upsertPosition(
+        agent!.id,
+        nullCurrentValueReduceMarket.id,
+        'NO',
+        10,
+        0.3,
+        3
+      );
 
       expect(mergedPosition.shares).toBe(15);
       expect(mergedPosition.avg_entry_price).toBeCloseTo(8 / 15, 10);
@@ -360,8 +532,17 @@ describe('db query modules - operations', () => {
       expect(positions.getPosition(agent!.id, activeMarket.id, 'YES')?.id).toBe(openPosition.id);
       expect(
         positions.getAllOpenPositions(agent!.id).map(position => position.market_id).sort()
-      ).toEqual([activeMarket.id, closedMarket.id].sort());
-      expect(positions.getOpenPositions(agent!.id).map(position => position.market_id)).toEqual([activeMarket.id]);
+      ).toEqual(
+        [
+          activeMarket.id,
+          closedMarket.id,
+          nullCurrentValueMergeMarket.id,
+          nullCurrentValueReduceMarket.id
+        ].sort()
+      );
+      expect(positions.getOpenPositions(agent!.id).map(position => position.market_id).sort()).toEqual(
+        [activeMarket.id, nullCurrentValueMergeMarket.id, nullCurrentValueReduceMarket.id].sort()
+      );
 
       positions.updatePositionMTM(openPosition.id, 11, 3);
 
@@ -387,10 +568,36 @@ describe('db query modules - operations', () => {
         'Cannot calculate avg price: newShares is 0'
       );
 
+      db.prepare('UPDATE positions SET current_value = NULL WHERE id = ?').run(nullCurrentValueMergePosition.id);
+      const mergedWithFallbackCurrentValue = positions.upsertPosition(
+        agent!.id,
+        nullCurrentValueMergeMarket.id,
+        'YES',
+        2,
+        0.25,
+        0.5
+      );
+      expect(mergedWithFallbackCurrentValue).toMatchObject({
+        id: nullCurrentValueMergePosition.id,
+        shares: 6,
+        total_cost: 2.5,
+        current_value: 2.5,
+        unrealized_pnl: 0
+      });
+
       positions.reducePosition('missing-position', 1);
       positions.reducePosition(openPosition.id, 5);
       expect(positions.getPositionById(openPosition.id)?.shares).toBe(10);
       expect(positions.getPositionById(openPosition.id)?.total_cost).toBeCloseTo(8 * (10 / 15), 10);
+
+      db.prepare('UPDATE positions SET current_value = NULL WHERE id = ?').run(nullCurrentValueReducePosition.id);
+      positions.reducePosition(nullCurrentValueReducePosition.id, 4);
+      const reducedWithFallbackCurrentValue = positions.getPositionById(nullCurrentValueReducePosition.id)!;
+      expect(reducedWithFallbackCurrentValue.id).toBe(nullCurrentValueReducePosition.id);
+      expect(reducedWithFallbackCurrentValue.shares).toBe(6);
+      expect(reducedWithFallbackCurrentValue.total_cost).toBeCloseTo(1.8, 10);
+      expect(reducedWithFallbackCurrentValue.current_value).toBeCloseTo(1.8, 10);
+      expect(reducedWithFallbackCurrentValue.unrealized_pnl).toBeCloseTo(0, 10);
 
       positions.reducePosition(closedMarketPosition.id, 8);
       expect(positions.getPositionById(closedMarketPosition.id)?.status).toBe('closed');
