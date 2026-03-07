@@ -1,8 +1,8 @@
 # Forecaster Arena Architecture
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
-This document is the technical system-of-record for how the application is currently built. It describes the runtime architecture that exists in the repository today, not the historical design intent.
+This document is the detailed runtime architecture companion to [`../ARCHITECTURE.md`](../ARCHITECTURE.md). It describes how the application currently runs in practice, while the top-level architecture doc defines the layering rules and boundaries the repository should preserve.
 
 ---
 
@@ -70,7 +70,7 @@ OpenRouter API                v
   app/api/* routes
         |
         v
-  app/* pages + components/*
+  app/* pages + features/* + components/*
 ```
 
 ---
@@ -476,8 +476,9 @@ These are the most important invariants the code currently relies on:
 Primary architecture files:
 
 - `app/api/*` for HTTP surfaces
-- `app/*` for public/admin UI
-- `components/*` for presentational UI
+- `app/*` for thin route/page wrappers
+- `features/*` for page-level UI flows and feature composition
+- `components/*` for shared presentational UI
 - `lib/constants.ts` for runtime config
 - `lib/db/*` for persistence
 - `lib/engine/*` for benchmark orchestration

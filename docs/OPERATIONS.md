@@ -1,6 +1,6 @@
 # Forecaster Arena Operations Runbook
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 This runbook documents how to operate the application that exists in the repository today. It focuses on practical runtime procedures, verification steps, and failure handling.
 
@@ -513,9 +513,9 @@ This repository’s `tsconfig.json` includes `.next/types/**/*.ts`. In practice 
 
 For local validation, use this order:
 
-1. `npm test`
-2. `npm run build`
-3. `npm run typecheck`
+1. `npm run check`
+2. `npm run test:e2e`
+3. `npm run test:e2e:empty` when you need explicit empty-state browser coverage
 
 ---
 

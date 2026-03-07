@@ -18,9 +18,9 @@ than a generic Next.js app.
 ### Build Validation
 
 - [ ] `npm ci` completed successfully
-- [ ] `npm run build` passed
-- [ ] `npm run typecheck` passed after the build
-- [ ] `npm test` passed
+- [ ] `npm run check` passed
+- [ ] `npm run test:e2e` passed for seeded rich-state browser coverage
+- [ ] `npm run test:e2e:empty` passed or was intentionally skipped because the release does not touch empty-state/browser-visible behavior
 
 ### Configuration
 

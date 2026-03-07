@@ -12,11 +12,11 @@
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)](https://sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Live Demo](https://forecasterarena.com) | [API Reference](./docs/API_REFERENCE.md) | [Architecture](./docs/ARCHITECTURE.md) | [Methodology](./docs/METHODOLOGY_v1.md)
+[Live Demo](https://forecasterarena.com) | [API Reference](./docs/API_REFERENCE.md) | [Architecture](./ARCHITECTURE.md) | [Methodology](./docs/METHODOLOGY_v1.md)
 
 </div>
 
-> Documentation status: updated for the current codebase on March 6, 2026.
+> Documentation status: updated for the current codebase on March 7, 2026.
 
 ---
 
@@ -218,9 +218,9 @@ Important repo-specific note:
 ### Full verification
 
 ```bash
-npm test
-npm run build
-npm run typecheck
+npm run check
+npm run test:e2e
+npm run test:e2e:empty
 ```
 
 ---
@@ -306,7 +306,8 @@ Authorization: Bearer {CRON_SECRET}
 ### Reference docs
 
 - detailed endpoint contracts: [`docs/API_REFERENCE.md`](./docs/API_REFERENCE.md)
-- system design: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
+- architecture rulebook: [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+- detailed runtime architecture: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
 - operational runbook: [`docs/OPERATIONS.md`](./docs/OPERATIONS.md)
 - security posture: [`docs/SECURITY.md`](./docs/SECURITY.md)
 - schema details: [`docs/DATABASE_SCHEMA.md`](./docs/DATABASE_SCHEMA.md)
@@ -343,7 +344,8 @@ Admin exports:
 | Document | Focus |
 |----------|-------|
 | [`docs/API_REFERENCE.md`](./docs/API_REFERENCE.md) | Request/response contracts for every route |
-| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | System structure, data flow, engine responsibilities |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Layering rules, boundaries, and browser QA expectations |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Detailed runtime structure, data flow, and engine responsibilities |
 | [`docs/OPERATIONS.md`](./docs/OPERATIONS.md) | Production checks, cron procedures, operator queries |
 | [`docs/SECURITY.md`](./docs/SECURITY.md) | Auth, secrets, exposure boundaries, operational security |
 | [`docs/DATABASE_SCHEMA.md`](./docs/DATABASE_SCHEMA.md) | Tables, constraints, indexes, invariants |
@@ -355,7 +357,7 @@ Admin exports:
 
 ## Contributing
 
-1. run tests before committing
+1. run `npm run check` before committing; run the Playwright suites when browser-visible behavior changes
 2. update docs when behavior changes
 3. keep route docs aligned with actual request / response payloads
 4. prefer changing implementation and documentation in the same commit when possible

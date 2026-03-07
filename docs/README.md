@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 This directory contains both:
 
@@ -16,13 +16,15 @@ section below.
 
 These files are intended to match the codebase as it exists today:
 
+- [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
+  - top-level layering rules, import boundaries, and browser QA expectations
 - [`README.md`](../README.md)
   - top-level project overview, runtime guarantees, current model roster,
     environment setup, and route summary
 - [`API_REFERENCE.md`](./API_REFERENCE.md)
   - detailed contract-level route documentation
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md)
-  - current runtime architecture and invariants
+  - detailed runtime architecture, engine flow, and invariants
 - [`OPERATIONS.md`](./OPERATIONS.md)
   - production runbook and operational checks
 - [`SECURITY.md`](./SECURITY.md)
@@ -60,4 +62,3 @@ description of current behavior:
 - [`MULTI_COHORT_FIXES_2025-12-14.md`](./MULTI_COHORT_FIXES_2025-12-14.md)
 
 Use these for historical reasoning, not for present-day operational guidance.
-
