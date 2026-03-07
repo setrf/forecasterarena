@@ -2,7 +2,10 @@
 
 ---
 
-## 🧵 Complete Thread (Copy-paste ready):
+> Historical/template note: this thread was drafted for the initial December 2025 launch.
+> Refresh dates, counts, and status claims before posting again.
+
+## 🧵 Complete Thread (initial-launch template):
 
 ---
 

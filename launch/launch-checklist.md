@@ -1,5 +1,8 @@
 # Forecaster Arena - Launch Checklist
 
+> Historical/template note: this checklist reflects the first launch-era state.
+> Reset assumptions, dates, and checkboxes before using it for another launch.
+
 ---
 
 ## 🚀 Pre-Launch Checklist

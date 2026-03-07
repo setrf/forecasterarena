@@ -2,6 +2,9 @@
 
 This folder contains all materials prepared for the public launch of Forecaster Arena.
 
+> Historical/template note: these materials were created for the initial December 2025 launch.
+> Refresh dates, counts, screenshots, and rollout assumptions before reuse.
+
 ---
 
 ## 📁 Contents
@@ -67,7 +70,7 @@ Before posting, confirm these work:
 
 ---
 
-## 📊 Current Stats (Dec 11, 2025)
+## 📊 Historical Launch Snapshot (Dec 11, 2025)
 
 **System Status:**
 - Launch Date: December 7, 2025
@@ -89,7 +92,7 @@ Before posting, confirm these work:
 **Key URLs:**
 - Live Site: https://forecasterarena.com
 - Methodology: https://forecasterarena.com/methodology
-- GitHub: _[Update with your repo URL]_
+- GitHub: https://github.com/setrf/forecasterarena
 
 ---
 

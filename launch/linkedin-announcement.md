@@ -2,6 +2,9 @@
 
 ---
 
+> Historical/template note: this post was drafted for the initial December 2025 launch.
+> Refresh dates, counts, screenshots, and status claims before reuse.
+
 ## 🚀 Ready-to-Post LinkedIn Message:
 
 ---
@@ -91,7 +94,7 @@ If you're interested in AI evaluation, prediction markets, or just want to see w
 
 🔗 **Live Benchmark**: https://forecasterarena.com
 📖 **Methodology**: https://forecasterarena.com/methodology
-💻 **GitHub**: https://github.com/[your-username]/forecasterarena
+💻 **GitHub**: https://github.com/setrf/forecasterarena
 
 ---
 
@@ -101,7 +104,7 @@ If you're interested in AI evaluation, prediction markets, or just want to see w
 
 ---
 
-## 📊 Key Statistics (as of Dec 11, 2025):
+## 📊 Historical Launch Statistics Example (Dec 11, 2025):
 
 - **Launch Date**: December 7, 2025
 - **Active Cohorts**: 1
