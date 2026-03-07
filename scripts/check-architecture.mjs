@@ -11,6 +11,7 @@ const checks = [
   { root: 'lib/engine/resolution.ts', maxLines: 40, extensions: new Set(['.ts']) },
   { root: 'app/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/admin/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/api/admin/export/route.ts', maxLines: 80, extensions: new Set(['.ts']) },
   { root: 'app/cohorts/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/cohorts/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/cohorts/[id]/models/[modelId]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
@@ -53,6 +54,15 @@ const boundaryRules = [
       { prefix: '@/lib/db', reason: 'model routes must go through the application layer' },
       { prefix: '@/lib/db/', reason: 'model routes must go through the application layer' },
       { prefix: '@/lib/db/queries', reason: 'model routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/admin/export',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'admin export routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'admin export routes must go through the application layer' },
+      { prefix: '@/lib/db/queries', reason: 'admin export routes must go through the application layer' }
     ]
   }
 ];
