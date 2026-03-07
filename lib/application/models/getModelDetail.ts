@@ -1,40 +1,38 @@
 import { INITIAL_BALANCE } from '@/lib/constants';
+import { getDb } from '@/lib/db';
 import { getModelById } from '@/lib/db/queries';
-import { buildCohortPerformance } from '@/lib/application/models/cohortPerformance';
 import {
-  getAgentsForModel,
-  getModelEquityCurve,
+  buildCohortPerformance,
+  buildEquityCurve,
+  calculateAverageBrierScore
+} from '@/lib/application/models/helpers';
+import {
+  getAgentsWithCohorts,
+  getModelEquitySnapshots,
   getModelWinRate,
   getRecentModelDecisions
 } from '@/lib/application/models/queries';
 import type {
+  ModelDetailNotFoundResult,
   ModelDetailPayload,
-  NotFoundResult,
   OkResult
 } from '@/lib/application/models/types';
 
 export function getModelDetail(
   modelId: string
-): OkResult<ModelDetailPayload> | NotFoundResult {
+): OkResult<ModelDetailPayload> | ModelDetailNotFoundResult {
   const model = getModelById(modelId);
 
   if (!model) {
     return { status: 'not_found', error: 'Model not found' };
   }
 
-  const agents = getAgentsForModel(modelId);
+  const db = getDb();
+  const agents = getAgentsWithCohorts(db, modelId);
   const cohortPerformance = buildCohortPerformance(agents);
-
   const totalPnl = cohortPerformance.reduce((sum, cohort) => sum + cohort.total_pnl, 0);
   const totalCapital = cohortPerformance.length * INITIAL_BALANCE;
-  const avgPnlPercent = totalCapital > 0 ? (totalPnl / totalCapital) * 100 : 0;
-
-  const brierScores = cohortPerformance
-    .map((cohort) => cohort.brier_score)
-    .filter((score): score is number => score !== null);
-  const avgBrierScore = brierScores.length > 0
-    ? brierScores.reduce((sum, score) => sum + score, 0) / brierScores.length
-    : null;
+  const winRateResult = getModelWinRate(db, modelId);
 
   return {
     status: 'ok',
@@ -42,12 +40,14 @@ export function getModelDetail(
       model,
       num_cohorts: agents.length,
       total_pnl: totalPnl,
-      avg_pnl_percent: avgPnlPercent,
-      avg_brier_score: avgBrierScore,
-      win_rate: getModelWinRate(modelId),
+      avg_pnl_percent: totalCapital > 0 ? (totalPnl / totalCapital) * 100 : 0,
+      avg_brier_score: calculateAverageBrierScore(cohortPerformance),
+      win_rate: winRateResult && winRateResult.total > 0
+        ? winRateResult.wins / winRateResult.total
+        : null,
       cohort_performance: cohortPerformance,
-      recent_decisions: getRecentModelDecisions(modelId),
-      equity_curve: getModelEquityCurve(modelId),
+      recent_decisions: getRecentModelDecisions(db, modelId),
+      equity_curve: buildEquityCurve(getModelEquitySnapshots(db, modelId)),
       updated_at: new Date().toISOString()
     }
   };

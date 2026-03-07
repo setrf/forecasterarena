@@ -69,6 +69,55 @@ describe('engine/resolution', () => {
     }
   });
 
+  it('exports processResolvedMarket from the settlement module path and records Brier scores', async () => {
+    await withResolutionFixture(async ({ agent, queries }) => {
+      const settlement = await import('@/lib/engine/resolution/settlement');
+
+      const market = queries.upsertMarket({
+        polymarket_id: `pm-resolution-${Date.now()}`,
+        question: 'Will settlement barrel exports keep working?',
+        close_date: '2030-01-01T00:00:00.000Z',
+        status: 'closed',
+        current_price: 0.61,
+        volume: 1000,
+        liquidity: 500
+      });
+
+      queries.updateAgentBalance(agent.id, 9_995, 5);
+      const position = queries.upsertPosition(agent.id, market.id, 'YES', 10, 0.5, 5);
+      queries.createTrade({
+        agent_id: agent.id,
+        market_id: market.id,
+        position_id: position.id,
+        trade_type: 'BUY',
+        side: 'YES',
+        shares: 10,
+        price: 0.5,
+        total_amount: 5,
+        implied_confidence: 0.5
+      });
+
+      const result = settlement.processResolvedMarket(market, 'YES');
+      const updatedAgent = queries.getAgentById(agent.id)!;
+      const brierScores = queries.getBrierScoresByAgent(agent.id);
+
+      expect(result).toEqual({
+        positions_settled: 1,
+        errors: []
+      });
+      expect(queries.getPositionById(position.id)?.status).toBe('settled');
+      expect(updatedAgent.cash_balance).toBe(10_005);
+      expect(updatedAgent.total_invested).toBe(0);
+      expect(brierScores).toHaveLength(1);
+      expect(brierScores[0]).toMatchObject({
+        market_id: market.id,
+        actual_outcome: 1,
+        forecast_probability: 0.5,
+        brier_score: 0.25
+      });
+    });
+  });
+
   it('keeps markets closed when any position settlement fails', async () => {
     const fetchMarketById = vi.fn().mockResolvedValue({ id: 'pm-closed' });
     const checkResolution = vi.fn().mockReturnValue({ resolved: true, winner: 'YES' });

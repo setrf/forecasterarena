@@ -46,6 +46,40 @@ async function createMultiAgentFixture(activeModelCount: number = 2) {
 }
 
 describe('engine/decision', () => {
+  it('exports processAgentDecision from the stable module path and skips bankrupt agents', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+    const callOpenRouterWithRetry = vi.fn();
+
+    vi.doMock('@/lib/openrouter/client', () => ({
+      callOpenRouterWithRetry,
+      estimateCost: vi.fn(() => 0.001)
+    }));
+
+    try {
+      const { cohort, agent } = await createSingleAgentFixture();
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+      const { getAgentsWithModelsByCohort } = await import('@/lib/db/queries');
+      const { processAgentDecision } = await import('@/lib/engine/decision/processAgentDecision');
+
+      db.prepare(`UPDATE agents SET status = 'bankrupt' WHERE id = ?`).run(agent.id);
+
+      const bankruptAgent = getAgentsWithModelsByCohort(cohort.id)[0]!;
+      const result = await processAgentDecision(bankruptAgent, cohort.id, 1, []);
+
+      expect(callOpenRouterWithRetry).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        agent_id: agent.id,
+        model_id: agent.model_id,
+        action: 'SKIPPED',
+        success: true
+      });
+    } finally {
+      vi.doUnmock('@/lib/openrouter/client');
+      await ctx.cleanup();
+    }
+  });
+
   it('skips processing when a non-error decision already exists for the same week', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
     const callOpenRouterWithRetry = vi.fn().mockResolvedValue(

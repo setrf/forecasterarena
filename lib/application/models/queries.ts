@@ -1,8 +1,12 @@
 import { getDb } from '@/lib/db';
 import type { AgentWithCohort } from '@/lib/application/models/types';
 
-export function getAgentsForModel(modelId: string): AgentWithCohort[] {
-  const db = getDb();
+type Db = ReturnType<typeof getDb>;
+
+export function getAgentsWithCohorts(
+  db: Db,
+  modelId: string
+): AgentWithCohort[] {
   return db.prepare(`
     SELECT
       a.*,
@@ -16,9 +20,11 @@ export function getAgentsForModel(modelId: string): AgentWithCohort[] {
   `).all(modelId) as AgentWithCohort[];
 }
 
-export function getModelWinRate(modelId: string): number | null {
-  const db = getDb();
-  const result = db.prepare(`
+export function getModelWinRate(
+  db: Db,
+  modelId: string
+): { wins: number; total: number } | undefined {
+  return db.prepare(`
     SELECT
       COUNT(CASE WHEN (t.side = m.resolution_outcome) THEN 1 END) as wins,
       COUNT(*) as total
@@ -29,14 +35,12 @@ export function getModelWinRate(modelId: string): number | null {
       AND m.status = 'resolved'
       AND t.trade_type = 'BUY'
   `).get(modelId) as { wins: number; total: number } | undefined;
-
-  return result && result.total > 0
-    ? result.wins / result.total
-    : null;
 }
 
-export function getRecentModelDecisions(modelId: string): Array<Record<string, unknown>> {
-  const db = getDb();
+export function getRecentModelDecisions(
+  db: Db,
+  modelId: string
+): Array<Record<string, unknown>> {
   return db.prepare(`
     SELECT d.*, c.cohort_number
     FROM decisions d
@@ -48,30 +52,15 @@ export function getRecentModelDecisions(modelId: string): Array<Record<string, u
   `).all(modelId) as Array<Record<string, unknown>>;
 }
 
-export function getModelEquityCurve(modelId: string): Array<{
-  snapshot_timestamp: string;
-  total_value: number;
-}> {
-  const db = getDb();
-  const rawSnapshots = db.prepare(`
+export function getModelEquitySnapshots(
+  db: Db,
+  modelId: string
+): Array<{ snapshot_timestamp: string; total_value: number }> {
+  return db.prepare(`
     SELECT ps.snapshot_timestamp, ps.total_value
     FROM portfolio_snapshots ps
     JOIN agents a ON ps.agent_id = a.id
     WHERE a.model_id = ?
     ORDER BY ps.snapshot_timestamp ASC
   `).all(modelId) as Array<{ snapshot_timestamp: string; total_value: number }>;
-
-  const snapshotsByTime = new Map<string, number[]>();
-  for (const snapshot of rawSnapshots) {
-    if (!snapshotsByTime.has(snapshot.snapshot_timestamp)) {
-      snapshotsByTime.set(snapshot.snapshot_timestamp, []);
-    }
-
-    snapshotsByTime.get(snapshot.snapshot_timestamp)!.push(snapshot.total_value);
-  }
-
-  return Array.from(snapshotsByTime.entries()).map(([timestamp, values]) => ({
-    snapshot_timestamp: timestamp,
-    total_value: values.reduce((sum, value) => sum + value, 0) / values.length
-  }));
 }

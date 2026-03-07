@@ -1,5 +1,18 @@
 import { getModelById } from '@/lib/db/queries';
 
+export interface AgentWithCohort {
+  id: string;
+  cohort_id: string;
+  model_id: string;
+  cash_balance: number;
+  total_invested: number;
+  status: string;
+  created_at: string;
+  cohort_number: number;
+  cohort_started_at: string;
+  cohort_status: string;
+}
+
 export interface ModelDetailPayload {
   model: NonNullable<ReturnType<typeof getModelById>>;
   num_cohorts: number;
@@ -27,20 +40,7 @@ export interface ModelDetailPayload {
   updated_at: string;
 }
 
-export interface AgentWithCohort {
-  id: string;
-  cohort_id: string;
-  model_id: string;
-  cash_balance: number;
-  total_invested: number;
-  status: string;
-  created_at: string;
-  cohort_number: number;
-  cohort_started_at: string;
-  cohort_status: string;
-}
-
-export type NotFoundResult = {
+export type ModelDetailNotFoundResult = {
   status: 'not_found';
   error: 'Model not found';
 };

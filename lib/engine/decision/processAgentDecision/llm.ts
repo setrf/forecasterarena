@@ -9,15 +9,17 @@ import {
 import type { ParsedDecision } from '@/lib/openrouter/parser';
 import type { AgentWithModel } from '@/lib/types';
 
+export interface DecisionAttempt {
+  parsed: ParsedDecision;
+  response: Awaited<ReturnType<typeof callOpenRouterWithRetry>>;
+  retryCount: number;
+}
+
 export async function requestDecisionWithRetries(args: {
   agent: AgentWithModel;
   systemPrompt: string;
   userPrompt: string;
-}): Promise<{
-  parsed: ParsedDecision;
-  response: Awaited<ReturnType<typeof callOpenRouterWithRetry>>;
-  retryCount: number;
-}> {
+}): Promise<DecisionAttempt> {
   let retryCount = 0;
   let response = await callOpenRouterWithRetry(
     args.agent.model.openrouter_id,

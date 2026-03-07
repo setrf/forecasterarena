@@ -1,15 +1,11 @@
-import {
-  claimDecisionForProcessing,
-  finalizeDecision
-} from '@/lib/db/queries';
-import { LLM_TIMEOUT_MS } from '@/lib/constants';
-import { estimateCost } from '@/lib/openrouter/client';
 import { buildDecisionUserPrompt } from '@/lib/engine/decision/buildDecisionUserPrompt';
 import { executeDecisionTrades } from '@/lib/engine/decision/executeDecisionTrades';
+import { claimAgentDecisionForProcessing } from '@/lib/engine/decision/processAgentDecision/claim';
 import {
   handleDecisionError,
   handleExecutionFailure
 } from '@/lib/engine/decision/processAgentDecision/errors';
+import { finalizeProcessedDecision } from '@/lib/engine/decision/processAgentDecision/finalize';
 import { requestDecisionWithRetries } from '@/lib/engine/decision/processAgentDecision/llm';
 import { createDecisionResult } from '@/lib/engine/decision/processAgentDecision/result';
 import { SYSTEM_PROMPT } from '@/lib/openrouter/prompts';
@@ -31,32 +27,18 @@ export async function processAgentDecision(
   let rawResponse: string | undefined;
 
   try {
-    if (agent.status === 'bankrupt') {
-      return {
-        ...result,
-        action: 'SKIPPED',
-        success: true
-      };
+    const decisionClaim = claimAgentDecisionForProcessing(agent, cohortId, weekNumber, result);
+    if (decisionClaim.skippedResult) {
+      return decisionClaim.skippedResult;
     }
 
-    const decisionClaim = claimDecisionForProcessing({
-      agent_id: agent.id,
-      cohort_id: cohortId,
-      decision_week: weekNumber,
-      stale_after_ms: LLM_TIMEOUT_MS * 2
-    });
-
-    if (decisionClaim.status === 'skipped') {
-      return {
-        ...result,
-        decision_id: decisionClaim.decision.id,
-        action: 'SKIPPED',
-        success: true
-      };
+    const decisionId = decisionClaim.claimedDecisionId;
+    if (!decisionId) {
+      throw new Error('Claimed decision id missing');
     }
 
-    claimedDecisionId = decisionClaim.decision.id;
-    result.decision_id = claimedDecisionId;
+    claimedDecisionId = decisionId;
+    result.decision_id = decisionId;
 
     console.log(`Processing decision for ${agent.model.display_name}...`);
 
@@ -71,19 +53,12 @@ export async function processAgentDecision(
     rawResponse = decisionOutput.response.content;
     retryCount = decisionOutput.retryCount;
 
-    const decision = finalizeDecision(claimedDecisionId, {
-      prompt_system: systemPrompt,
-      prompt_user: userPrompt,
-      raw_response: decisionOutput.response.content,
-      parsed_response: JSON.stringify(decisionOutput.parsed),
-      retry_count: retryCount,
-      action: decisionOutput.parsed.action,
-      reasoning: decisionOutput.parsed.reasoning,
-      tokens_input: decisionOutput.response.usage.prompt_tokens,
-      tokens_output: decisionOutput.response.usage.completion_tokens,
-      api_cost_usd: estimateCost(decisionOutput.response.usage, agent.model.openrouter_id),
-      response_time_ms: decisionOutput.response.response_time_ms,
-      error_message: null
+    const decision = finalizeProcessedDecision({
+      agent,
+      decisionId,
+      systemPrompt,
+      userPrompt,
+      decisionAttempt: decisionOutput
     });
 
     result.decision_id = decision.id;

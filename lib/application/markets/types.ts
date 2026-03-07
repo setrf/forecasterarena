@@ -12,7 +12,7 @@ export interface ListMarketsInput {
   offset: number;
 }
 
-export type ListMarketsResult = {
+export interface ListMarketsResult {
   markets: Array<Record<string, unknown>>;
   total: number;
   has_more: boolean;
@@ -24,7 +24,7 @@ export type ListMarketsResult = {
     categories_count: number;
   };
   updated_at: string;
-};
+}
 
 export type MarketDetailResult =
   | {
