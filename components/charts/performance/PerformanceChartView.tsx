@@ -2,14 +2,13 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis
 } from 'recharts';
-import { BASELINE } from '@/components/charts/performance/constants';
 import { EmptyPerformanceState } from '@/components/charts/performance/EmptyPerformanceState';
+import { PerformanceChartControls } from '@/components/charts/performance/PerformanceChartControls';
 import {
   formatPerformanceCurrency,
   formatPerformanceDateShort,
@@ -17,6 +16,7 @@ import {
 } from '@/components/charts/performance/formatters';
 import { InteractiveLegend } from '@/components/charts/performance/InteractiveLegend';
 import { PremiumTooltip } from '@/components/charts/performance/PremiumTooltip';
+import { PerformanceReferenceLines } from '@/components/charts/performance/PerformanceReferenceLines';
 import type { ModelConfig, PerformanceDataPoint } from '@/components/charts/performance/types';
 
 interface PerformanceChartViewProps {
@@ -66,20 +66,12 @@ export function PerformanceChartView({
 
   return (
     <div className="relative">
-      <div className="absolute top-0 right-0 z-10">
-        <button
-          onClick={toggleShowPercent}
-          className={`
-            px-3 py-1.5 text-xs font-mono rounded-lg transition-all
-            ${showPercent
-              ? 'bg-[var(--accent-gold)]/10 text-[var(--accent-gold)] border border-[var(--accent-gold)]/30'
-              : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-subtle)] hover:text-[var(--text-secondary)]'
-            }
-          `}
-        >
-          {showPercent ? '% Return' : '$ Value'}
-        </button>
-      </div>
+      <PerformanceChartControls
+        isolatedModel={isolatedModel}
+        isolatedModelName={isolatedModelName}
+        showPercent={showPercent}
+        toggleShowPercent={toggleShowPercent}
+      />
 
       <ResponsiveContainer width="100%" height={height}>
         <ComposedChart data={data} margin={{ top: 30, right: 30, left: 10, bottom: 5 }}>
@@ -92,39 +84,10 @@ export function PerformanceChartView({
             />
           )}
 
-          <ReferenceLine
-            y={BASELINE}
-            stroke="var(--text-muted)"
-            strokeDasharray="4 4"
-            strokeWidth={1}
-            label={{
-              value: showPercent ? '0% (Break Even)' : '$10,000',
-              position: 'left',
-              fill: 'var(--text-muted)',
-              fontSize: 10,
-              fontFamily: 'JetBrains Mono, monospace'
-            }}
+          <PerformanceReferenceLines
+            showPercent={showPercent}
+            sundayMarkers={sundayMarkers}
           />
-
-          {sundayMarkers.slice(0, 8).map((dateStr, index) => (
-            <ReferenceLine
-              key={dateStr}
-              x={dateStr}
-              stroke="var(--accent-gold)"
-              strokeDasharray="2 4"
-              strokeWidth={1}
-              opacity={0.3}
-              label={index === 0 ? {
-                value: '↓ Decision Days',
-                position: 'insideTop',
-                fill: 'var(--accent-gold)',
-                fontSize: 9,
-                fontFamily: 'JetBrains Mono, monospace',
-                opacity: 0.6,
-                offset: 15
-              } : undefined}
-            />
-          ))}
 
           <XAxis
             dataKey="date"
@@ -207,12 +170,6 @@ export function PerformanceChartView({
           leaderId={leaderId}
           showPercent={showPercent}
         />
-      )}
-
-      {isolatedModel && isolatedModelName && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-[var(--text-muted)] bg-[var(--bg-tertiary)] px-3 py-1 rounded-full">
-          Showing only {isolatedModelName} • Click again to show all
-        </div>
       )}
     </div>
   );

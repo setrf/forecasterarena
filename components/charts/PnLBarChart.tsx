@@ -11,29 +11,22 @@ import {
   Cell,
   ReferenceLine,
 } from 'recharts';
-import { formatSignedPercent, formatSignedUsd } from '@/lib/format/display';
+import { EmptyBarChartState } from '@/components/charts/bar/EmptyBarChartState';
+import { TooltipCard, TooltipRow } from '@/components/charts/bar/TooltipCard';
+import {
+  formatChartCurrency,
+  formatChartPercent,
+  sortPnLChartData,
+  type PnLChartDatum
+} from '@/components/charts/bar/utils';
 
-interface PnLData {
-  model_id: string;
-  model_name: string;
-  color: string;
-  pnl: number;
-  pnl_percent: number;
-}
+type PnLData = PnLChartDatum;
 
 interface PnLBarChartProps {
   data: PnLData[];
   height?: number;
   showPercent?: boolean;
   horizontal?: boolean;
-}
-
-function formatCurrency(value: number): string {
-  return formatSignedUsd(value);
-}
-
-function formatPercent(value: number): string {
-  return formatSignedPercent(value, { decimals: 1 });
 }
 
 interface CustomTooltipProps {
@@ -47,29 +40,24 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   const data = payload[0].payload;
 
   return (
-    <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg p-3 shadow-xl">
-      <div className="flex items-center gap-2 mb-2">
-        <div
-          className="w-3 h-3 rounded-full"
-          style={{ backgroundColor: data.color }}
-        />
-        <span className="font-medium">{data.model_name}</span>
-      </div>
-      <div className="space-y-1 text-sm">
-        <div className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">P/L:</span>
+    <TooltipCard color={data.color} title={data.model_name}>
+      <TooltipRow
+        label="P/L:"
+        value={(
           <span className={`font-mono ${data.pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
-            {formatCurrency(data.pnl)}
+            {formatChartCurrency(data.pnl)}
           </span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">Return:</span>
+        )}
+      />
+      <TooltipRow
+        label="Return:"
+        value={(
           <span className={`font-mono ${data.pnl_percent >= 0 ? 'text-positive' : 'text-negative'}`}>
-            {formatPercent(data.pnl_percent)}
+            {formatChartPercent(data.pnl_percent)}
           </span>
-        </div>
-      </div>
-    </div>
+        )}
+      />
+    </TooltipCard>
   );
 }
 
@@ -79,22 +67,14 @@ export default function PnLBarChart({
   showPercent = false,
   horizontal = true,
 }: PnLBarChartProps) {
-  // Sort by P/L descending
-  const sortedData = [...data].sort((a, b) => b.pnl - a.pnl);
+  const sortedData = sortPnLChartData(data);
 
   if (!data.length) {
-    return (
-      <div 
-        className="flex items-center justify-center text-[var(--text-muted)] border border-dashed border-[var(--border-subtle)] rounded-lg"
-        style={{ height }}
-      >
-        <p>No P/L data available</p>
-      </div>
-    );
+    return <EmptyBarChartState height={height} message="No P/L data available" />;
   }
 
   const dataKey = showPercent ? 'pnl_percent' : 'pnl';
-  const formatter = showPercent ? formatPercent : formatCurrency;
+  const formatter = showPercent ? formatChartPercent : formatChartCurrency;
 
   if (horizontal) {
     return (
@@ -176,5 +156,4 @@ export default function PnLBarChart({
     </ResponsiveContainer>
   );
 }
-
 

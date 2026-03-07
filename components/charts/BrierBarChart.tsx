@@ -11,15 +11,16 @@ import {
   Cell,
   ReferenceLine,
 } from 'recharts';
-import { formatDecimal } from '@/lib/format/display';
+import { EmptyBarChartState } from '@/components/charts/bar/EmptyBarChartState';
+import { TooltipCard, TooltipRow } from '@/components/charts/bar/TooltipCard';
+import {
+  formatChartDecimal,
+  interpretBrierScore,
+  sortBrierChartData,
+  type BrierChartDatum
+} from '@/components/charts/bar/utils';
 
-interface BrierData {
-  model_id: string;
-  model_name: string;
-  color: string;
-  brier_score: number;
-  num_bets: number;
-}
+type BrierData = BrierChartDatum;
 
 interface BrierBarChartProps {
   data: BrierData[];
@@ -31,43 +32,24 @@ interface CustomTooltipProps {
   payload?: Array<{ payload: BrierData }>;
 }
 
-function interpretBrier(score: number): { label: string; color: string } {
-  if (score < 0.1) return { label: 'Excellent', color: 'var(--accent-emerald)' };
-  if (score < 0.2) return { label: 'Good', color: 'var(--accent-blue)' };
-  if (score < 0.25) return { label: 'Fair', color: 'var(--accent-amber)' };
-  return { label: 'Poor', color: 'var(--accent-rose)' };
-}
-
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;
-  const interpretation = interpretBrier(data.brier_score);
+  const interpretation = interpretBrierScore(data.brier_score);
 
   return (
-    <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg p-3 shadow-xl">
-      <div className="flex items-center gap-2 mb-2">
-        <div
-          className="w-3 h-3 rounded-full"
-          style={{ backgroundColor: data.color }}
-        />
-        <span className="font-medium">{data.model_name}</span>
-      </div>
-      <div className="space-y-1 text-sm">
-        <div className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">Brier Score:</span>
-          <span className="font-mono">{formatDecimal(data.brier_score)}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">Rating:</span>
-          <span style={{ color: interpretation.color }}>{interpretation.label}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">Resolved Bets:</span>
-          <span>{data.num_bets}</span>
-        </div>
-      </div>
-    </div>
+    <TooltipCard color={data.color} title={data.model_name}>
+      <TooltipRow
+        label="Brier Score:"
+        value={<span className="font-mono">{formatChartDecimal(data.brier_score)}</span>}
+      />
+      <TooltipRow
+        label="Rating:"
+        value={<span style={{ color: interpretation.color }}>{interpretation.label}</span>}
+      />
+      <TooltipRow label="Resolved Bets:" value={<span>{data.num_bets}</span>} />
+    </TooltipCard>
   );
 }
 
@@ -75,18 +57,10 @@ export default function BrierBarChart({
   data,
   height = 300,
 }: BrierBarChartProps) {
-  // Sort by Brier score ascending (lower is better)
-  const sortedData = [...data].sort((a, b) => a.brier_score - b.brier_score);
+  const sortedData = sortBrierChartData(data);
 
   if (!data.length) {
-    return (
-      <div 
-        className="flex items-center justify-center text-[var(--text-muted)] border border-dashed border-[var(--border-subtle)] rounded-lg"
-        style={{ height }}
-      >
-        <p>No Brier score data available</p>
-      </div>
-    );
+    return <EmptyBarChartState height={height} message="No Brier score data available" />;
   }
 
   return (
@@ -104,7 +78,7 @@ export default function BrierBarChart({
         <XAxis
           type="number"
           domain={[0, 0.5]}
-          tickFormatter={(v) => formatDecimal(v, { decimals: 2 })}
+          tickFormatter={(v) => formatChartDecimal(v, 2)}
           stroke="var(--text-muted)"
           tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
           axisLine={{ stroke: 'var(--border-subtle)' }}
@@ -142,5 +116,4 @@ export default function BrierBarChart({
     </ResponsiveContainer>
   );
 }
-
 
