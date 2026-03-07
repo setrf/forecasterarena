@@ -2,6 +2,9 @@
 
 > Historical/template note: this checklist reflects the first launch-era state.
 > Reset assumptions, dates, and checkboxes before using it for another launch.
+> Use [`../docs/DEPLOYMENT_CHECKLIST.md`](../docs/DEPLOYMENT_CHECKLIST.md)
+> and [`../docs/OPERATIONS.md`](../docs/OPERATIONS.md)
+> for the current deployment and operational workflow.
 
 ---
 

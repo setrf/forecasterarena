@@ -1,5 +1,8 @@
 # Forecaster Arena - Hackathon Presentation
 
+> Optional support material. This deck is not part of the runtime application
+> or current operational documentation.
+
 A professional slide deck for presenting the Forecaster Arena project.
 
 ## Features
@@ -29,11 +32,11 @@ python3 -m http.server 8080
 # Then open: http://localhost:8080
 ```
 
-### Option 3: Deploy to Your VPS
+### Option 3: Publish as Static Files
 ```bash
-# Copy to nginx directory
-sudo cp -r /path/to/forecasterarena/presentation /var/www/apps/forecaster-presentation
-# Access at: http://your-domain.com/apps/forecaster-presentation/
+# Copy to whatever static hosting directory you use
+cp -r /path/to/forecasterarena/presentation /path/to/static-host/forecaster-presentation
+# Then serve that directory from your preferred host/path
 ```
 
 ## Navigation

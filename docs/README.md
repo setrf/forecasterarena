@@ -62,3 +62,15 @@ description of current behavior:
 - [`MULTI_COHORT_FIXES_2025-12-14.md`](./MULTI_COHORT_FIXES_2025-12-14.md)
 
 Use these for historical reasoning, not for present-day operational guidance.
+
+---
+
+## Supporting Materials
+
+These directories are useful for presentations or historical launch context, but
+they are not the system-of-record for current runtime behavior:
+
+- [`../launch`](../launch)
+  - historical launch copy, outreach drafts, and launch-day checklists
+- [`../presentation`](../presentation)
+  - optional slide deck assets and PDF-export instructions

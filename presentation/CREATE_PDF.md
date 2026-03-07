@@ -1,5 +1,8 @@
 # How to Create PDF from Presentation
 
+> Optional support workflow for the static presentation deck. This is not part
+> of the runtime app or deployment process.
+
 ## Method 1: Browser Print to PDF (Easiest)
 
 ### Step 1: Open the print version

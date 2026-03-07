@@ -92,12 +92,12 @@ Public routes that use `safeErrorMessage(...)` return a generic internal error s
 
 | Route group | Cache behavior |
 |-------------|----------------|
-| `/api/leaderboard` | `public, max-age=300, stale-while-revalidate=60` |
-| `/api/performance-data` | `public, max-age=300, stale-while-revalidate=60` |
-| `/api/markets` | `public, max-age=300, stale-while-revalidate=60` |
+| `/api/leaderboard` | `no-store` |
+| `/api/performance-data` | `no-store` |
+| `/api/markets` | `no-store` |
 | `/api/decisions/recent` | `public, max-age=120, stale-while-revalidate=30` |
 | Admin routes | `no-store` / uncached |
-| Other dynamic routes | dynamic route handlers, no public cache headers unless explicitly set |
+| Other dynamic routes | dynamic route handlers, uncached unless explicitly set otherwise |
 
 ---
 
