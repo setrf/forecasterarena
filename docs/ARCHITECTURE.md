@@ -145,6 +145,17 @@ Authenticated by `Authorization: Bearer <CRON_SECRET>`:
 
 The code does not embed a scheduler. Cron timing is an operational concern and is documented in `docs/OPERATIONS.md`.
 
+### 3.5 Browser QA Surface
+
+Checked-in Playwright smoke coverage lives under `playwright/`.
+
+That suite runs against a deterministic seeded SQLite database prepared specifically for browser testing. It validates the user-facing contract that unit tests do not fully cover:
+
+- public route rendering
+- mobile navigation behavior
+- seeded dynamic detail routes
+- admin login and authenticated admin pages
+
 ---
 
 ## 4. Core Subsystems

@@ -60,6 +60,8 @@ const checks = [
   { root: 'app/models/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/models/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/api/performance-data/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'components/DecisionFeed.tsx', maxLines: 40, extensions: new Set(['.tsx']) },
+  { root: 'components/Navigation.tsx', maxLines: 80, extensions: new Set(['.tsx']) },
   { root: 'features', maxLines: 350, extensions: new Set(['.ts', '.tsx']) }
 ];
 

@@ -42,6 +42,20 @@ That script currently enforces:
 - line-count caps on the main public entrypoints and route/page wrappers
 - import-boundary restrictions for feature modules, application modules, and thin API routes
 
+## Browser QA
+
+Browser smoke coverage lives in `/playwright`.
+
+After UI refactors, the minimum browser pass should verify:
+
+- public navigation on desktop and mobile
+- a seeded model detail route
+- a seeded cohort detail route and decision expansion behavior
+- a seeded market detail route
+- admin login plus authenticated admin costs and logs pages
+
+The Playwright suite uses a deterministic seeded SQLite database prepared before the Next.js dev server starts. That keeps browser tests stable and avoids depending on local `data/` files.
+
 ## Practical Rule
 
 If a file starts doing more than one of these jobs, it should probably be split:

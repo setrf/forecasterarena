@@ -25,3 +25,9 @@ jobs:
 
       - name: Run validation suite
         run: npm run check
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser smoke suite
+        run: npm run test:e2e
