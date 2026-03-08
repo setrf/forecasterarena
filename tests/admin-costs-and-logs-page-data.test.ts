@@ -37,7 +37,7 @@ describe('admin costs page data helpers', () => {
     })));
 
     await expect(fetchAdminCostsData()).resolves.toEqual({
-      costsByModel: [expect.objectContaining({ public_model_id: 'openai-gpt', family_id: 'openai-gpt', legacy_model_id: 'gpt-5.1' })],
+      costsByModel: [expect.objectContaining({ public_model_id: 'openai-gpt', family_slug: 'openai-gpt', family_id: 'openai-gpt', legacy_model_id: 'gpt-5.1' })],
       summary: expect.objectContaining({ total_cost: 1.234 })
     });
 

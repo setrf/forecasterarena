@@ -147,7 +147,7 @@ export default function AdminCostsPageClient() {
               </thead>
               <tbody>
                 {costsByModel.map((model) => (
-                  <tr key={model.public_model_slug ?? model.public_model_id}>
+                  <tr key={model.family_slug ?? model.public_model_slug ?? model.public_model_id}>
                     <td>
                       <div className="flex items-center gap-2">
                         <div

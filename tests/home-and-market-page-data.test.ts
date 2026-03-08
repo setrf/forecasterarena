@@ -14,6 +14,7 @@ describe('home page data helpers', () => {
           {
             model_id: 'openai-gpt',
             model_slug: 'openai-gpt',
+            family_slug: 'openai-gpt',
             family_id: 'openai-gpt',
             legacy_model_id: 'gpt-5.1',
             display_name: 'GPT-5.2',
@@ -38,6 +39,7 @@ describe('home page data helpers', () => {
       leaderboard: [
         expect.objectContaining({
           model_id: 'openai-gpt',
+          family_slug: 'openai-gpt',
           legacy_model_id: 'gpt-5.1',
           total_pnl: 100
         })

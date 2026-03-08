@@ -19,6 +19,7 @@ describe('admin export lineage queries', () => {
         'agent_benchmark_identity',
         'api_costs'
       ]));
+      expect(DEFAULT_TABLES).not.toContain('models');
 
       const decision = fixture.queries.createDecision({
         agent_id: fixture.agent.id,

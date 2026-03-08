@@ -4,6 +4,7 @@ import { getActiveModelFamilies } from '@/lib/db/queries';
 type RawModelCost = {
   public_model_id: string;
   public_model_slug: string | null;
+  family_slug: string | null;
   family_id: string | null;
   model_name: string;
   color: string;
@@ -20,6 +21,7 @@ export function getAdminCosts() {
     SELECT
       COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as public_model_id,
       COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as public_model_slug,
+      abi.family_slug as family_slug,
       abi.family_id,
       COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_name,
       COALESCE(abi.color, '#94A3B8') as color,
@@ -33,6 +35,7 @@ export function getAdminCosts() {
     GROUP BY
       COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id),
       COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id),
+      abi.family_slug,
       abi.family_id,
       COALESCE(abi.family_display_name, abi.release_display_name, a.model_id),
       COALESCE(abi.color, '#94A3B8')
@@ -49,9 +52,9 @@ export function getAdminCosts() {
     ));
     return existing || {
       public_model_id: publicModelId,
-      public_model_slug: family.slug,
+      public_model_slug: family.slug ?? family.id,
+      family_slug: family.slug ?? family.id,
       family_id: family.id,
-      family_slug: family.slug,
       legacy_model_id: family.legacy_model_id,
       model_name: family.public_display_name,
       color: family.color ?? '#94A3B8',
@@ -63,9 +66,9 @@ export function getAdminCosts() {
   }).map((cost) => ({
     ...cost,
     model_id: cost.public_model_id,
-    public_model_slug: cost.public_model_slug ?? families.find((family) => family.id === cost.family_id)?.slug ?? null,
+    public_model_slug: cost.public_model_slug ?? cost.family_slug ?? families.find((family) => family.id === cost.family_id)?.slug ?? null,
     family_id: cost.family_id,
-    family_slug: families.find((family) => family.id === cost.family_id)?.slug ?? null,
+    family_slug: cost.family_slug ?? families.find((family) => family.id === cost.family_id)?.slug ?? null,
     legacy_model_id: families.find((family) => family.id === cost.family_id)?.legacy_model_id ?? null
   }));
 

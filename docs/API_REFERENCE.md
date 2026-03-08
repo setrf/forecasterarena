@@ -158,6 +158,7 @@ Response shape:
     {
       "model_id": "openai-gpt",
       "model_slug": "openai-gpt",
+      "family_slug": "openai-gpt",
       "family_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
       "display_name": "GPT-5.2",
@@ -189,7 +190,8 @@ Response shape:
 Notes:
 
 - leaderboard rows only appear for models that actually have cohort history
-- `model_id` and `model_slug` are the canonical family-facing continuity keys exposed by the read model
+- `family_slug` is the clearest canonical route key for public model-family navigation
+- `model_id` and `model_slug` are retained as compatibility aliases for existing consumers
 - `legacy_model_id` is compatibility metadata only
 - `display_name` is the family-facing label used for comparison views
 - the exact release used by any historical cohort is derived from frozen agent lineage, not directly from the mutable `models` table
@@ -771,9 +773,9 @@ Returns cost data aggregated by model family and overall summary.
     {
       "public_model_id": "openai-gpt",
       "public_model_slug": "openai-gpt",
-      "model_id": "openai-gpt",
       "family_id": "openai-gpt",
       "family_slug": "openai-gpt",
+      "model_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
       "model_name": "GPT-5.2",
       "color": "#10B981",
@@ -796,9 +798,10 @@ Returns cost data aggregated by model family and overall summary.
 
 Notes:
 
-- `public_model_id` and `public_model_slug` are the family-facing continuity keys used by the admin UI
-- `model_id` is retained as a compatibility alias for older consumers
-- `family_id` and `family_slug` are the stable lineage identifiers
+- `family_slug` is the clearest canonical family-facing key for admin/UI linking
+- `public_model_id` and `public_model_slug` are retained continuity aliases for older consumers
+- `model_id` is a compatibility alias only
+- `family_id` is the stable lineage identifier used internally
 - `legacy_model_id` preserves the old roster key when one exists
 
 ### GET /api/admin/logs
@@ -891,7 +894,6 @@ Rules:
 - default tables:
   - `cohorts`
   - `agents`
-  - `models` (compatibility metadata)
   - `model_families`
   - `model_releases`
   - `benchmark_configs`
@@ -903,6 +905,8 @@ Rules:
   - `trades`
   - `positions`
   - `portfolio_snapshots`
+- optional compatibility table:
+  - `models`
 - ZIP filenames are sanitized and generated server-side
 - exports are cleaned up after roughly 24 hours
 - historical identity should be reconstructed from `agent_benchmark_identity`, `model_families`, `model_releases`, `benchmark_configs`, `benchmark_config_models`, and frozen lineage columns on `agents` / `api_costs`, not from the mutable `models` table alone

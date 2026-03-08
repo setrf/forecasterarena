@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db';
-import { DEFAULT_TABLES, type ExportTable } from '@/lib/application/admin-export/constants';
+import { ALL_EXPORT_TABLES, DEFAULT_TABLES, type ExportTable } from '@/lib/application/admin-export/constants';
 import type { ExportQueries } from '@/lib/application/admin-export/types';
 
 export function buildQueries(includePrompts: boolean): ExportQueries {
@@ -129,7 +129,7 @@ export function buildQueries(includePrompts: boolean): ExportQueries {
 export function getRequestedTables(input: unknown): ExportTable[] {
   const tables = Array.isArray(input) ? input : DEFAULT_TABLES;
   return tables.filter((table): table is ExportTable => {
-    return typeof table === 'string' && DEFAULT_TABLES.includes(table as ExportTable);
+    return typeof table === 'string' && ALL_EXPORT_TABLES.includes(table as ExportTable);
   });
 }
 

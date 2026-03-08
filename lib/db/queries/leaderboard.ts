@@ -36,6 +36,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       SELECT
         ai.public_model_id as model_id,
         ai.public_model_slug as model_slug,
+        ai.public_model_slug as family_slug,
         ai.family_id,
         ai.legacy_model_id,
         ai.display_name,
@@ -91,6 +92,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
     SELECT
       s.model_id,
       s.model_slug,
+      s.family_slug,
       s.family_id,
       s.legacy_model_id,
       s.display_name,

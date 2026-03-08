@@ -45,6 +45,7 @@ export interface PositionWithMarket extends Position {
 export interface LeaderboardEntry {
   model_id: string;
   model_slug?: string;
+  family_slug?: string | null;
   family_id?: string | null;
   legacy_model_id?: string | null;
   display_name: string;

@@ -67,6 +67,7 @@ describe('admin application data services', () => {
 
       expect(costs.costs_by_model.find((cost) => cost.public_model_id === family?.slug)).toMatchObject({
         family_id: family?.id,
+        family_slug: family?.slug,
         legacy_model_id: modelId,
         total_cost: 0.42,
         total_input_tokens: 120,
