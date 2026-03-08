@@ -1,0 +1,126 @@
+import { METHODOLOGY_VERSION } from '@/lib/constants';
+import { logSystemEvent } from '@/lib/db';
+import {
+  createBenchmarkConfig,
+  createBenchmarkConfigModel,
+  getActiveModelFamilies,
+  getBenchmarkConfigById,
+  getBenchmarkConfigModels,
+  getModelFamilyById,
+  getModelReleaseById
+} from '@/lib/db/queries';
+import type { AdminOperationResult } from '@/lib/application/admin/types';
+import type {
+  AdminBenchmarkConfigSummary,
+  CreateAdminBenchmarkConfigInput
+} from '@/lib/application/admin-benchmark/types';
+
+function isNonNegativeFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+export function createAdminBenchmarkConfigRecord(
+  input: CreateAdminBenchmarkConfigInput
+): AdminOperationResult<{
+  success: true;
+  config: AdminBenchmarkConfigSummary;
+}> {
+  const versionName = input.version_name.trim();
+  if (!versionName) {
+    return { ok: false, status: 400, error: 'Version name is required' };
+  }
+
+  const assignments = Array.isArray(input.assignments) ? input.assignments : [];
+  if (assignments.length === 0) {
+    return { ok: false, status: 400, error: 'At least one lineup assignment is required' };
+  }
+
+  const activeFamilies = getActiveModelFamilies();
+  const activeFamilyIds = new Set(activeFamilies.map((family) => family.id));
+  const seenFamilies = new Set<string>();
+
+  for (const assignment of assignments) {
+    if (!activeFamilyIds.has(assignment.family_id)) {
+      return { ok: false, status: 400, error: `Unknown or inactive model family: ${assignment.family_id}` };
+    }
+
+    if (seenFamilies.has(assignment.family_id)) {
+      return { ok: false, status: 400, error: `Duplicate lineup assignment for family: ${assignment.family_id}` };
+    }
+    seenFamilies.add(assignment.family_id);
+
+    if (!isNonNegativeFiniteNumber(assignment.input_price_per_million)) {
+      return { ok: false, status: 400, error: `Invalid input price for family: ${assignment.family_id}` };
+    }
+
+    if (!isNonNegativeFiniteNumber(assignment.output_price_per_million)) {
+      return { ok: false, status: 400, error: `Invalid output price for family: ${assignment.family_id}` };
+    }
+
+    const family = getModelFamilyById(assignment.family_id);
+    const release = getModelReleaseById(assignment.release_id);
+    if (!family || !release || release.family_id !== family.id) {
+      return { ok: false, status: 400, error: `Release ${assignment.release_id} does not belong to family ${assignment.family_id}` };
+    }
+
+    if (release.release_status === 'retired') {
+      return { ok: false, status: 400, error: `Release ${release.release_name} is retired and cannot be used in a new config` };
+    }
+  }
+
+  const missingFamilies = activeFamilies.filter((family) => !seenFamilies.has(family.id));
+  if (missingFamilies.length > 0) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Missing lineup assignments for active families: ${missingFamilies.map((family) => family.public_display_name).join(', ')}`
+    };
+  }
+
+  const config = createBenchmarkConfig({
+    version_name: versionName,
+    methodology_version: input.methodology_version.trim() || METHODOLOGY_VERSION,
+    notes: input.notes?.trim() || null,
+    created_by: 'admin',
+    is_default_for_future_cohorts: false
+  });
+
+  activeFamilies
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .forEach((family, index) => {
+      const assignment = assignments.find((item) => item.family_id === family.id)!;
+      const release = getModelReleaseById(assignment.release_id)!;
+
+      createBenchmarkConfigModel({
+        benchmark_config_id: config.id,
+        family_id: family.id,
+        release_id: release.id,
+        slot_order: index,
+        family_display_name_snapshot: family.public_display_name,
+        short_display_name_snapshot: family.short_display_name,
+        release_display_name_snapshot: release.release_name,
+        provider_snapshot: release.provider,
+        color_snapshot: family.color,
+        openrouter_id_snapshot: release.openrouter_id,
+        input_price_per_million_snapshot: assignment.input_price_per_million,
+        output_price_per_million_snapshot: assignment.output_price_per_million
+      });
+    });
+
+  logSystemEvent('admin_benchmark_config_created', {
+    benchmark_config_id: config.id,
+    version_name: config.version_name,
+    family_count: activeFamilies.length
+  }, 'info');
+
+  return {
+    ok: true,
+    data: {
+      success: true,
+      config: {
+        ...getBenchmarkConfigById(config.id)!,
+        models: getBenchmarkConfigModels(config.id)
+      }
+    }
+  };
+}

@@ -31,6 +31,25 @@ export function getDefaultBenchmarkConfig(): BenchmarkConfig | undefined {
   `).get() as BenchmarkConfig | undefined;
 }
 
+export function getAllBenchmarkConfigs(limit?: number): BenchmarkConfig[] {
+  const db = getDb();
+
+  if (typeof limit === 'number') {
+    return db.prepare(`
+      SELECT *
+      FROM benchmark_configs
+      ORDER BY is_default_for_future_cohorts DESC, created_at DESC
+      LIMIT ?
+    `).all(limit) as BenchmarkConfig[];
+  }
+
+  return db.prepare(`
+    SELECT *
+    FROM benchmark_configs
+    ORDER BY is_default_for_future_cohorts DESC, created_at DESC
+  `).all() as BenchmarkConfig[];
+}
+
 export function getBenchmarkConfigById(id: string): BenchmarkConfig | undefined {
   const db = getDb();
   return db.prepare(`

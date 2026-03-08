@@ -1,0 +1,147 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createIsolatedTestContext } from '@/tests/helpers/test-context';
+
+afterEach(() => {
+  vi.doUnmock('@/lib/db');
+  vi.resetModules();
+});
+
+async function buildFullAssignments() {
+  const queries = await import('@/lib/db/queries');
+  return queries.getActiveModelFamilies().map((family) => {
+    const release = queries.getCurrentReleaseForFamily(family.id) ?? queries.getModelReleasesByFamily(family.id)[0]!;
+    return {
+      family_id: family.id,
+      release_id: release.id,
+      input_price_per_million: 1,
+      output_price_per_million: 2
+    };
+  });
+}
+
+describe('admin benchmark lineage services', () => {
+  it('returns an overview with family releases and config snapshots', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const { getAdminBenchmarkOverview } = await import('@/lib/application/admin-benchmark');
+      const overview = getAdminBenchmarkOverview();
+
+      expect(overview.default_config_id).toBeTruthy();
+      expect(overview.updated_at).toEqual(expect.any(String));
+      expect(overview.families.length).toBeGreaterThan(0);
+      expect(overview.configs.length).toBeGreaterThan(0);
+      expect(overview.families[0]).toMatchObject({
+        current_release_id: expect.any(String),
+        releases: expect.arrayContaining([
+          expect.objectContaining({
+            id: expect.any(String),
+            release_name: expect.any(String)
+          })
+        ])
+      });
+      expect(overview.configs[0]?.models.length).toBeGreaterThan(0);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('creates a new family release and rejects duplicates', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const { getActiveModelFamilies } = await import('@/lib/db/queries');
+      const { createAdminModelReleaseRecord } = await import('@/lib/application/admin-benchmark');
+      const family = getActiveModelFamilies()[0]!;
+
+      const created = createAdminModelReleaseRecord({
+        family_id: family.id,
+        release_name: 'Future Test Release',
+        openrouter_id: `${family.provider.toLowerCase()}/future-test-release`,
+        default_input_price_per_million: 3,
+        default_output_price_per_million: 9,
+        notes: 'Created during tests'
+      });
+
+      expect(created).toMatchObject({
+        ok: true,
+        data: {
+          success: true,
+          release: {
+            family_id: family.id,
+            release_name: 'Future Test Release',
+            default_input_price_per_million: 3,
+            default_output_price_per_million: 9
+          }
+        }
+      });
+
+      const duplicate = createAdminModelReleaseRecord({
+        family_id: family.id,
+        release_name: 'Future Test Release',
+        openrouter_id: `${family.provider.toLowerCase()}/future-test-release`,
+        default_input_price_per_million: 3,
+        default_output_price_per_million: 9
+      });
+
+      expect(duplicate).toEqual({
+        ok: false,
+        status: 409,
+        error: 'A release with that slug already exists for this family'
+      });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('validates config creation and can promote a complete config', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const { getActiveModelFamilies } = await import('@/lib/db/queries');
+      const {
+        createAdminBenchmarkConfigRecord,
+        promoteAdminBenchmarkConfig
+      } = await import('@/lib/application/admin-benchmark');
+      const families = getActiveModelFamilies();
+      const assignments = await buildFullAssignments();
+
+      const missingFamilyResult = createAdminBenchmarkConfigRecord({
+        version_name: 'incomplete-config',
+        methodology_version: 'v1',
+        assignments: assignments.slice(0, Math.max(1, families.length - 1))
+      });
+
+      expect(missingFamilyResult).toMatchObject({
+        ok: false,
+        status: 400
+      });
+
+      const created = createAdminBenchmarkConfigRecord({
+        version_name: 'complete-config',
+        methodology_version: 'v1',
+        notes: 'Full test lineup',
+        assignments
+      });
+
+      expect(created.ok).toBe(true);
+      if (!created.ok) {
+        return;
+      }
+
+      expect(created.data.config.models).toHaveLength(families.length);
+
+      const promoted = promoteAdminBenchmarkConfig(created.data.config.id);
+      expect(promoted).toEqual({
+        ok: true,
+        data: {
+          success: true,
+          config_id: created.data.config.id,
+          version_name: 'complete-config'
+        }
+      });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+});
