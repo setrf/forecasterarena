@@ -59,7 +59,14 @@ export function CohortLeaderboardTable({
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: agent.model_color }}
                       />
-                      <span>{agent.model_display_name}</span>
+                      <div className="flex flex-col">
+                        <span>{agent.model_display_name}</span>
+                        {agent.model_release_name && agent.model_release_name !== agent.model_display_name && (
+                          <span className="text-xs text-[var(--text-muted)]">
+                            {agent.model_release_name}
+                          </span>
+                        )}
+                      </div>
                       {agent.status === 'bankrupt' && (
                         <span className="text-xs text-[var(--accent-rose)]">BANKRUPT</span>
                       )}

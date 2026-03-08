@@ -2,7 +2,8 @@ import { getDb } from '@/lib/db';
 import { getActiveModelFamilies } from '@/lib/db/queries';
 
 type RawModelCost = {
-  model_id: string;
+  public_model_id: string;
+  family_id: string | null;
   model_name: string;
   color: string;
   total_cost: number;
@@ -16,7 +17,7 @@ export function getAdminCosts() {
 
   const rawCosts = db.prepare(`
     SELECT
-      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as model_id,
+      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as public_model_id,
       abi.family_id,
       COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_name,
       COALESCE(abi.color, '#94A3B8') as color,
@@ -39,9 +40,15 @@ export function getAdminCosts() {
 
   const costsByModel = families.map((family) => {
     const publicModelId = family.legacy_model_id ?? family.slug ?? family.id;
-    const existing = rawCosts.find((cost) => cost.model_id === publicModelId);
+    const existing = rawCosts.find((cost) => (
+      cost.family_id === family.id ||
+      cost.public_model_id === publicModelId
+    ));
     return existing || {
-      model_id: publicModelId,
+      public_model_id: publicModelId,
+      family_id: family.id,
+      family_slug: family.slug,
+      legacy_model_id: family.legacy_model_id,
       model_name: family.public_display_name,
       color: family.color ?? '#94A3B8',
       total_cost: 0,
@@ -49,7 +56,13 @@ export function getAdminCosts() {
       total_output_tokens: 0,
       decision_count: 0
     };
-  });
+  }).map((cost) => ({
+    ...cost,
+    model_id: cost.public_model_id,
+    family_id: cost.family_id,
+    family_slug: families.find((family) => family.id === cost.family_id)?.slug ?? null,
+    legacy_model_id: families.find((family) => family.id === cost.family_id)?.legacy_model_id ?? null
+  }));
 
   const totalCost = costsByModel.reduce((sum, model) => sum + model.total_cost, 0);
   const totalInputTokens = costsByModel.reduce((sum, model) => sum + model.total_input_tokens, 0);

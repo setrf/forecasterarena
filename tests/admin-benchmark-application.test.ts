@@ -144,4 +144,95 @@ describe('admin benchmark lineage services', () => {
       await ctx.cleanup();
     }
   });
+
+  it('keeps existing cohorts on their frozen release after a new lineup is promoted', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-01T00:05:00.000Z'));
+
+      const queries = await import('@/lib/db/queries');
+      const {
+        createAdminBenchmarkConfigRecord,
+        createAdminModelReleaseRecord,
+        promoteAdminBenchmarkConfig
+      } = await import('@/lib/application/admin-benchmark');
+      const { startNewCohort } = await import('@/lib/engine/cohort');
+
+      const firstStart = startNewCohort();
+      expect(firstStart.success).toBe(true);
+      if (!firstStart.success) {
+        return;
+      }
+      const firstCohort = firstStart.cohort!;
+
+      const firstCohortAgents = queries.getAgentsWithModelsByCohort(firstCohort.id);
+      const openAiFamily = queries.getModelFamilyById('openai-gpt')!;
+      const firstOpenAiAgent = firstCohortAgents.find((agent) => agent.family_id === openAiFamily.id)!;
+      const oldReleaseId = firstOpenAiAgent.release_id;
+
+      const releaseResult = createAdminModelReleaseRecord({
+        family_id: openAiFamily.id,
+        release_name: 'GPT-5.4',
+        openrouter_id: 'openai/gpt-5.4',
+        default_input_price_per_million: 6,
+        default_output_price_per_million: 18
+      });
+      expect(releaseResult.ok).toBe(true);
+      if (!releaseResult.ok) {
+        return;
+      }
+
+      const assignments = (await buildFullAssignments()).map((assignment) => (
+        assignment.family_id === openAiFamily.id
+          ? {
+            ...assignment,
+            release_id: releaseResult.data.release.id,
+            input_price_per_million: 6,
+            output_price_per_million: 18
+          }
+          : assignment
+      ));
+
+      const configResult = createAdminBenchmarkConfigRecord({
+        version_name: 'lineup-with-gpt54',
+        methodology_version: 'v1',
+        assignments
+      });
+      expect(configResult.ok).toBe(true);
+      if (!configResult.ok) {
+        return;
+      }
+
+      const promoteResult = promoteAdminBenchmarkConfig(configResult.data.config.id);
+      expect(promoteResult.ok).toBe(true);
+
+      vi.setSystemTime(new Date('2026-03-08T00:05:00.000Z'));
+      const secondStart = startNewCohort();
+      expect(secondStart.success).toBe(true);
+      if (!secondStart.success) {
+        return;
+      }
+      const secondCohort = secondStart.cohort!;
+
+      const secondCohortAgents = queries.getAgentsWithModelsByCohort(secondCohort.id);
+      const secondOpenAiAgent = secondCohortAgents.find((agent) => agent.family_id === openAiFamily.id)!;
+
+      expect(firstOpenAiAgent.release_id).toBe(oldReleaseId);
+      expect(firstOpenAiAgent.model.release_name).not.toBe('GPT-5.4');
+      expect(secondOpenAiAgent.release_id).toBe(releaseResult.data.release.id);
+      expect(secondOpenAiAgent.model.release_name).toBe('GPT-5.4');
+      expect(secondOpenAiAgent.model.input_price_per_million).toBe(6);
+      expect(secondOpenAiAgent.model.output_price_per_million).toBe(18);
+
+      const reloadedFirstOpenAiAgent = queries.getAgentsWithModelsByCohort(firstCohort.id)
+        .find((agent) => agent.family_id === openAiFamily.id)!;
+      expect(reloadedFirstOpenAiAgent.release_id).toBe(oldReleaseId);
+      expect(reloadedFirstOpenAiAgent.model.release_name).not.toBe('GPT-5.4');
+    } finally {
+      vi.useRealTimers();
+      await ctx.cleanup();
+    }
+  });
 });

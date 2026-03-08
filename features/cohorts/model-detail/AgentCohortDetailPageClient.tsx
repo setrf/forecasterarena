@@ -27,9 +27,10 @@ export default function AgentCohortDetailPageClient() {
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
-  const chartData = useMemo(() => createAgentCohortChartData(data, modelId), [data, modelId]);
+  const chartKey = data?.model?.id ?? modelId;
+  const chartData = useMemo(() => createAgentCohortChartData(data, chartKey), [data, chartKey]);
   const chartModels = data?.model ? [{
-    id: data.model.id,
+    id: chartKey,
     name: data.model.display_name,
     color: data.model.color
   }] : [];
@@ -52,6 +53,7 @@ export default function AgentCohortDetailPageClient() {
         cohortId={cohortId}
         cohortNumber={data.cohort.cohort_number}
         modelName={data.model.display_name}
+        releaseName={data.model.release_name}
       />
       <AgentCohortHeader data={data} />
       <AgentStatsGrids data={data} />

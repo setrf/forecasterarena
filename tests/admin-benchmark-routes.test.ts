@@ -91,4 +91,37 @@ describe('admin benchmark routes', () => {
       version_name: 'lineup-v2'
     });
   });
+
+  it('preserves unauthorized responses across the benchmark admin routes', async () => {
+    vi.doMock('@/lib/api/admin-route', () => ({
+      ensureAdminAuthenticated: () => Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }));
+
+    const overviewRoute = await import('@/app/api/admin/benchmark/route');
+    const releaseRoute = await import('@/app/api/admin/benchmark/releases/route');
+    const configRoute = await import('@/app/api/admin/benchmark/configs/route');
+    const defaultRoute = await import('@/app/api/admin/benchmark/default/route');
+
+    const overviewResponse = await overviewRoute.GET();
+    const releaseResponse = await releaseRoute.POST(new Request('http://localhost/api/admin/benchmark/releases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}'
+    }) as any);
+    const configResponse = await configRoute.POST(new Request('http://localhost/api/admin/benchmark/configs', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}'
+    }) as any);
+    const defaultResponse = await defaultRoute.POST(new Request('http://localhost/api/admin/benchmark/default', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}'
+    }) as any);
+
+    for (const response of [overviewResponse, releaseResponse, configResponse, defaultResponse]) {
+      expect(response.status).toBe(401);
+      expect(await response.json()).toEqual({ error: 'Unauthorized' });
+    }
+  });
 });

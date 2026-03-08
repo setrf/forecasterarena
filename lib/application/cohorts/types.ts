@@ -12,6 +12,7 @@ export interface CohortDetailPayload {
     model_slug?: string;
     family_id?: string | null;
     release_id?: string | null;
+    benchmark_config_model_id?: string | null;
     model_display_name: string;
     model_color: string | null;
     model_release_name?: string;
@@ -45,6 +46,7 @@ export interface AgentCohortDetailPayload {
     status: string;
     started_at: string;
     completed_at: string | null;
+    benchmark_config_id: string | null;
     current_week: number;
     total_markets: number;
   };
@@ -57,10 +59,12 @@ export interface AgentCohortDetailPayload {
     color: string | null;
     release_id?: string;
     release_name?: string;
+    benchmark_config_model_id?: string | null;
   };
   agent: {
     id: string;
     model_id?: string;
+    benchmark_config_model_id?: string | null;
     status: string;
     cash_balance: number;
     total_invested: number;

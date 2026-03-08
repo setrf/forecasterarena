@@ -42,6 +42,7 @@ export function getCohortDetail(
       model_slug: agent.model.family_slug,
       family_id: agent.family_id,
       release_id: agent.release_id,
+      benchmark_config_model_id: agent.benchmark_config_model_id,
       model_display_name: agent.model.display_name,
       model_color: agent.model.color,
       model_release_name: agent.model.release_name,
@@ -75,7 +76,10 @@ export function getCohortDetail(
   return {
     status: 'ok',
     data: {
-      cohort,
+      cohort: {
+        ...cohort,
+        benchmark_config_id: cohort.benchmark_config_id
+      },
       agents,
       stats: {
         week_number: calculateWeekNumber(cohort.started_at),

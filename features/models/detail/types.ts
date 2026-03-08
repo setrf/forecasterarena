@@ -18,6 +18,8 @@ export interface ModelDecision {
   decision_timestamp: string;
   action: string;
   reasoning: string | null;
+  model_release_id?: string | null;
+  model_release_name?: string | null;
 }
 
 export interface EquityPoint {

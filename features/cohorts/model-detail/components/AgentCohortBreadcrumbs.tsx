@@ -4,12 +4,14 @@ interface AgentCohortBreadcrumbsProps {
   cohortId: string;
   cohortNumber: number;
   modelName: string;
+  releaseName?: string;
 }
 
 export function AgentCohortBreadcrumbs({
   cohortId,
   cohortNumber,
-  modelName
+  modelName,
+  releaseName
 }: AgentCohortBreadcrumbsProps) {
   return (
     <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)] mb-6">
@@ -21,7 +23,10 @@ export function AgentCohortBreadcrumbs({
         Cohort #{cohortNumber}
       </Link>
       <span>›</span>
-      <span className="text-[var(--text-primary)]">{modelName}</span>
+      <span className="text-[var(--text-primary)]">
+        {modelName}
+        {releaseName && releaseName !== modelName ? ` (${releaseName})` : ''}
+      </span>
     </div>
   );
 }

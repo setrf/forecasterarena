@@ -6,7 +6,8 @@ export const seededRoutes = {
   cohortModel: '/cohorts/cohort-e2e-1/models/openai-gpt',
   legacyCohortModel: '/cohorts/cohort-e2e-1/models/gpt-5.1',
   market: '/markets/market-e2e-fed',
-  decision: '/decisions/decision-gpt-fed'
+  decision: '/decisions/decision-gpt-fed',
+  adminBenchmark: '/admin/benchmark'
 };
 
 export const seededExportWindow = {

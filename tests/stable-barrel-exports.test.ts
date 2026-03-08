@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import * as adminBenchmarkBarrel from '@/lib/application/admin-benchmark';
 import * as decisionsBarrel from '@/lib/db/queries/decisions';
 import * as positionsBarrel from '@/lib/db/queries/positions';
 import * as parserBarrel from '@/lib/openrouter/parser';
 import * as brierBarrel from '@/lib/scoring/brier';
 import * as pnlBarrel from '@/lib/scoring/pnl';
+import { createAdminBenchmarkConfigRecord } from '@/lib/application/admin-benchmark/createAdminBenchmarkConfig';
+import { createAdminModelReleaseRecord } from '@/lib/application/admin-benchmark/createAdminModelRelease';
+import { getAdminBenchmarkOverview } from '@/lib/application/admin-benchmark/getAdminBenchmarkOverview';
+import { promoteAdminBenchmarkConfig } from '@/lib/application/admin-benchmark/promoteAdminBenchmarkConfig';
 import { claimDecisionForProcessing } from '@/lib/db/queries/decisions/claim';
 import {
   getDecisionByAgentWeek,
@@ -85,6 +90,11 @@ describe('stable barrel exports', () => {
   });
 
   it('preserves the public parser and scoring barrel entrypoints', () => {
+    expect(adminBenchmarkBarrel.createAdminBenchmarkConfigRecord).toBe(createAdminBenchmarkConfigRecord);
+    expect(adminBenchmarkBarrel.createAdminModelReleaseRecord).toBe(createAdminModelReleaseRecord);
+    expect(adminBenchmarkBarrel.getAdminBenchmarkOverview).toBe(getAdminBenchmarkOverview);
+    expect(adminBenchmarkBarrel.promoteAdminBenchmarkConfig).toBe(promoteAdminBenchmarkConfig);
+
     expect(parserBarrel.getDefaultHoldDecision).toBe(getDefaultHoldDecision);
     expect(parserBarrel.isValidDecision).toBe(isValidDecision);
     expect(parserBarrel.parseDecision).toBe(parseDecision);

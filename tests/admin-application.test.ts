@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MODELS } from '@/lib/constants';
 import { createSingleAgentFixture } from '@/tests/helpers/db-fixtures';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
@@ -39,8 +38,14 @@ describe('admin application data services', () => {
       });
 
       const admin = await import('@/lib/application/admin');
+      const {
+        getActiveModelFamilies,
+        getModelFamilyByLegacyModelId
+      } = await import('@/lib/db/queries');
       const stats = admin.getAdminStats();
       const costs = admin.getAdminCosts();
+      const families = getActiveModelFamilies();
+      const family = getModelFamilyByLegacyModelId(modelId);
 
       expect(stats).toMatchObject({
         active_cohorts: 1,
@@ -50,7 +55,7 @@ describe('admin application data services', () => {
       });
       expect(stats.updated_at).toEqual(expect.any(String));
 
-      expect(costs.costs_by_model).toHaveLength(MODELS.length);
+      expect(costs.costs_by_model).toHaveLength(families.length);
       expect(costs.summary).toMatchObject({
         total_cost: 0.42,
         total_input_tokens: 120,
@@ -60,7 +65,8 @@ describe('admin application data services', () => {
       });
       expect(costs.updated_at).toEqual(expect.any(String));
 
-      expect(costs.costs_by_model.find((cost) => cost.model_id === modelId)).toMatchObject({
+      expect(costs.costs_by_model.find((cost) => cost.public_model_id === modelId)).toMatchObject({
+        family_id: family?.id,
         total_cost: 0.42,
         total_input_tokens: 120,
         total_output_tokens: 45,
@@ -68,7 +74,7 @@ describe('admin application data services', () => {
       });
       expect(
         costs.costs_by_model
-          .filter((cost) => cost.model_id !== modelId)
+          .filter((cost) => cost.public_model_id !== modelId)
           .every((cost) => cost.total_cost === 0 && cost.decision_count === 0)
       ).toBe(true);
     } finally {

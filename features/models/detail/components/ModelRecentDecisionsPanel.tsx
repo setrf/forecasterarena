@@ -42,6 +42,11 @@ export function ModelRecentDecisionsPanel({
                   <span className="text-sm text-[var(--text-muted)]">
                     Cohort #{decision.cohort_number}, Week {decision.decision_week}
                   </span>
+                  {decision.model_release_name && (
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {decision.model_release_name}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-[var(--text-muted)]">

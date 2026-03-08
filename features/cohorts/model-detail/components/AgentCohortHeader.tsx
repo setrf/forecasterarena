@@ -17,6 +17,9 @@ export function AgentCohortHeader({ data }: AgentCohortHeaderProps) {
       <div className="flex-1">
         <div className="flex flex-wrap items-center gap-3 mb-2">
           <h1 className="text-3xl font-bold">{data.model.display_name}</h1>
+          {data.model.release_name && data.model.release_name !== data.model.display_name && (
+            <span className="badge">{data.model.release_name}</span>
+          )}
           <span className={`badge ${data.agent.status === 'active' ? 'badge-active' : 'badge-pending'}`}>
             {data.agent.status}
           </span>

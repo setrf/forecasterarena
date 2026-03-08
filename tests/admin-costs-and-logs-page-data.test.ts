@@ -13,7 +13,11 @@ describe('admin costs page data helpers', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(mockResponse(true, {
       costs_by_model: [
         {
+          public_model_id: 'gpt-5.1',
           model_id: 'gpt-5.1',
+          family_id: 'openai-gpt',
+          family_slug: 'openai-gpt',
+          legacy_model_id: 'gpt-5.1',
           model_name: 'GPT-5.2',
           color: '#10B981',
           total_cost: 1.234,
@@ -32,7 +36,7 @@ describe('admin costs page data helpers', () => {
     })));
 
     await expect(fetchAdminCostsData()).resolves.toEqual({
-      costsByModel: [expect.objectContaining({ model_id: 'gpt-5.1' })],
+      costsByModel: [expect.objectContaining({ public_model_id: 'gpt-5.1', family_id: 'openai-gpt' })],
       summary: expect.objectContaining({ total_cost: 1.234 })
     });
 

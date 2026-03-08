@@ -11,10 +11,16 @@ test('admin dashboard restores and clears session state correctly', async ({ pag
   await page.goto('/admin');
   await expect(page.getByRole('heading', { level: 1, name: 'Admin Dashboard' })).toBeVisible();
 
+  await page.goto('/admin/benchmark');
+  await expect(page.getByRole('heading', { level: 1, name: 'Benchmark Control' })).toBeVisible();
+
   await page.getByRole('button', { name: 'Logout' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Admin Login' })).toBeVisible();
 
   await page.goto('/admin/costs');
   await expect(page.getByRole('heading', { level: 1, name: 'API Costs' })).toBeVisible();
   await expect(page.getByText('No cost data available')).toBeVisible();
+
+  await page.goto('/admin/benchmark');
+  await expect(page.getByRole('heading', { level: 1, name: 'Admin Login' })).toBeVisible();
 });

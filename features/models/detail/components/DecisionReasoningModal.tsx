@@ -35,6 +35,11 @@ export function DecisionReasoningModal({
               <span className="text-[var(--text-secondary)]">
                 Cohort #{decision.cohort_number}, Week {decision.decision_week}
               </span>
+              {decision.model_release_name && (
+                <span className="text-sm text-[var(--text-muted)]">
+                  {decision.model_release_name}
+                </span>
+              )}
             </div>
             <button
               onClick={onClose}

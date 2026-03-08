@@ -71,6 +71,7 @@ export function getAgentCohortDetail(
         status: cohort.status,
         started_at: cohort.started_at,
         completed_at: cohort.completed_at,
+        benchmark_config_id: cohort.benchmark_config_id,
         current_week: getCohortWeek(db, cohortId),
         total_markets: getCohortMarketCount(db, cohortId)
       },
@@ -82,11 +83,13 @@ export function getAgentCohortDetail(
         provider: agent.model.provider,
         color: agent.model.color,
         release_id: agent.model.release_id,
-        release_name: agent.model.release_name
+        release_name: agent.model.release_name,
+        benchmark_config_model_id: agent.benchmark_config_model_id
       },
       agent: {
         id: agent.id,
         model_id: agent.model_id,
+        benchmark_config_model_id: agent.benchmark_config_model_id,
         status: agent.status,
         cash_balance: agent.cash_balance,
         total_invested: agent.total_invested,

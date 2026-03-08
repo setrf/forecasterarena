@@ -7,6 +7,7 @@ const checks = [
   { root: 'lib/db/index.ts', maxLines: 20, extensions: new Set(['.ts']) },
   { root: 'lib/constants/models.ts', maxLines: 20, extensions: new Set(['.ts']) },
   { root: 'lib/application/cron.ts', maxLines: 25, extensions: new Set(['.ts']) },
+  { root: 'lib/application/admin-benchmark.ts', maxLines: 25, extensions: new Set(['.ts']) },
   { root: 'lib/application/cohorts.ts', maxLines: 25, extensions: new Set(['.ts']) },
   { root: 'lib/application/cohorts/shared/index.ts', maxLines: 25, extensions: new Set(['.ts']) },
   { root: 'lib/application/markets/index.ts', maxLines: 25, extensions: new Set(['.ts']) },
@@ -35,7 +36,12 @@ const checks = [
   { root: 'lib/types/entities/trading.ts', maxLines: 20, extensions: new Set(['.ts']) },
   { root: 'app/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/admin/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/admin/benchmark/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/api/admin/action/route.ts', maxLines: 60, extensions: new Set(['.ts']) },
+  { root: 'app/api/admin/benchmark/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/admin/benchmark/configs/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/admin/benchmark/default/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
+  { root: 'app/api/admin/benchmark/releases/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'app/api/admin/costs/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'app/api/admin/export/route.ts', maxLines: 80, extensions: new Set(['.ts']) },
   { root: 'app/api/admin/login/route.ts', maxLines: 60, extensions: new Set(['.ts']) },
@@ -101,6 +107,16 @@ const boundaryRules = [
       { prefix: '@/lib/db', reason: 'model routes must go through the application layer' },
       { prefix: '@/lib/db/', reason: 'model routes must go through the application layer' },
       { prefix: '@/lib/db/queries', reason: 'model routes must go through the application layer' }
+    ]
+  },
+  {
+    root: 'app/api/admin/benchmark',
+    extensions: new Set(['.ts']),
+    disallow: [
+      { prefix: '@/lib/db', reason: 'admin benchmark routes must go through the application layer' },
+      { prefix: '@/lib/db/', reason: 'admin benchmark routes must go through the application layer' },
+      { prefix: '@/lib/db/queries', reason: 'admin benchmark routes must go through the application layer' },
+      { prefix: '@/lib/engine/', reason: 'admin benchmark routes must go through the application layer' }
     ]
   },
   {

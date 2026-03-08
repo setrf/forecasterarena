@@ -5,6 +5,7 @@ export interface Cohort {
   status: string;
   completed_at: string | null;
   methodology_version: string;
+  benchmark_config_id?: string | null;
   initial_balance: number;
 }
 
@@ -12,7 +13,11 @@ export interface AgentStats {
   id: string;
   model_id: string;
   model_slug?: string;
+  family_id?: string | null;
+  release_id?: string | null;
+  benchmark_config_model_id?: string | null;
   model_display_name: string;
+  model_release_name?: string;
   model_color: string;
   cash_balance: number;
   total_invested: number;

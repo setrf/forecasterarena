@@ -4,19 +4,27 @@ export interface Cohort {
   status: string;
   started_at: string;
   completed_at: string | null;
+  benchmark_config_id?: string | null;
   current_week: number;
   total_markets: number;
 }
 
 export interface Model {
   id: string;
+  family_id?: string;
+  slug?: string;
   display_name: string;
   provider: string;
   color: string;
+  release_id?: string;
+  release_name?: string;
+  benchmark_config_model_id?: string | null;
 }
 
 export interface Agent {
   id: string;
+  model_id?: string;
+  benchmark_config_model_id?: string | null;
   status: string;
   cash_balance: number;
   total_invested: number;
