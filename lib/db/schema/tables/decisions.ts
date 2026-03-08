@@ -53,6 +53,9 @@ CREATE TABLE IF NOT EXISTS trades (
   market_id TEXT NOT NULL,                       -- Links to markets
   position_id TEXT,                              -- Links to positions
   decision_id TEXT,                              -- Links to decisions
+  family_id TEXT,                                -- Frozen model family at trade time
+  release_id TEXT,                               -- Frozen model release at trade time
+  benchmark_config_model_id TEXT,                -- Frozen lineup slot at trade time
   trade_type TEXT NOT NULL,                      -- BUY | SELL
   side TEXT NOT NULL,                            -- 'YES', 'NO', or outcome
   shares REAL NOT NULL,                          -- Number of shares
@@ -65,6 +68,9 @@ CREATE TABLE IF NOT EXISTS trades (
   FOREIGN KEY (agent_id) REFERENCES agents(id),
   FOREIGN KEY (market_id) REFERENCES markets(id),
   FOREIGN KEY (position_id) REFERENCES positions(id),
-  FOREIGN KEY (decision_id) REFERENCES decisions(id)
+  FOREIGN KEY (decision_id) REFERENCES decisions(id),
+  FOREIGN KEY (family_id) REFERENCES model_families(id),
+  FOREIGN KEY (release_id) REFERENCES model_releases(id),
+  FOREIGN KEY (benchmark_config_model_id) REFERENCES benchmark_config_models(id)
 );
 `;

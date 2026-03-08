@@ -241,12 +241,13 @@ Operational note:
 
 - current and future cohorts may point at the promoted default config
 - legacy cohorts backfilled during migration can receive cohort-specific `benchmark-config-backfill-<cohort_id>` configs so historical assignments are frozen without rewriting the shared future default
+- active cohorts may also be rolled to the promoted default config through explicit admin rollover or the Sunday decision-refresh path
 
 ---
 
 ### 3.3e `benchmark_config_models`
 
-Frozen family/release assignments inside one benchmark config.
+Frozen family/release assignments inside one benchmark config. Decisions, trades, and brier scores also snapshot release lineage at write time so historical records remain stable after future family rollovers.
 
 Important columns:
 
@@ -646,7 +647,8 @@ passes can safely retry the same market.
 ### 5.4 Aggregate performance curves
 
 `/api/performance-data` groups `portfolio_snapshots` by timestamp and averages
-portfolio values across cohorts when needed.
+portfolio values across cohorts when needed. It also emits `release_changes`
+so charts can annotate where family release upgrades occurred.
 
 ---
 

@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import {
+  applyAdminBenchmarkRollover,
   createAdminBenchmarkConfig,
   createAdminBenchmarkRelease,
   fetchAdminBenchmarkOverview,
+  previewAdminBenchmarkRollover,
   promoteAdminBenchmarkConfig
 } from '@/features/admin/benchmark/api';
 import {
@@ -12,10 +14,11 @@ import {
   buildReleaseFormState
 } from '@/features/admin/benchmark/constants';
 import type {
-  BenchmarkOverview,
-  BenchmarkResultMessage,
-  ConfigFormState,
-  ReleaseFormState
+    BenchmarkOverview,
+    BenchmarkResultMessage,
+    BenchmarkRolloverPreview,
+    ConfigFormState,
+    ReleaseFormState
 } from '@/features/admin/benchmark/types';
 import { loginAdmin, logoutAdmin } from '@/features/admin/dashboard/api';
 
@@ -30,6 +33,9 @@ export function useAdminBenchmarkController() {
   const [releaseLoading, setReleaseLoading] = useState(false);
   const [configLoading, setConfigLoading] = useState(false);
   const [promotingConfigId, setPromotingConfigId] = useState<string | null>(null);
+  const [previewingConfigId, setPreviewingConfigId] = useState<string | null>(null);
+  const [applyingRollover, setApplyingRollover] = useState(false);
+  const [rolloverPreview, setRolloverPreview] = useState<BenchmarkRolloverPreview | null>(null);
   const [releaseState, setReleaseState] = useState<ReleaseFormState>(buildReleaseFormState(null));
   const [configState, setConfigState] = useState<ConfigFormState | null>(null);
 
@@ -222,6 +228,43 @@ export function useAdminBenchmarkController() {
     }
   }
 
+  async function handlePreviewRollover(configId: string) {
+    setPreviewingConfigId(configId);
+    setResult(null);
+
+    try {
+      const preview = await previewAdminBenchmarkRollover(configId);
+      setRolloverPreview(preview);
+    } catch {
+      setResult({ type: 'error', message: 'Failed to preview active cohort rollover' });
+    } finally {
+      setPreviewingConfigId(null);
+    }
+  }
+
+  async function handleApplyRollover() {
+    if (!rolloverPreview) {
+      return;
+    }
+
+    setApplyingRollover(true);
+    setResult(null);
+
+    try {
+      const nextResult = await applyAdminBenchmarkRollover(rolloverPreview.config_id);
+      setResult(nextResult);
+
+      if (nextResult.type === 'success') {
+        setRolloverPreview(null);
+        await loadOverview(true);
+      }
+    } catch {
+      setResult({ type: 'error', message: 'Connection error' });
+    } finally {
+      setApplyingRollover(false);
+    }
+  }
+
   return {
     password,
     isAuthenticated,
@@ -233,6 +276,9 @@ export function useAdminBenchmarkController() {
     releaseLoading,
     configLoading,
     promotingConfigId,
+    previewingConfigId,
+    applyingRollover,
+    rolloverPreview,
     releaseState,
     configState,
     setPassword,
@@ -244,6 +290,9 @@ export function useAdminBenchmarkController() {
     updateConfigAssignment,
     handleCreateRelease,
     handleCreateConfig,
-    handlePromoteConfig
+    handlePromoteConfig,
+    handlePreviewRollover,
+    handleApplyRollover,
+    dismissRolloverPreview: () => setRolloverPreview(null)
   };
 }

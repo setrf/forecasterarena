@@ -193,7 +193,8 @@ Operational rule:
 
 - register new releases and promote future configs through the admin benchmark control plane
 - do not mutate old `models` rows expecting historical cohorts to follow along safely
-- active and historical cohorts must continue using the frozen lineage they already carry
+- active cohorts refresh to the promoted default lineup before Sunday decision runs
+- historical decisions, trades, and brier scores keep their frozen release lineage even after active cohorts refresh
 
 Recommended release-rotation workflow:
 
@@ -201,13 +202,13 @@ Recommended release-rotation workflow:
 2. `POST /api/admin/benchmark/releases` to register the exact release under its existing family.
 3. `POST /api/admin/benchmark/configs` to build the next lineup.
 4. Review the admin benchmark page and confirm every family points to the intended release and price snapshot.
-5. `POST /api/admin/benchmark/default` to make that config the future default.
-6. Verify the next cohort starts with the promoted config while older cohorts keep their previous release lineage.
+5. `POST /api/admin/benchmark/default` to make that config the default lineup.
+6. Use the admin rollover preview/apply flow if you want currently active cohorts to switch immediately.
+7. Verify the next Sunday decision run refreshes active cohorts to the default lineup while historical decision/trade/brier records still show their original releases.
 
 Rollback rule:
 
-- if the wrong future lineup is promoted, promote the previous config again before the next cohort start
-- do not rewrite active cohorts in place
+- if the wrong default lineup is promoted, promote the previous config again or use the admin rollover flow to apply the previous config to active cohorts
 
 ### 5.2 Cohort Existence
 

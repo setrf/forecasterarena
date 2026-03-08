@@ -1,6 +1,8 @@
 import {
   getAllBenchmarkConfigs,
   getAllModelFamilies,
+  getActiveCohorts,
+  getAgentsByCohort,
   getBenchmarkConfigModels,
   getDefaultBenchmarkConfig,
   getModelReleasesByFamily
@@ -15,6 +17,7 @@ import type {
 export function getAdminBenchmarkOverview(): AdminBenchmarkOverview {
   const families = getAllModelFamilies();
   const defaultConfig = getDefaultBenchmarkConfig();
+  const activeCohorts = getActiveCohorts();
   const defaultConfigModels = new Map(
     (defaultConfig ? getBenchmarkConfigModels(defaultConfig.id) : []).map((model) => [model.family_id, model])
   );
@@ -56,6 +59,8 @@ export function getAdminBenchmarkOverview(): AdminBenchmarkOverview {
 
   return {
     default_config_id: defaultConfig?.id ?? null,
+    active_cohort_count: activeCohorts.length,
+    active_agent_count: activeCohorts.reduce((sum, cohort) => sum + getAgentsByCohort(cohort.id).length, 0),
     families: familySummaries,
     configs,
     updated_at: new Date().toISOString()

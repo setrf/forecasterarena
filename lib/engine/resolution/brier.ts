@@ -37,6 +37,9 @@ export function recordBrierScoresForMarket(
       agent_id: trade.agent_id,
       trade_id: trade.id,
       market_id: market.id,
+      family_id: trade.family_id,
+      release_id: trade.release_id,
+      benchmark_config_model_id: trade.benchmark_config_model_id,
       forecast_probability: trade.implied_confidence,
       actual_outcome: trade.side.toUpperCase() === winningOutcome.toUpperCase() ? 1 : 0,
       brier_score: calculateBrierScore(

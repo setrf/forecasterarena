@@ -6,6 +6,9 @@ export function createTrade(trade: {
   market_id: string;
   position_id?: string;
   decision_id?: string;
+  family_id?: string | null;
+  release_id?: string | null;
+  benchmark_config_model_id?: string | null;
   trade_type: 'BUY' | 'SELL';
   side: string;
   shares: number;
@@ -20,16 +23,19 @@ export function createTrade(trade: {
 
   db.prepare(`
     INSERT INTO trades (
-      id, agent_id, market_id, position_id, decision_id,
+      id, agent_id, market_id, position_id, decision_id, family_id, release_id, benchmark_config_model_id,
       trade_type, side, shares, price, total_amount,
       implied_confidence, cost_basis, realized_pnl
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     trade.agent_id,
     trade.market_id,
     trade.position_id,
     trade.decision_id,
+    trade.family_id ?? null,
+    trade.release_id ?? null,
+    trade.benchmark_config_model_id ?? null,
     trade.trade_type,
     trade.side,
     trade.shares,

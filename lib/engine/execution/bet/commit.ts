@@ -4,6 +4,7 @@ import {
   updateAgentBalance,
   upsertPosition
 } from '@/lib/db/queries';
+import { getTradeLineageSnapshot } from '@/lib/db/queries/trade-lineage';
 import type { Agent, Market } from '@/lib/types';
 
 export function commitBetTrade(args: {
@@ -32,6 +33,10 @@ export function commitBetTrade(args: {
       market_id: args.market.id,
       position_id: position.id,
       decision_id: args.decisionId,
+      ...getTradeLineageSnapshot({
+        agentId: args.agentId,
+        decisionId: args.decisionId
+      }),
       trade_type: 'BUY',
       side: args.sideForStorage,
       shares: args.shares,

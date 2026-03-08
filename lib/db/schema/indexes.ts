@@ -22,6 +22,9 @@ CREATE INDEX IF NOT EXISTS idx_positions_agent_status ON positions(agent_id, sta
 CREATE INDEX IF NOT EXISTS idx_trades_agent ON trades(agent_id);
 CREATE INDEX IF NOT EXISTS idx_trades_market ON trades(market_id);
 CREATE INDEX IF NOT EXISTS idx_trades_decision ON trades(decision_id);
+CREATE INDEX IF NOT EXISTS idx_trades_family ON trades(family_id);
+CREATE INDEX IF NOT EXISTS idx_trades_release ON trades(release_id);
+CREATE INDEX IF NOT EXISTS idx_trades_config_model ON trades(benchmark_config_model_id);
 CREATE INDEX IF NOT EXISTS idx_trades_executed ON trades(executed_at DESC);
 
 -- Decisions
@@ -54,6 +57,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_cohorts_started_unique ON cohorts(started_
 CREATE INDEX IF NOT EXISTS idx_brier_agent ON brier_scores(agent_id);
 CREATE INDEX IF NOT EXISTS idx_brier_market ON brier_scores(market_id);
 CREATE INDEX IF NOT EXISTS idx_brier_trade ON brier_scores(trade_id);
+CREATE INDEX IF NOT EXISTS idx_brier_family ON brier_scores(family_id);
+CREATE INDEX IF NOT EXISTS idx_brier_release ON brier_scores(release_id);
+CREATE INDEX IF NOT EXISTS idx_brier_config_model ON brier_scores(benchmark_config_model_id);
 
 -- API Costs
 CREATE INDEX IF NOT EXISTS idx_api_costs_recorded ON api_costs(recorded_at DESC);

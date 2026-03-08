@@ -33,9 +33,29 @@ export interface AdminBenchmarkConfigSummary extends BenchmarkConfig {
 
 export interface AdminBenchmarkOverview {
   default_config_id: string | null;
+  active_cohort_count: number;
+  active_agent_count: number;
   families: AdminBenchmarkFamilySummary[];
   configs: AdminBenchmarkConfigSummary[];
   updated_at: string;
+}
+
+export interface AdminBenchmarkRolloverFamilyChange {
+  family_id: string;
+  family_name: string;
+  from_release_name: string | null;
+  to_release_name: string;
+  affected_agents: number;
+}
+
+export interface AdminBenchmarkRolloverPreview {
+  config_id: string;
+  version_name: string;
+  active_cohorts: number;
+  active_agents: number;
+  impacted_cohorts: number;
+  impacted_agents: number;
+  family_changes: AdminBenchmarkRolloverFamilyChange[];
 }
 
 export interface CreateAdminModelReleaseInput {

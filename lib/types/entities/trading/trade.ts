@@ -4,6 +4,9 @@ export interface Trade {
   market_id: string;
   position_id: string | null;
   decision_id: string | null;
+  family_id: string | null;
+  release_id: string | null;
+  benchmark_config_model_id: string | null;
   trade_type: 'BUY' | 'SELL';
   side: string;
   shares: number;

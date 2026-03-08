@@ -32,13 +32,19 @@ CREATE TABLE IF NOT EXISTS brier_scores (
   agent_id TEXT NOT NULL,                        -- Links to agents
   trade_id TEXT NOT NULL,                        -- Links to trades
   market_id TEXT NOT NULL,                       -- Links to markets
+  family_id TEXT,                                -- Frozen model family at score time
+  release_id TEXT,                               -- Frozen model release at score time
+  benchmark_config_model_id TEXT,                -- Frozen lineup slot at score time
   forecast_probability REAL NOT NULL,            -- Implied probability
   actual_outcome REAL NOT NULL,                  -- 1 (win) or 0 (loss)
   brier_score REAL NOT NULL,                     -- Calculated score
   calculated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id),
   FOREIGN KEY (trade_id) REFERENCES trades(id),
-  FOREIGN KEY (market_id) REFERENCES markets(id)
+  FOREIGN KEY (market_id) REFERENCES markets(id),
+  FOREIGN KEY (family_id) REFERENCES model_families(id),
+  FOREIGN KEY (release_id) REFERENCES model_releases(id),
+  FOREIGN KEY (benchmark_config_model_id) REFERENCES benchmark_config_models(id)
 );
 
 -- ============================================================================

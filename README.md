@@ -39,8 +39,9 @@ The codebase now separates **legacy model IDs**, **stable benchmark families**, 
 - `models.id` remains as a legacy compatibility key
 - `model_families` defines the long-lived benchmark slot
 - `model_releases` defines the exact deployed model
-- `benchmark_configs` freeze the lineup used for future cohorts
+- `benchmark_configs` define the default lineup used for future cohorts and Sunday refreshes of active cohorts
 - `agents.family_id`, `agents.release_id`, and `agents.benchmark_config_model_id` freeze that identity onto each cohort participant
+- `decisions`, `trades`, and `brier_scores` freeze release lineage at write time so historical records remain correct after family rollovers
 
 | Family | Legacy ID | Current Release | Provider | OpenRouter ID |
 |--------|-----------|-----------------|----------|---------------|

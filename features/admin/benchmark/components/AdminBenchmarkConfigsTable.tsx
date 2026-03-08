@@ -3,20 +3,24 @@ import type { BenchmarkOverview } from '@/features/admin/benchmark/types';
 interface AdminBenchmarkConfigsTableProps {
   overview: BenchmarkOverview;
   promotingConfigId: string | null;
+  previewingConfigId: string | null;
   onPromote: (configId: string) => void;
+  onPreviewRollover: (configId: string) => void;
 }
 
 export function AdminBenchmarkConfigsTable({
   overview,
   promotingConfigId,
-  onPromote
+  previewingConfigId,
+  onPromote,
+  onPreviewRollover
 }: AdminBenchmarkConfigsTableProps) {
   return (
     <div className="glass-card p-6 border border-[var(--border-medium)]">
       <div className="mb-4">
         <h2 className="text-xl font-semibold">Recent Benchmark Configs</h2>
         <p className="text-sm text-[var(--text-muted)]">
-          Promotion changes only future cohorts. Existing cohorts keep their frozen lineup.
+          Promotion changes the default lineup for future cohorts. Use active rollover preview to see and confirm immediate changes for running cohorts.
         </p>
       </div>
 
@@ -59,13 +63,22 @@ export function AdminBenchmarkConfigsTable({
                     {isDefault ? (
                       <span className="text-[var(--text-muted)] text-sm">In use</span>
                     ) : (
-                      <button
-                        onClick={() => onPromote(config.id)}
-                        disabled={promotingConfigId !== null}
-                        className="btn btn-secondary text-sm"
-                      >
-                        {promotingConfigId === config.id ? 'Promoting...' : `Promote ${config.version_name}`}
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => onPreviewRollover(config.id)}
+                          disabled={promotingConfigId !== null || previewingConfigId !== null}
+                          className="btn btn-secondary text-sm"
+                        >
+                          {previewingConfigId === config.id ? 'Previewing...' : 'Preview active rollout'}
+                        </button>
+                        <button
+                          onClick={() => onPromote(config.id)}
+                          disabled={promotingConfigId !== null || previewingConfigId !== null}
+                          className="btn btn-secondary text-sm"
+                        >
+                          {promotingConfigId === config.id ? 'Promoting...' : `Promote default`}
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

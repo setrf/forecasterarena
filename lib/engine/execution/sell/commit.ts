@@ -4,6 +4,7 @@ import {
   reducePosition,
   updateAgentBalance
 } from '@/lib/db/queries';
+import { getTradeLineageSnapshot } from '@/lib/db/queries/trade-lineage';
 import type { Agent, Market, Position } from '@/lib/types';
 
 export function commitSellTrade(args: {
@@ -24,6 +25,10 @@ export function commitSellTrade(args: {
       market_id: args.market.id,
       position_id: args.position.id,
       decision_id: args.decisionId,
+      ...getTradeLineageSnapshot({
+        agentId: args.agentId,
+        decisionId: args.decisionId
+      }),
       trade_type: 'SELL',
       side: args.position.side,
       shares: args.sharesToSell,

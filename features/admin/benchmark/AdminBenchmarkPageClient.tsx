@@ -4,6 +4,7 @@ import { AdminBenchmarkConfigBuilder } from '@/features/admin/benchmark/componen
 import { AdminBenchmarkConfigsTable } from '@/features/admin/benchmark/components/AdminBenchmarkConfigsTable';
 import { AdminBenchmarkCurrentLineup } from '@/features/admin/benchmark/components/AdminBenchmarkCurrentLineup';
 import { AdminBenchmarkReleaseForm } from '@/features/admin/benchmark/components/AdminBenchmarkReleaseForm';
+import { AdminBenchmarkRolloverPreview } from '@/features/admin/benchmark/components/AdminBenchmarkRolloverPreview';
 import { useAdminBenchmarkController } from '@/features/admin/benchmark/useAdminBenchmarkController';
 import { AdminLoginCard } from '@/features/admin/dashboard/components/AdminLoginCard';
 import { AdminNavigationLinks } from '@/features/admin/dashboard/components/AdminNavigationLinks';
@@ -21,6 +22,9 @@ export default function AdminBenchmarkPageClient() {
     releaseLoading,
     configLoading,
     promotingConfigId,
+    previewingConfigId,
+    applyingRollover,
+    rolloverPreview,
     releaseState,
     configState,
     setPassword,
@@ -32,7 +36,10 @@ export default function AdminBenchmarkPageClient() {
     updateConfigAssignment,
     handleCreateRelease,
     handleCreateConfig,
-    handlePromoteConfig
+    handlePromoteConfig,
+    handlePreviewRollover,
+    handleApplyRollover,
+    dismissRolloverPreview
   } = useAdminBenchmarkController();
 
   if (!hasResolvedAuth) {
@@ -85,6 +92,14 @@ export default function AdminBenchmarkPageClient() {
 
       <AdminResultBanner result={result} />
       <AdminBenchmarkCurrentLineup overview={overview} />
+      {rolloverPreview && (
+        <AdminBenchmarkRolloverPreview
+          preview={rolloverPreview}
+          applying={applyingRollover}
+          onApply={handleApplyRollover}
+          onCancel={dismissRolloverPreview}
+        />
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
         <AdminBenchmarkReleaseForm
@@ -109,7 +124,9 @@ export default function AdminBenchmarkPageClient() {
         <AdminBenchmarkConfigsTable
           overview={overview}
           promotingConfigId={promotingConfigId}
+          previewingConfigId={previewingConfigId}
           onPromote={handlePromoteConfig}
+          onPreviewRollover={handlePreviewRollover}
         />
       </div>
 

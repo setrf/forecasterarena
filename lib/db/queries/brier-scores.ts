@@ -5,6 +5,9 @@ export function createBrierScore(score: {
   agent_id: string;
   trade_id: string;
   market_id: string;
+  family_id?: string | null;
+  release_id?: string | null;
+  benchmark_config_model_id?: string | null;
   forecast_probability: number;
   actual_outcome: number;
   brier_score: number;
@@ -24,14 +27,17 @@ export function createBrierScore(score: {
 
   db.prepare(`
     INSERT INTO brier_scores (
-      id, agent_id, trade_id, market_id,
+      id, agent_id, trade_id, market_id, family_id, release_id, benchmark_config_model_id,
       forecast_probability, actual_outcome, brier_score
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     score.agent_id,
     score.trade_id,
     score.market_id,
+    score.family_id ?? null,
+    score.release_id ?? null,
+    score.benchmark_config_model_id ?? null,
     score.forecast_probability,
     score.actual_outcome,
     score.brier_score
