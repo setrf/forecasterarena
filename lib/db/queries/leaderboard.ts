@@ -5,13 +5,7 @@ import type { CohortSummary, LeaderboardEntry } from '../../types';
 export function getAggregateLeaderboard(): LeaderboardEntry[] {
   const db = getDb();
   const results = db.prepare(`
-    WITH latest_snapshots AS (
-      SELECT
-        ps.*,
-        ROW_NUMBER() OVER (PARTITION BY ps.agent_id ORDER BY ps.snapshot_timestamp DESC) as rn
-      FROM portfolio_snapshots ps
-    ),
-    open_position_values AS (
+    WITH open_position_values AS (
       SELECT
         p.agent_id,
         COALESCE(SUM(COALESCE(p.current_value, p.total_cost)), 0) as total_position_value
@@ -39,17 +33,33 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         ai.display_name,
         ai.provider,
         ai.color,
-        COUNT(DISTINCT a.id) as num_cohorts,
+        COUNT(*) as num_cohorts,
         SUM(
           COALESCE(
-            ls.total_pnl,
+            (
+              SELECT ps.total_pnl
+              FROM portfolio_snapshots ps
+              WHERE ps.agent_id = a.id
+              ORDER BY ps.snapshot_timestamp DESC
+              LIMIT 1
+            ),
             a.cash_balance + COALESCE(op.total_position_value, 0) - ?
           )
         ) as total_pnl,
-        SUM(COALESCE(ls.num_resolved_bets, 0)) as total_resolved_bets
+        SUM(
+          COALESCE(
+            (
+              SELECT ps.num_resolved_bets
+              FROM portfolio_snapshots ps
+              WHERE ps.agent_id = a.id
+              ORDER BY ps.snapshot_timestamp DESC
+              LIMIT 1
+            ),
+            0
+          )
+        ) as total_resolved_bets
       FROM agents a
       JOIN agent_identity ai ON ai.agent_id = a.id
-      LEFT JOIN latest_snapshots ls ON a.id = ls.agent_id AND ls.rn = 1
       LEFT JOIN open_position_values op ON a.id = op.agent_id
       GROUP BY
         ai.family_slug,

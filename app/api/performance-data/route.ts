@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       getPerformanceData(searchParams.get('range'), searchParams.get('cohort_id'))
     );
 
-    response.headers.set('Cache-Control', 'no-store');
+    response.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=45');
     return response;
   } catch (error) {
     return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });

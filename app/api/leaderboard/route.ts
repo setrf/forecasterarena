@@ -16,7 +16,7 @@ export async function GET() {
   try {
     const response = NextResponse.json(getLeaderboardData());
 
-    response.headers.set('Cache-Control', 'no-store');
+    response.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=45');
     return response;
   } catch (error) {
     return NextResponse.json(
@@ -25,4 +25,3 @@ export async function GET() {
     );
   }
 }
-

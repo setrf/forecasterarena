@@ -11,7 +11,21 @@ export interface ReleaseChangeEvent {
   color: string;
 }
 
+interface PerformancePayload {
+  data: Array<Record<string, number | string>>;
+  models: ReturnType<typeof getPublicCatalogModels>;
+  release_changes: ReleaseChangeEvent[];
+  range: PerformanceTimeRange;
+  updated_at: string;
+}
+
 const VALID_RANGES = new Set<PerformanceTimeRange>(['10M', '1H', '1D', '1W', '1M', '3M', 'ALL']);
+const PERFORMANCE_CACHE_TTL_MS = 15_000;
+
+const performanceCache = new Map<string, {
+  expiresAt: number;
+  data: PerformancePayload;
+}>();
 
 function normalizeRange(rawRange: string | null): PerformanceTimeRange {
   return VALID_RANGES.has(rawRange as PerformanceTimeRange)
@@ -47,6 +61,23 @@ function getRangeStart(range: PerformanceTimeRange, now: Date): string {
   }
 
   return start.toISOString();
+}
+
+function getBucketSeconds(range: PerformanceTimeRange): number {
+  switch (range) {
+    case '10M':
+    case '1H':
+    case '1D':
+      return 600;
+    case '1W':
+      return 3600;
+    case '1M':
+      return 21600;
+    case '3M':
+      return 86400;
+    case 'ALL':
+      return 604800;
+  }
 }
 
 export function getReleaseChangeEvents(args?: {
@@ -176,23 +207,37 @@ export function getReleaseChangeEvents(args?: {
   return events.sort((left, right) => left.date.localeCompare(right.date));
 }
 
-export function getPerformanceData(rawRange: string | null, cohortId: string | null) {
+export function getPerformanceData(rawRange: string | null, cohortId: string | null): PerformancePayload {
   const range = normalizeRange(rawRange);
+  const cacheKey = `${range}::${cohortId ?? 'all'}`;
+  const now = new Date();
+  const nowMs = now.getTime();
+  const cached = performanceCache.get(cacheKey);
+  if (cached && cached.expiresAt > nowMs) {
+    return cached.data;
+  }
+
   const db = getDb();
-  const params: Array<string | number> = [getRangeStart(range, new Date())];
+  const bucketSeconds = getBucketSeconds(range);
+  const params: Array<string | number> = [bucketSeconds, bucketSeconds, bucketSeconds, getRangeStart(range, now)];
 
   let query = `
-    SELECT
-      ps.snapshot_timestamp,
-      COALESCE(abi.family_slug, abi.family_id) as family_slug,
-      abi.family_id,
-      COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
-      COALESCE(abi.color, '#94A3B8') as color,
-      ps.total_value
-    FROM portfolio_snapshots ps
-    JOIN agents a ON ps.agent_id = a.id
-    LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
-    WHERE ps.snapshot_timestamp >= ?
+    WITH filtered_snapshots AS (
+      SELECT
+        ps.agent_id,
+        CAST(unixepoch(ps.snapshot_timestamp) / ? AS INTEGER) * ? as bucket_epoch,
+        COALESCE(abi.family_slug, abi.family_id) as family_slug,
+        COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
+        COALESCE(abi.color, '#94A3B8') as color,
+        ps.total_value,
+        ROW_NUMBER() OVER (
+          PARTITION BY ps.agent_id, CAST(unixepoch(ps.snapshot_timestamp) / ? AS INTEGER)
+          ORDER BY ps.snapshot_timestamp DESC
+        ) as rn
+      FROM portfolio_snapshots ps
+      JOIN agents a ON ps.agent_id = a.id
+      LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
+      WHERE ps.snapshot_timestamp >= ?
   `;
 
   if (cohortId) {
@@ -200,7 +245,30 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
     params.push(cohortId);
   }
 
-  query += ' ORDER BY ps.snapshot_timestamp ASC, display_name ASC';
+  query += `
+    ),
+    bucketed_family_snapshots AS (
+      SELECT
+        datetime(bucket_epoch, 'unixepoch') as snapshot_timestamp,
+        family_slug,
+        display_name,
+        color,
+        AVG(total_value) as total_value
+      FROM filtered_snapshots
+      WHERE rn = 1
+      -- Downsample to a bucketed family-level series so chart payloads stay small
+      -- and the API does not have to ship every per-agent snapshot to the browser.
+      GROUP BY bucket_epoch, family_slug, display_name, color
+    )
+    SELECT
+      snapshot_timestamp,
+      family_slug,
+      display_name,
+      color,
+      total_value
+    FROM bucketed_family_snapshots
+  `;
+  query += ' ORDER BY snapshot_timestamp ASC, display_name ASC';
 
   const rows = db.prepare(query).all(...params) as Array<{
     snapshot_timestamp: string;
@@ -241,11 +309,18 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
     });
   });
 
-  return {
+  const data = {
     data: Array.from(dataByDate.values()),
     models: getPublicCatalogModels(),
     release_changes: getReleaseChangeEvents({ cohortId }),
     range,
-    updated_at: new Date().toISOString()
+    updated_at: now.toISOString()
   };
+
+  performanceCache.set(cacheKey, {
+    expiresAt: nowMs + PERFORMANCE_CACHE_TTL_MS,
+    data
+  });
+
+  return data;
 }
