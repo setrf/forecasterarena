@@ -82,11 +82,11 @@ export function buildQueries(includePrompts: boolean): ExportQueries {
     },
     decisions: {
       columns: includePrompts
-        ? ['id', 'agent_id', 'cohort_id', 'decision_week', 'decision_timestamp', 'prompt_system', 'prompt_user', 'raw_response', 'parsed_response', 'retry_count', 'action', 'reasoning', 'tokens_input', 'tokens_output', 'api_cost_usd', 'response_time_ms', 'error_message', 'created_at']
-        : ['id', 'agent_id', 'cohort_id', 'decision_week', 'decision_timestamp', 'parsed_response', 'retry_count', 'action', 'reasoning', 'tokens_input', 'tokens_output', 'api_cost_usd', 'response_time_ms', 'error_message', 'created_at'],
+        ? ['id', 'agent_id', 'cohort_id', 'family_id', 'release_id', 'benchmark_config_model_id', 'decision_week', 'decision_timestamp', 'prompt_system', 'prompt_user', 'raw_response', 'parsed_response', 'retry_count', 'action', 'reasoning', 'tokens_input', 'tokens_output', 'api_cost_usd', 'response_time_ms', 'error_message', 'created_at']
+        : ['id', 'agent_id', 'cohort_id', 'family_id', 'release_id', 'benchmark_config_model_id', 'decision_week', 'decision_timestamp', 'parsed_response', 'retry_count', 'action', 'reasoning', 'tokens_input', 'tokens_output', 'api_cost_usd', 'response_time_ms', 'error_message', 'created_at'],
       sql: `SELECT ${includePrompts
-        ? 'id, agent_id, cohort_id, decision_week, decision_timestamp, prompt_system, prompt_user, raw_response, parsed_response, retry_count, action, reasoning, tokens_input, tokens_output, api_cost_usd, response_time_ms, error_message, created_at'
-        : 'id, agent_id, cohort_id, decision_week, decision_timestamp, parsed_response, retry_count, action, reasoning, tokens_input, tokens_output, api_cost_usd, response_time_ms, error_message, created_at'}
+        ? 'id, agent_id, cohort_id, family_id, release_id, benchmark_config_model_id, decision_week, decision_timestamp, prompt_system, prompt_user, raw_response, parsed_response, retry_count, action, reasoning, tokens_input, tokens_output, api_cost_usd, response_time_ms, error_message, created_at'
+        : 'id, agent_id, cohort_id, family_id, release_id, benchmark_config_model_id, decision_week, decision_timestamp, parsed_response, retry_count, action, reasoning, tokens_input, tokens_output, api_cost_usd, response_time_ms, error_message, created_at'}
             FROM decisions
             WHERE cohort_id = ?
               AND decision_timestamp >= ?

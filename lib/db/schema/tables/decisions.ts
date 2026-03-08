@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS decisions (
   id TEXT PRIMARY KEY,                           -- UUID
   agent_id TEXT NOT NULL,                        -- Links to agents
   cohort_id TEXT NOT NULL,                       -- Links to cohorts
+  family_id TEXT,                                -- Frozen model family at decision time
+  release_id TEXT,                               -- Frozen model release at decision time
+  benchmark_config_model_id TEXT,                -- Frozen lineup slot at decision time
   decision_week INTEGER NOT NULL,                -- Week number in cohort
   decision_timestamp TEXT NOT NULL,              -- When decision was made
   
@@ -32,7 +35,10 @@ CREATE TABLE IF NOT EXISTS decisions (
   
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (agent_id) REFERENCES agents(id),
-  FOREIGN KEY (cohort_id) REFERENCES cohorts(id)
+  FOREIGN KEY (cohort_id) REFERENCES cohorts(id),
+  FOREIGN KEY (family_id) REFERENCES model_families(id),
+  FOREIGN KEY (release_id) REFERENCES model_releases(id),
+  FOREIGN KEY (benchmark_config_model_id) REFERENCES benchmark_config_models(id)
 );
 
 -- ============================================================================

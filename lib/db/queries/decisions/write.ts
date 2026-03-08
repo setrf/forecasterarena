@@ -4,6 +4,7 @@ import {
   DECISION_PLACEHOLDER_PROMPT,
 } from '@/lib/db/queries/decisions/constants';
 import { getDecisionById } from '@/lib/db/queries/decisions/getters';
+import { getDecisionLineageSnapshot } from '@/lib/db/queries/decisions/lineage';
 import type {
   CreateDecisionInput,
   DecisionErrorDetails,
@@ -15,18 +16,22 @@ export function createDecision(decision: CreateDecisionInput): Decision {
   const db = getDb();
   const id = generateId();
   const now = new Date().toISOString();
+  const lineage = getDecisionLineageSnapshot(decision.agent_id);
 
   db.prepare(`
     INSERT INTO decisions (
-      id, agent_id, cohort_id, decision_week, decision_timestamp,
+      id, agent_id, cohort_id, family_id, release_id, benchmark_config_model_id, decision_week, decision_timestamp,
       prompt_system, prompt_user, raw_response, parsed_response, retry_count,
       action, reasoning, tokens_input, tokens_output, api_cost_usd,
       response_time_ms, error_message
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     decision.agent_id,
     decision.cohort_id,
+    lineage.family_id,
+    lineage.release_id,
+    lineage.benchmark_config_model_id,
     decision.decision_week,
     now,
     decision.prompt_system,

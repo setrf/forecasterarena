@@ -8,13 +8,13 @@ export function getRecentModelDecisions(
     SELECT
       d.*,
       c.cohort_number,
-      abi.release_id as model_release_id,
-      abi.release_display_name as model_release_name
+      dbi.release_id as model_release_id,
+      dbi.release_display_name as model_release_name
     FROM decisions d
     JOIN agents a ON d.agent_id = a.id
     JOIN cohorts c ON d.cohort_id = c.id
-    LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
-    WHERE a.family_id = ?
+    LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
+    WHERE COALESCE(dbi.family_id, a.family_id) = ?
     ORDER BY d.decision_timestamp DESC
     LIMIT 20
   `).all(familyId) as Array<Record<string, unknown>>;

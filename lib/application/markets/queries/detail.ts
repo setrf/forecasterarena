@@ -50,15 +50,17 @@ export function selectMarketTrades(
   return db.prepare(`
     SELECT
       t.*,
-      COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_display_name,
-      abi.release_display_name as model_release_name,
-      COALESCE(abi.color, '#94A3B8') as model_color,
-      COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as family_slug,
-      abi.legacy_model_id as legacy_model_id,
-      abi.family_id,
-      abi.release_id
+      COALESCE(dbi.family_display_name, abi.family_display_name, abi.release_display_name, a.model_id) as model_display_name,
+      COALESCE(dbi.release_display_name, abi.release_display_name) as model_release_name,
+      COALESCE(dbi.color, abi.color, '#94A3B8') as model_color,
+      COALESCE(dbi.family_slug, abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as family_slug,
+      COALESCE(dbi.legacy_model_id, abi.legacy_model_id) as legacy_model_id,
+      COALESCE(dbi.family_id, abi.family_id) as family_id,
+      COALESCE(dbi.release_id, abi.release_id) as release_id
     FROM trades t
     JOIN agents a ON t.agent_id = a.id
+    LEFT JOIN decisions d ON d.id = t.decision_id
+    LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
     LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     WHERE t.market_id = ?
     ORDER BY t.executed_at DESC
@@ -73,15 +75,18 @@ export function selectMarketBrierScores(
   return db.prepare(`
     SELECT
       bs.*,
-      COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_display_name,
-      abi.release_display_name as model_release_name,
-      COALESCE(abi.color, '#94A3B8') as model_color,
-      COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as family_slug,
-      abi.legacy_model_id as legacy_model_id,
-      abi.family_id,
-      abi.release_id
+      COALESCE(dbi.family_display_name, abi.family_display_name, abi.release_display_name, a.model_id) as model_display_name,
+      COALESCE(dbi.release_display_name, abi.release_display_name) as model_release_name,
+      COALESCE(dbi.color, abi.color, '#94A3B8') as model_color,
+      COALESCE(dbi.family_slug, abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as family_slug,
+      COALESCE(dbi.legacy_model_id, abi.legacy_model_id) as legacy_model_id,
+      COALESCE(dbi.family_id, abi.family_id) as family_id,
+      COALESCE(dbi.release_id, abi.release_id) as release_id
     FROM brier_scores bs
     JOIN agents a ON bs.agent_id = a.id
+    LEFT JOIN trades t ON t.id = bs.trade_id
+    LEFT JOIN decisions d ON d.id = t.decision_id
+    LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
     LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     WHERE bs.market_id = ?
     ORDER BY bs.brier_score ASC

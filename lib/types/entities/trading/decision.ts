@@ -2,6 +2,9 @@ export interface Decision {
   id: string;
   agent_id: string;
   cohort_id: string;
+  family_id: string | null;
+  release_id: string | null;
+  benchmark_config_model_id: string | null;
   decision_week: number;
   decision_timestamp: string;
   prompt_system: string;

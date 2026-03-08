@@ -4,13 +4,15 @@ import { modelIdentityFoundationMigration } from '@/lib/db/migrations/002_model_
 import { apiCostLineageMigration } from '@/lib/db/migrations/003_api_cost_lineage';
 import { lineageWriteGuardsMigration } from '@/lib/db/migrations/004_lineage_write_guards';
 import { agentsBenchmarkSlotIdentityMigration } from '@/lib/db/migrations/005_agents_benchmark_slot_identity';
+import { decisionLineageMigration } from '@/lib/db/migrations/006_decision_lineage';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
 const MIGRATIONS: DbMigration[] = [
   modelIdentityFoundationMigration,
   apiCostLineageMigration,
   lineageWriteGuardsMigration,
-  agentsBenchmarkSlotIdentityMigration
+  agentsBenchmarkSlotIdentityMigration,
+  decisionLineageMigration
 ];
 
 export function runMigrations(db: Database.Database): void {
