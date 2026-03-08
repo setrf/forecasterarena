@@ -1,5 +1,6 @@
 import React from 'react';
 import { beforeAll, describe, expect, it } from 'vitest';
+import AdminBenchmarkPageClient from '@/features/admin/benchmark/AdminBenchmarkPageClient';
 import AdminDashboardPageClient from '@/features/admin/dashboard/AdminDashboardPageClient';
 import CohortDetailPageClient from '@/features/cohorts/detail/CohortDetailPageClient';
 import HomePageClient from '@/features/home/HomePageClient';
@@ -20,6 +21,11 @@ describe('page wiring', () => {
   it('keeps the admin route bound to the admin dashboard feature shell', async () => {
     const module = await import('@/app/admin/page');
     expect(module.default().type).toBe(AdminDashboardPageClient);
+  });
+
+  it('keeps the admin benchmark route bound to the benchmark feature shell', async () => {
+    const module = await import('@/app/admin/benchmark/page');
+    expect(module.default().type).toBe(AdminBenchmarkPageClient);
   });
 
   it('keeps the market detail route bound to the market detail feature shell', async () => {
