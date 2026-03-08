@@ -13,6 +13,7 @@ export interface Model {
   id: string;
   family_id?: string;
   slug?: string;
+  legacy_model_id?: string | null;
   display_name: string;
   provider: string;
   color: string;
@@ -24,6 +25,7 @@ export interface Model {
 export interface Agent {
   id: string;
   model_id?: string;
+  legacy_model_id?: string | null;
   benchmark_config_model_id?: string | null;
   status: string;
   cash_balance: number;

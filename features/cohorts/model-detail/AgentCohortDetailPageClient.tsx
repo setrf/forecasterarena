@@ -27,7 +27,7 @@ export default function AgentCohortDetailPageClient() {
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
-  const chartKey = data?.model?.id ?? modelId;
+  const chartKey = data?.model?.slug ?? data?.model?.id ?? modelId;
   const chartData = useMemo(() => createAgentCohortChartData(data, chartKey), [data, chartKey]);
   const chartModels = data?.model ? [{
     id: chartKey,

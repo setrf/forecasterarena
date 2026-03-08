@@ -3,6 +3,7 @@ import { getActiveModelFamilies } from '@/lib/db/queries';
 
 type RawModelCost = {
   public_model_id: string;
+  public_model_slug: string | null;
   family_id: string | null;
   model_name: string;
   color: string;
@@ -17,7 +18,8 @@ export function getAdminCosts() {
 
   const rawCosts = db.prepare(`
     SELECT
-      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as public_model_id,
+      COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as public_model_id,
+      COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as public_model_slug,
       abi.family_id,
       COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_name,
       COALESCE(abi.color, '#94A3B8') as color,
@@ -29,7 +31,8 @@ export function getAdminCosts() {
     LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     LEFT JOIN decisions d ON a.id = d.agent_id
     GROUP BY
-      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id),
+      COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id),
+      COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id),
       abi.family_id,
       COALESCE(abi.family_display_name, abi.release_display_name, a.model_id),
       COALESCE(abi.color, '#94A3B8')
@@ -39,13 +42,14 @@ export function getAdminCosts() {
   const families = getActiveModelFamilies();
 
   const costsByModel = families.map((family) => {
-    const publicModelId = family.legacy_model_id ?? family.slug ?? family.id;
+    const publicModelId = family.slug ?? family.id;
     const existing = rawCosts.find((cost) => (
       cost.family_id === family.id ||
       cost.public_model_id === publicModelId
     ));
     return existing || {
       public_model_id: publicModelId,
+      public_model_slug: family.slug,
       family_id: family.id,
       family_slug: family.slug,
       legacy_model_id: family.legacy_model_id,
@@ -59,6 +63,7 @@ export function getAdminCosts() {
   }).map((cost) => ({
     ...cost,
     model_id: cost.public_model_id,
+    public_model_slug: cost.public_model_slug ?? families.find((family) => family.id === cost.family_id)?.slug ?? null,
     family_id: cost.family_id,
     family_slug: families.find((family) => family.id === cost.family_id)?.slug ?? null,
     legacy_model_id: families.find((family) => family.id === cost.family_id)?.legacy_model_id ?? null

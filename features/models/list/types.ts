@@ -1,5 +1,8 @@
 export interface ModelStats {
   model_id: string;
+  model_slug?: string;
+  family_id?: string | null;
+  legacy_model_id?: string | null;
   total_pnl: number;
   avg_brier_score: number | null;
   win_rate: number | null;

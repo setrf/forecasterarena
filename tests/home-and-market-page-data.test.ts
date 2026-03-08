@@ -12,7 +12,10 @@ describe('home page data helpers', () => {
       .mockResolvedValueOnce(mockResponse(true, {
         leaderboard: [
           {
-            model_id: 'gpt-5.1',
+            model_id: 'openai-gpt',
+            model_slug: 'openai-gpt',
+            family_id: 'openai-gpt',
+            legacy_model_id: 'gpt-5.1',
             display_name: 'GPT-5.2',
             provider: 'OpenAI',
             color: '#10B981',
@@ -34,7 +37,8 @@ describe('home page data helpers', () => {
       models: [],
       leaderboard: [
         expect.objectContaining({
-          model_id: 'gpt-5.1',
+          model_id: 'openai-gpt',
+          legacy_model_id: 'gpt-5.1',
           total_pnl: 100
         })
       ],
@@ -61,7 +65,7 @@ describe('home page data helpers', () => {
         data: [{ date: '2030-01-01T00:00:00.000Z', 'kimi-k2': 10002 }],
         models: [
           { id: 'kimi-k2', name: 'Kimi', color: '#EC4899', provider: 'Moonshot AI' },
-          { id: 'gpt-5.1', displayName: 'GPT', color: '#10B981', provider: 'OpenAI' }
+          { id: 'openai-gpt', legacy_model_id: 'gpt-5.1', displayName: 'GPT', color: '#10B981', provider: 'OpenAI' }
         ]
       })));
 
@@ -69,7 +73,7 @@ describe('home page data helpers', () => {
       data: [{ date: '2030-01-01T00:00:00.000Z', 'kimi-k2': 10002 }],
       models: [
         expect.objectContaining({ id: 'kimi-k2', displayName: 'Kimi' }),
-        expect.objectContaining({ id: 'gpt-5.1', displayName: 'GPT' })
+        expect.objectContaining({ id: 'openai-gpt', legacy_model_id: 'gpt-5.1', displayName: 'GPT' })
       ]
     });
   });

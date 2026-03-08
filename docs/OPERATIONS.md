@@ -313,8 +313,8 @@ Current safeguards:
 
 - the operation is week-unique,
 - repeated calls in the same week return the existing cohort,
-- agent creation is physically idempotent by `(cohort_id, model_id)`,
-- the frozen lineup actually used by the cohort is carried by `benchmark_config_id` and each agent’s `benchmark_config_model_id`.
+- agent creation is physically idempotent by the legacy storage key `(cohort_id, model_id)`,
+- the canonical benchmark identity is carried by `benchmark_config_id` and each agent’s `benchmark_config_model_id`.
 
 ### 6.3 Run Decisions
 
@@ -435,7 +435,7 @@ ORDER BY cohort_number DESC;
 ```
 
 ```sql
-SELECT id, cohort_id, model_id
+SELECT id, cohort_id, model_id, family_id, release_id, benchmark_config_model_id
 FROM agents
 WHERE family_id IS NULL
    OR release_id IS NULL

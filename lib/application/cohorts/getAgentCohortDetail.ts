@@ -76,9 +76,10 @@ export function getAgentCohortDetail(
         total_markets: getCohortMarketCount(db, cohortId)
       },
       model: {
-        id: family.legacy_model_id ?? family.slug ?? family.id,
+        id: family.slug ?? family.id,
         family_id: family.id,
         slug: family.slug,
+        legacy_model_id: family.legacy_model_id,
         display_name: agent.model.family_display_name,
         provider: agent.model.provider,
         color: agent.model.color,
@@ -88,7 +89,8 @@ export function getAgentCohortDetail(
       },
       agent: {
         id: agent.id,
-        model_id: agent.model_id,
+        model_id: agent.model.family_slug ?? agent.family_id ?? agent.model_id,
+        legacy_model_id: agent.model.legacy_model_id,
         benchmark_config_model_id: agent.benchmark_config_model_id,
         status: agent.status,
         cash_balance: agent.cash_balance,

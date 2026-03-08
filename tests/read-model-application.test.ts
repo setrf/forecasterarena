@@ -305,6 +305,11 @@ describe('models application', () => {
       `).run('2026-03-11T00:00:00.000Z', decision2.id);
 
       const { getModelDetail } = await import('@/lib/application/models');
+      const family = db.prepare(`
+        SELECT slug
+        FROM model_families
+        WHERE legacy_model_id = ?
+      `).get(firstModel.id) as { slug: string };
 
       expect(getModelDetail('missing')).toEqual({
         status: 'not_found',
@@ -317,7 +322,8 @@ describe('models application', () => {
         throw new Error('Expected model detail result');
       }
 
-      expect(result.data.model.id).toBe(firstModel.id);
+      expect(result.data.model.id).toBe(family.slug);
+      expect(result.data.model.legacy_model_id).toBe(firstModel.id);
       expect(result.data.num_cohorts).toBe(2);
       expect(result.data.total_pnl).toBe(0);
       expect(result.data.avg_pnl_percent).toBe(0);

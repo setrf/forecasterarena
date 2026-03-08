@@ -10,6 +10,7 @@ export interface CohortDetailPayload {
     id: string;
     model_id: string;
     model_slug?: string;
+    legacy_model_id?: string | null;
     family_id?: string | null;
     release_id?: string | null;
     benchmark_config_model_id?: string | null;
@@ -54,6 +55,7 @@ export interface AgentCohortDetailPayload {
     id: string;
     family_id?: string;
     slug?: string;
+    legacy_model_id?: string | null;
     display_name: string;
     provider: string;
     color: string | null;
@@ -64,6 +66,7 @@ export interface AgentCohortDetailPayload {
   agent: {
     id: string;
     model_id?: string;
+    legacy_model_id?: string | null;
     benchmark_config_model_id?: string | null;
     status: string;
     cash_balance: number;

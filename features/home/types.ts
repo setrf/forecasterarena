@@ -1,6 +1,8 @@
 export interface LeaderboardEntry {
   model_id: string;
   model_slug?: string;
+  family_id?: string | null;
+  legacy_model_id?: string | null;
   display_name: string;
   provider: string;
   color: string;
@@ -28,7 +30,10 @@ export interface CatalogModel {
 
 export function createEmptyLeaderboard(models: CatalogModel[]): LeaderboardEntry[] {
   return models.map((model) => ({
-    model_id: model.id,
+    model_id: model.slug ?? model.id,
+    model_slug: model.slug ?? model.id,
+    family_id: model.family_id ?? null,
+    legacy_model_id: model.legacy_model_id ?? null,
     display_name: model.displayName,
     provider: model.provider,
     color: model.color,

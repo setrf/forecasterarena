@@ -77,7 +77,7 @@ Rationale:
 
 Implementation constraints:
 
-- Enforced by `UNIQUE(cohort_id, model_id)` in `agents`.
+- Enforced physically by `UNIQUE(cohort_id, model_id)` in `agents`.
 - Agent creation is safe to rerun because inserts use `INSERT OR IGNORE`.
 - The semantic identity of that cohort participant is frozen by `family_id`, `release_id`, and `benchmark_config_model_id`.
 

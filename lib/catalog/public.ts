@@ -25,7 +25,7 @@ export function getPublicCatalogModels(): PublicCatalogModel[] {
       ?? null;
 
     return {
-      id: family.legacy_model_id ?? family.slug ?? family.id,
+      id: family.slug ?? family.id,
       family_id: family.id,
       slug: family.slug,
       legacy_model_id: family.legacy_model_id,
@@ -44,6 +44,7 @@ export function resolvePublicCatalogModel(identifier: string): PublicCatalogMode
   return getPublicCatalogModels().find((model) => (
     model.id === identifier ||
     model.family_id === identifier ||
-    model.slug === identifier
+    model.slug === identifier ||
+    model.legacy_model_id === identifier
   ));
 }

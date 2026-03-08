@@ -56,7 +56,7 @@ Why this matters:
 
 - public continuity pages use the **family**
 - active and historical cohorts keep the exact **release** they started with
-- legacy IDs still appear in compatibility paths and exports, but they are no longer the source of truth for historical identity
+- legacy IDs still appear in compatibility paths and exports, but the lineage tables and frozen agent/config assignments are the source of truth for historical identity
 
 ---
 
@@ -103,7 +103,7 @@ Recent changes in the codebase materially changed the system guarantees. The doc
 
 - Cohorts are keyed by a normalized weekly `started_at`
 - repeated or concurrent start attempts resolve to the same cohort
-- agent creation is physically idempotent per `(cohort_id, model_id)` and semantically frozen by `benchmark_config_model_id`
+- agent creation is physically idempotent per the legacy key `(cohort_id, model_id)` and semantically frozen by `benchmark_config_model_id`
 
 ### 2. Decisions are unique per agent / cohort / week
 

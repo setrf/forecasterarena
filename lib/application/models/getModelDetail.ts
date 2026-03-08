@@ -45,7 +45,7 @@ export function getModelDetail(
     status: 'ok',
     data: {
       model: {
-        id: family.legacy_model_id ?? family.slug ?? family.id,
+        id: family.slug ?? family.id,
         family_id: family.id,
         slug: family.slug,
         legacy_model_id: family.legacy_model_id,

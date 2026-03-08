@@ -206,7 +206,7 @@ Current behavior:
 - `createCohort()` normalizes to the current week start (Sunday 00:00 UTC),
 - concurrent callers resolve to the same weekly cohort,
 - cohort creation now requires a frozen `benchmark_config_id`,
-- agent creation is physically idempotent through `INSERT OR IGNORE` plus unique `(cohort_id, model_id)`,
+- agent creation is physically idempotent through `INSERT OR IGNORE` plus the legacy unique key `(cohort_id, model_id)`,
 - each persisted agent is also required to carry frozen `family_id`, `release_id`, and `benchmark_config_model_id`.
 
 Why it matters:

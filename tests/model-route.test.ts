@@ -33,7 +33,12 @@ async function withModelRoute(
 
 describe('model route', () => {
   it('returns model detail with aggregate stats, decisions, and equity curve', async () => {
-    await withModelRoute(async ({ queries, route, cohort, agent, modelId }) => {
+    await withModelRoute(async ({ db, queries, route, cohort, agent, modelId }) => {
+      const family = db.prepare(`
+        SELECT slug
+        FROM model_families
+        WHERE legacy_model_id = ?
+      `).get(modelId) as { slug: string };
       const market = queries.upsertMarket({
         polymarket_id: 'resolved-market',
         question: 'Will the route return model detail?',
@@ -105,7 +110,8 @@ describe('model route', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.model.id).toBe(modelId);
+      expect(data.model.id).toBe(family.slug);
+      expect(data.model.legacy_model_id).toBe(modelId);
       expect(data.num_cohorts).toBe(1);
       expect(data.total_pnl).toBe(20);
       expect(data.avg_pnl_percent).toBeCloseTo(0.2, 10);
@@ -130,7 +136,7 @@ describe('model route', () => {
   });
 
   it('falls back to live portfolio value when no snapshots exist yet', async () => {
-    await withModelRoute(async ({ queries, route, agent, modelId }) => {
+    await withModelRoute(async ({ db, queries, route, agent, modelId }) => {
       const market = queries.upsertMarket({
         polymarket_id: 'active-market',
         question: 'Will fallback valuation be used?',
@@ -150,9 +156,15 @@ describe('model route', () => {
         { params: Promise.resolve({ id: modelId }) }
       );
       const data = await response.json();
+      const family = db.prepare(`
+        SELECT slug
+        FROM model_families
+        WHERE legacy_model_id = ?
+      `).get(modelId) as { slug: string };
       const cohortPerformance = data.cohort_performance[0];
 
       expect(response.status).toBe(200);
+      expect(data.model.id).toBe(family.slug);
       expect(cohortPerformance.total_value).toBe(10007);
       expect(cohortPerformance.total_pnl).toBe(7);
       expect(cohortPerformance.total_pnl_percent).toBeCloseTo(0.07, 10);

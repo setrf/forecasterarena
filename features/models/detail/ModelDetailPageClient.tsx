@@ -38,7 +38,8 @@ export default function ModelDetailPageClient() {
     return <ModelDetailNotFound message="Model Not Found" />;
   }
 
-  const chartModelId = model?.id ?? modelId;
+  const canonicalModelSlug = model?.slug ?? model?.id ?? modelId;
+  const chartModelId = canonicalModelSlug;
   const chartData = useMemo(() => createModelChartData(chartModelId, data), [chartModelId, data]);
   const chartModels = model ? [{
     id: chartModelId,
@@ -68,7 +69,7 @@ export default function ModelDetailPageClient() {
         <ModelCohortPerformancePanel
           cohorts={data?.cohort_performance ?? []}
           loading={loading}
-          modelId={model?.slug ?? chartModelId}
+          modelId={canonicalModelSlug}
         />
         <ModelRecentDecisionsPanel
           decisions={data?.recent_decisions ?? []}

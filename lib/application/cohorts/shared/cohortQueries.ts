@@ -37,7 +37,9 @@ export function getRecentCohortDecisions(
       d.*,
       COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_display_name,
       COALESCE(abi.color, '#94A3B8') as model_color,
-      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as model_id,
+      COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as model_id,
+      abi.family_slug as model_slug,
+      abi.legacy_model_id as legacy_model_id,
       abi.family_id,
       abi.release_id,
       abi.release_display_name as model_release_name

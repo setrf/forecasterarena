@@ -462,7 +462,7 @@ These are the most important invariants the code currently relies on:
    - Enforced by unique `started_at`.
 
 2. One frozen benchmark slot per cohort participant
-   - Physically enforced by unique `(cohort_id, model_id)`.
+   - Physically enforced by the legacy unique key `(cohort_id, model_id)`.
    - Semantically carried by `agents.family_id`, `agents.release_id`, and `agents.benchmark_config_model_id`.
 
 3. One open position per `(agent, market, side)`

@@ -22,8 +22,10 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
     agent_identity AS (
       SELECT
         a.id as agent_id,
-        COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as public_model_id,
-        COALESCE(abi.family_slug, abi.legacy_model_id, abi.family_id, a.model_id) as public_model_slug,
+        COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as public_model_id,
+        COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as public_model_slug,
+        abi.family_id as family_id,
+        abi.legacy_model_id as legacy_model_id,
         COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
         COALESCE(abi.provider, 'Unknown') as provider,
         COALESCE(abi.color, '#94A3B8') as color
@@ -34,6 +36,8 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       SELECT
         ai.public_model_id as model_id,
         ai.public_model_slug as model_slug,
+        ai.family_id,
+        ai.legacy_model_id,
         ai.display_name,
         ai.provider,
         ai.color,
@@ -49,7 +53,14 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       JOIN agent_identity ai ON ai.agent_id = a.id
       LEFT JOIN latest_snapshots ls ON a.id = ls.agent_id AND ls.rn = 1
       LEFT JOIN open_position_values op ON a.id = op.agent_id
-      GROUP BY ai.public_model_id, ai.public_model_slug, ai.display_name, ai.provider, ai.color
+      GROUP BY
+        ai.public_model_id,
+        ai.public_model_slug,
+        ai.family_id,
+        ai.legacy_model_id,
+        ai.display_name,
+        ai.provider,
+        ai.color
     ),
     brier_stats AS (
       SELECT
@@ -80,6 +91,8 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
     SELECT
       s.model_id,
       s.model_slug,
+      s.family_id,
+      s.legacy_model_id,
       s.display_name,
       s.provider,
       s.color,

@@ -26,7 +26,7 @@ export function createCohortChartData(
 
 export function getCohortChartModels(agents: AgentStats[]) {
   return agents.map((agent) => ({
-    id: agent.model_id,
+    id: agent.model_slug ?? agent.model_id,
     name: agent.model_display_name,
     color: agent.model_color ?? '#94A3B8'
   }));

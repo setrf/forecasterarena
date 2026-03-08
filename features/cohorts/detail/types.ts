@@ -13,6 +13,7 @@ export interface AgentStats {
   id: string;
   model_id: string;
   model_slug?: string;
+  legacy_model_id?: string | null;
   family_id?: string | null;
   release_id?: string | null;
   benchmark_config_model_id?: string | null;

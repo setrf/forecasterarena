@@ -156,7 +156,10 @@ Response shape:
 {
   "leaderboard": [
     {
-      "model_id": "gpt-5.1",
+      "model_id": "openai-gpt",
+      "model_slug": "openai-gpt",
+      "family_id": "openai-gpt",
+      "legacy_model_id": "gpt-5.1",
       "display_name": "GPT-5.2",
       "provider": "OpenAI",
       "color": "#10B981",
@@ -186,7 +189,8 @@ Response shape:
 Notes:
 
 - leaderboard rows only appear for models that actually have cohort history
-- `model_id` is the public continuity key exposed by the read model
+- `model_id` and `model_slug` are the canonical family-facing continuity keys exposed by the read model
+- `legacy_model_id` is compatibility metadata only
 - `display_name` is the family-facing label used for comparison views
 - the exact release used by any historical cohort is derived from frozen agent lineage, not directly from the mutable `models` table
 
@@ -213,14 +217,16 @@ Response shape:
   "data": [
     {
       "date": "2026-03-06T17:40:00.000Z",
-      "gpt-5.1": 10120.5,
-      "gemini-2.5-flash": 9955.25
+      "openai-gpt": 10120.5,
+      "google-gemini": 9955.25
     }
   ],
   "models": [
     {
-      "id": "gpt-5.1",
-      "name": "GPT-5.2",
+      "id": "openai-gpt",
+      "slug": "openai-gpt",
+      "legacy_model_id": "gpt-5.1",
+      "displayName": "GPT-5.2",
       "color": "#10B981"
     }
   ],
@@ -349,26 +355,29 @@ Notes:
 Returns aggregate performance for one model across cohorts.
 
 ```http
-GET /api/models/gpt-5.1
+GET /api/models/openai-gpt
 ```
 
 Path parameter:
 
 | Param | Meaning |
 |------|---------|
-| `id` | stable model ID, e.g. `gpt-5.1`, `claude-opus-4.5` |
+| `id` | canonical family slug, e.g. `openai-gpt`, `google-gemini` |
 
 Response shape:
 
 ```json
 {
   "model": {
-    "id": "gpt-5.1",
-    "openrouter_id": "openai/gpt-5.2",
+    "id": "openai-gpt",
+    "family_id": "openai-gpt",
+    "slug": "openai-gpt",
+    "legacy_model_id": "gpt-5.1",
     "display_name": "GPT-5.2",
     "provider": "OpenAI",
     "color": "#10B981",
-    "is_active": 1
+    "current_release_id": "openai-gpt--gpt-5-2",
+    "current_release_name": "GPT-5.2"
   },
   "num_cohorts": 3,
   "total_pnl": 420.5,
@@ -416,7 +425,9 @@ Response shape:
   "agents": [
     {
       "id": "agent-id",
-      "model_id": "gpt-5.1",
+      "model_id": "openai-gpt",
+      "model_slug": "openai-gpt",
+      "legacy_model_id": "gpt-5.1",
       "model_display_name": "GPT-5.2",
       "model_color": "#10B981",
       "cash_balance": 9400,
@@ -439,7 +450,7 @@ Response shape:
     "avg_brier_score": null
   },
   "equity_curves": {
-    "gpt-5.1": [
+    "openai-gpt": [
       { "date": "2026-03-06T17:40:00.000Z", "value": 10075 }
     ]
   },
@@ -453,7 +464,7 @@ Response shape:
 Returns one model's detailed state within one cohort.
 
 ```http
-GET /api/cohorts/<cohort-id>/models/gpt-5.1
+GET /api/cohorts/<cohort-id>/models/openai-gpt
 ```
 
 Response shape:
@@ -470,7 +481,9 @@ Response shape:
     "total_markets": 7
   },
   "model": {
-    "id": "gpt-5.1",
+    "id": "openai-gpt",
+    "slug": "openai-gpt",
+    "legacy_model_id": "gpt-5.1",
     "display_name": "GPT-5.2",
     "provider": "OpenAI",
     "color": "#10B981"
@@ -756,8 +769,9 @@ Returns cost data aggregated by model family and overall summary.
 {
   "costs_by_model": [
     {
-      "public_model_id": "gpt-5.1",
-      "model_id": "gpt-5.1",
+      "public_model_id": "openai-gpt",
+      "public_model_slug": "openai-gpt",
+      "model_id": "openai-gpt",
       "family_id": "openai-gpt",
       "family_slug": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
@@ -782,7 +796,7 @@ Returns cost data aggregated by model family and overall summary.
 
 Notes:
 
-- `public_model_id` is the family-facing continuity key used by the admin UI
+- `public_model_id` and `public_model_slug` are the family-facing continuity keys used by the admin UI
 - `model_id` is retained as a compatibility alias for older consumers
 - `family_id` and `family_slug` are the stable lineage identifiers
 - `legacy_model_id` preserves the old roster key when one exists
@@ -877,7 +891,7 @@ Rules:
 - default tables:
   - `cohorts`
   - `agents`
-  - `models`
+  - `models` (compatibility metadata)
   - `model_families`
   - `model_releases`
   - `benchmark_configs`
@@ -890,6 +904,7 @@ Rules:
   - `portfolio_snapshots`
 - ZIP filenames are sanitized and generated server-side
 - exports are cleaned up after roughly 24 hours
+- historical identity should be reconstructed from `model_families`, `model_releases`, `benchmark_configs`, `benchmark_config_models`, and frozen lineage columns on `agents` / `api_costs`, not from the mutable `models` table alone
 
 Success response:
 

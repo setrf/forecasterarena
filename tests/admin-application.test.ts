@@ -65,8 +65,9 @@ describe('admin application data services', () => {
       });
       expect(costs.updated_at).toEqual(expect.any(String));
 
-      expect(costs.costs_by_model.find((cost) => cost.public_model_id === modelId)).toMatchObject({
+      expect(costs.costs_by_model.find((cost) => cost.public_model_id === family?.slug)).toMatchObject({
         family_id: family?.id,
+        legacy_model_id: modelId,
         total_cost: 0.42,
         total_input_tokens: 120,
         total_output_tokens: 45,
@@ -74,7 +75,7 @@ describe('admin application data services', () => {
       });
       expect(
         costs.costs_by_model
-          .filter((cost) => cost.public_model_id !== modelId)
+          .filter((cost) => cost.public_model_id !== family?.slug)
           .every((cost) => cost.total_cost === 0 && cost.decision_count === 0)
       ).toBe(true);
     } finally {

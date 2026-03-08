@@ -20,7 +20,7 @@ export function PerformanceSection({
   error,
 }: PerformanceSectionProps) {
   const modelConfigs = models.map((model) => ({
-    id: model.id,
+    id: model.slug ?? model.id,
     name: model.displayName,
     color: model.color
   }));

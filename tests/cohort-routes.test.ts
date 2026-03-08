@@ -65,7 +65,12 @@ describe('cohort routes', () => {
   });
 
   it('returns agent cohort detail for an active model in the cohort', async () => {
-    await withCohortRoutes(async ({ cohort, modelId, agentRoute }) => {
+    await withCohortRoutes(async ({ db, cohort, modelId, agentRoute }) => {
+      const family = db.prepare(`
+        SELECT slug
+        FROM model_families
+        WHERE legacy_model_id = ?
+      `).get(modelId) as { slug: string };
       const response = await agentRoute.GET(
         new Request(`http://localhost/api/cohorts/${cohort.id}/models/${modelId}`) as any,
         { params: Promise.resolve({ id: cohort.id, modelId }) }
@@ -74,7 +79,8 @@ describe('cohort routes', () => {
 
       expect(response.status).toBe(200);
       expect(data.cohort.id).toBe(cohort.id);
-      expect(data.model.id).toBe(modelId);
+      expect(data.model.id).toBe(family.slug);
+      expect(data.model.legacy_model_id).toBe(modelId);
       expect(data.agent.total_agents).toBe(1);
       expect(data.positions).toEqual([]);
       expect(data.closed_positions).toEqual([]);

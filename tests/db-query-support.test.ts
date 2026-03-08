@@ -451,6 +451,8 @@ describe('db query modules - support and reporting', () => {
       const createdAgents = agents.createAgentsForCohort(cohort.id, benchmarkConfig.id);
       const agentOne = createdAgents.find(agent => agent.model_id === allowedIds[0])!;
       const agentTwo = createdAgents.find(agent => agent.model_id === allowedIds[1])!;
+      const familyOne = db.prepare('SELECT id, slug FROM model_families WHERE legacy_model_id = ?').get(allowedIds[0]) as { id: string; slug: string };
+      const familyTwo = db.prepare('SELECT id, slug FROM model_families WHERE legacy_model_id = ?').get(allowedIds[1]) as { id: string; slug: string };
 
       snapshots.createPortfolioSnapshot({
         agent_id: agentOne.id,
@@ -525,7 +527,10 @@ describe('db query modules - support and reporting', () => {
 
       expect(leaderboardEntries).toHaveLength(2);
       expect(leaderboardEntries[0]).toMatchObject({
-        model_id: allowedIds[0],
+        model_id: familyOne.slug,
+        model_slug: familyOne.slug,
+        family_id: familyOne.id,
+        legacy_model_id: allowedIds[0],
         total_pnl: 300,
         total_pnl_percent: 3,
         avg_brier_score: 0.04,
@@ -534,7 +539,10 @@ describe('db query modules - support and reporting', () => {
         win_rate: 1
       });
       expect(leaderboardEntries[1]).toMatchObject({
-        model_id: allowedIds[1],
+        model_id: familyTwo.slug,
+        model_slug: familyTwo.slug,
+        family_id: familyTwo.id,
+        legacy_model_id: allowedIds[1],
         total_pnl: -100,
         total_pnl_percent: -1,
         avg_brier_score: 0.09,
@@ -558,6 +566,8 @@ describe('db query modules - support and reporting', () => {
       const createdAgents = agents.createAgentsForCohort(cohort.id, benchmarkConfig.id);
       const agentOne = createdAgents.find(agent => agent.model_id === allowedIds[0])!;
       const agentTwo = createdAgents.find(agent => agent.model_id === allowedIds[1])!;
+      const familyOne = db.prepare('SELECT id, slug FROM model_families WHERE legacy_model_id = ?').get(allowedIds[0]) as { id: string; slug: string };
+      const familyTwo = db.prepare('SELECT id, slug FROM model_families WHERE legacy_model_id = ?').get(allowedIds[1]) as { id: string; slug: string };
 
       const marketOne = createMarket(markets, { question: 'Fallback positive pnl' });
       const marketTwo = createMarket(markets, { question: 'Fallback negative pnl' });
@@ -575,14 +585,20 @@ describe('db query modules - support and reporting', () => {
 
       expect(leaderboardEntries).toHaveLength(2);
       expect(leaderboardEntries[0]).toMatchObject({
-        model_id: allowedIds[0],
+        model_id: familyOne.slug,
+        model_slug: familyOne.slug,
+        family_id: familyOne.id,
+        legacy_model_id: allowedIds[0],
         total_pnl: 20,
         total_pnl_percent: 0.2,
         num_cohorts: 1,
         num_resolved_bets: 0
       });
       expect(leaderboardEntries[1]).toMatchObject({
-        model_id: allowedIds[1],
+        model_id: familyTwo.slug,
+        model_slug: familyTwo.slug,
+        family_id: familyTwo.id,
+        legacy_model_id: allowedIds[1],
         total_pnl: -20,
         total_pnl_percent: -0.2,
         num_cohorts: 1,
