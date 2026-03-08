@@ -29,22 +29,22 @@ import type {
 
 export function getAgentCohortDetail(
   cohortId: string,
-  modelId: string
+  familySlugOrLegacyId: string
 ): OkResult<AgentCohortDetailPayload> | AgentCohortNotFoundResult {
   const cohort = getCohortById(cohortId);
   if (!cohort) {
     return { status: 'not_found', error: 'Cohort not found' };
   }
 
-  const family = resolveModelFamily(modelId);
+  const family = resolveModelFamily(familySlugOrLegacyId);
   if (!family) {
     return { status: 'not_found', error: 'Model not found' };
   }
 
   const agentWithModel = getAgentsWithModelsByCohort(cohortId).find((candidate) => (
     candidate.family_id === family.id ||
-    candidate.model_id === modelId ||
-    candidate.model.family_slug === modelId
+    candidate.model_id === familySlugOrLegacyId ||
+    candidate.model.family_slug === familySlugOrLegacyId
   ));
 
   const agent = agentWithModel;

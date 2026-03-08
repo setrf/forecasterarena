@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { fetchAgentCohortDetailData } from '@/features/cohorts/model-detail/api';
 import type { AgentCohortData } from '@/features/cohorts/model-detail/types';
 
-export function useAgentCohortDetailData(cohortId: string, modelId: string) {
+export function useAgentCohortDetailData(cohortId: string, familySlugOrLegacyId: string) {
   const [data, setData] = useState<AgentCohortData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +14,7 @@ export function useAgentCohortDetailData(cohortId: string, modelId: string) {
 
     async function loadAgentCohortDetail() {
       try {
-        const result = await fetchAgentCohortDetailData(cohortId, modelId);
+        const result = await fetchAgentCohortDetailData(cohortId, familySlugOrLegacyId);
         if (isCancelled) {
           return;
         }
@@ -42,7 +42,7 @@ export function useAgentCohortDetailData(cohortId: string, modelId: string) {
     return () => {
       isCancelled = true;
     };
-  }, [cohortId, modelId]);
+  }, [cohortId, familySlugOrLegacyId]);
 
   return {
     data,

@@ -16,10 +16,10 @@ import { createModelChartData } from '@/features/models/detail/utils';
 
 export default function ModelDetailPageClient() {
   const params = useParams<{ id: string }>();
-  const modelId = params.id;
+  const familySlugOrLegacyId = params.id;
   const [selectedDecision, setSelectedDecision] = useState<ModelDecision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
-  const { data, loading } = useModelDetailData(modelId);
+  const { data, loading } = useModelDetailData(familySlugOrLegacyId);
   const model = data ? {
     id: data.model.id,
     family_id: data.model.family_id,
@@ -38,7 +38,7 @@ export default function ModelDetailPageClient() {
     return <ModelDetailNotFound message="Model Not Found" />;
   }
 
-  const canonicalModelSlug = model?.slug ?? model?.id ?? modelId;
+  const canonicalModelSlug = model?.slug ?? model?.id ?? familySlugOrLegacyId;
   const chartModelId = canonicalModelSlug;
   const chartData = useMemo(() => createModelChartData(chartModelId, data), [chartModelId, data]);
   const chartModels = model ? [{

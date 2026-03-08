@@ -1,9 +1,9 @@
 /**
  * Agent-Cohort Detail API Endpoint
  *
- * Returns detailed performance data for a specific model within a specific cohort.
+ * Returns detailed performance data for a specific benchmark family within a specific cohort.
  *
- * @route GET /api/cohorts/[cohortId]/models/[modelId]
+ * @route GET /api/cohorts/[cohortId]/models/[familySlugOrLegacyId]
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,8 +17,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string; modelId: string }> }
 ) {
   try {
-    const { id: cohortId, modelId } = await params;
-    const result = getAgentCohortDetail(cohortId, modelId);
+    const { id: cohortId, modelId: familySlugOrLegacyId } = await params;
+    const result = getAgentCohortDetail(cohortId, familySlugOrLegacyId);
 
     if (result.status === 'not_found') {
       return NextResponse.json({ error: result.error }, { status: 404 });

@@ -5,10 +5,10 @@ import { resolveModelFamily } from '@/lib/db/queries';
 export default async function AgentCohortDetailPage(
   { params }: { params: Promise<{ id: string; modelId: string }> }
 ) {
-  const { id, modelId } = await params;
-  const family = resolveModelFamily(modelId);
+  const { id, modelId: familySlugOrLegacyId } = await params;
+  const family = resolveModelFamily(familySlugOrLegacyId);
 
-  if (family && family.slug && modelId !== family.slug) {
+  if (family && family.slug && familySlugOrLegacyId !== family.slug) {
     redirect(`/cohorts/${id}/models/${family.slug}`);
   }
 

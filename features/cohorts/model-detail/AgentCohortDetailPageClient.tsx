@@ -21,13 +21,13 @@ export default function AgentCohortDetailPageClient() {
   const params = useParams<{ id: string; modelId: string }>();
   const router = useRouter();
   const cohortId = params.id;
-  const modelId = params.modelId;
+  const familySlugOrLegacyId = params.modelId;
 
-  const { data, loading, error } = useAgentCohortDetailData(cohortId, modelId);
+  const { data, loading, error } = useAgentCohortDetailData(cohortId, familySlugOrLegacyId);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
-  const chartKey = data?.model?.slug ?? data?.model?.id ?? modelId;
+  const chartKey = data?.model?.slug ?? data?.model?.id ?? familySlugOrLegacyId;
   const chartData = useMemo(() => createAgentCohortChartData(data, chartKey), [data, chartKey]);
   const chartModels = data?.model ? [{
     id: chartKey,

@@ -56,7 +56,7 @@ Why this matters:
 
 - public continuity pages use the **family**
 - active and historical cohorts keep the exact **release** they started with
-- legacy IDs still appear in compatibility paths and exports, but the lineage tables and frozen agent/config assignments are the source of truth for historical identity
+- legacy IDs are compatibility aliases only; lineage tables, canonical family slugs, and frozen agent/config assignments are the source of truth for historical identity
 
 ---
 

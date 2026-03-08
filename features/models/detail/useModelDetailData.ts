@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { fetchModelDetailData } from '@/features/models/detail/api';
 import type { ModelDetailData } from '@/features/models/detail/types';
 
-export function useModelDetailData(modelId: string) {
+export function useModelDetailData(familySlugOrLegacyId: string) {
   const [data, setData] = useState<ModelDetailData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -13,7 +13,7 @@ export function useModelDetailData(modelId: string) {
 
     async function loadModelDetail() {
       try {
-        const payload = await fetchModelDetailData(modelId);
+        const payload = await fetchModelDetailData(familySlugOrLegacyId);
         if (!isCancelled && payload) {
           setData(payload);
         }
@@ -33,7 +33,7 @@ export function useModelDetailData(modelId: string) {
     return () => {
       isCancelled = true;
     };
-  }, [modelId]);
+  }, [familySlugOrLegacyId]);
 
   return {
     data,

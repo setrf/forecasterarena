@@ -5,10 +5,10 @@ import { resolveModelFamily } from '@/lib/db/queries';
 export default async function ModelDetailPage(
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const family = resolveModelFamily(id);
+  const { id: familySlugOrLegacyId } = await params;
+  const family = resolveModelFamily(familySlugOrLegacyId);
 
-  if (family && family.slug && id !== family.slug) {
+  if (family && family.slug && familySlugOrLegacyId !== family.slug) {
     redirect(`/models/${family.slug}`);
   }
 

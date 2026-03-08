@@ -23,9 +23,9 @@ import type {
 } from '@/lib/application/models/types';
 
 export function getModelDetail(
-  modelId: string
+  familySlugOrLegacyId: string
 ): OkResult<ModelDetailPayload> | ModelDetailNotFoundResult {
-  const family = resolveModelFamily(modelId);
+  const family = resolveModelFamily(familySlugOrLegacyId);
 
   if (!family) {
     return { status: 'not_found', error: 'Model not found' };

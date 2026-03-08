@@ -86,10 +86,10 @@ Primary routes:
 
 - `/`
 - `/models`
-- `/models/[id]`
+- `/models/[id]` (`id` resolves canonical family slugs; legacy roster ids are compatibility aliases)
 - `/cohorts`
 - `/cohorts/[id]`
-- `/cohorts/[id]/models/[modelId]`
+- `/cohorts/[id]/models/[modelId]` (`modelId` resolves canonical family slugs; legacy roster ids are compatibility aliases)
 - `/markets`
 - `/markets/[id]`
 - `/decisions/[id]`
