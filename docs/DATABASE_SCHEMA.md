@@ -650,6 +650,11 @@ passes can safely retry the same market.
 portfolio values across cohorts when needed. It also emits `release_changes`
 so charts can annotate where family release upgrades occurred.
 
+The snapshot cron now also refreshes a persisted `performance_chart_cache`
+table for the global time ranges. This lets cold app starts serve the main
+chart from SQLite-backed cached JSON instead of recomputing the full recent
+series on the first request.
+
 ---
 
 ## 6. Practical Analyst Notes

@@ -80,6 +80,63 @@ function getBucketSeconds(range: PerformanceTimeRange): number {
   }
 }
 
+function buildPerformanceCacheKey(range: PerformanceTimeRange, cohortId: string | null): string {
+  return `${range}::${cohortId ?? 'all'}`;
+}
+
+function readPersistedPerformanceData(
+  range: PerformanceTimeRange,
+  cohortId: string | null
+): Array<Record<string, number | string>> | null {
+  if (cohortId) {
+    return null;
+  }
+
+  const db = getDb();
+  const row = db.prepare(`
+    SELECT payload_json
+    FROM performance_chart_cache
+    WHERE cache_key = ?
+    LIMIT 1
+  `).get(buildPerformanceCacheKey(range, cohortId)) as { payload_json: string } | undefined;
+
+  if (!row?.payload_json) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(row.payload_json);
+    return Array.isArray(parsed) ? parsed as Array<Record<string, number | string>> : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedPerformanceData(
+  range: PerformanceTimeRange,
+  cohortId: string | null,
+  data: Array<Record<string, number | string>>
+): void {
+  if (cohortId) {
+    return;
+  }
+
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO performance_chart_cache (
+      cache_key, cohort_id, range_key, payload_json, generated_at
+    ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(cache_key) DO UPDATE SET
+      payload_json = excluded.payload_json,
+      generated_at = CURRENT_TIMESTAMP
+  `).run(
+    buildPerformanceCacheKey(range, cohortId),
+    cohortId,
+    range,
+    JSON.stringify(data)
+  );
+}
+
 export function getReleaseChangeEvents(args?: {
   cohortId?: string | null;
   familyId?: string | null;
@@ -207,19 +264,13 @@ export function getReleaseChangeEvents(args?: {
   return events.sort((left, right) => left.date.localeCompare(right.date));
 }
 
-export function getPerformanceData(rawRange: string | null, cohortId: string | null): PerformancePayload {
-  const range = normalizeRange(rawRange);
-  const cacheKey = `${range}::${cohortId ?? 'all'}`;
-  const now = new Date();
-  const nowMs = now.getTime();
-  const cached = performanceCache.get(cacheKey);
-  if (cached && cached.expiresAt > nowMs) {
-    return cached.data;
-  }
-
+function computePerformanceSeries(
+  range: PerformanceTimeRange,
+  cohortId: string | null
+): Array<Record<string, number | string>> {
   const db = getDb();
   const bucketSeconds = getBucketSeconds(range);
-  const params: Array<string | number> = [bucketSeconds, bucketSeconds, bucketSeconds, getRangeStart(range, now)];
+  const params: Array<string | number> = [bucketSeconds, bucketSeconds, bucketSeconds, getRangeStart(range, new Date())];
 
   let query = `
     WITH filtered_snapshots AS (
@@ -309,8 +360,46 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
     });
   });
 
+  return Array.from(dataByDate.values());
+}
+
+export function refreshPersistedPerformanceCache(): void {
+  const ranges: PerformanceTimeRange[] = ['10M', '1H', '1D', '1W', '1M', '3M', 'ALL'];
+  const now = Date.now();
+
+  for (const range of ranges) {
+    const series = computePerformanceSeries(range, null);
+    writePersistedPerformanceData(range, null, series);
+    performanceCache.set(buildPerformanceCacheKey(range, null), {
+      expiresAt: now + PERFORMANCE_CACHE_TTL_MS,
+      data: {
+        data: series,
+        models: getPublicCatalogModels(),
+        release_changes: getReleaseChangeEvents({ cohortId: null }),
+        range,
+        updated_at: new Date(now).toISOString()
+      }
+    });
+  }
+}
+
+export function getPerformanceData(rawRange: string | null, cohortId: string | null): PerformancePayload {
+  const range = normalizeRange(rawRange);
+  const cacheKey = buildPerformanceCacheKey(range, cohortId);
+  const now = new Date();
+  const nowMs = now.getTime();
+  const cached = performanceCache.get(cacheKey);
+  if (cached && cached.expiresAt > nowMs) {
+    return cached.data;
+  }
+
+  const dataPoints = readPersistedPerformanceData(range, cohortId) ?? computePerformanceSeries(range, cohortId);
+  if (!cohortId) {
+    writePersistedPerformanceData(range, cohortId, dataPoints);
+  }
+
   const data = {
-    data: Array.from(dataByDate.values()),
+    data: dataPoints,
     models: getPublicCatalogModels(),
     release_changes: getReleaseChangeEvents({ cohortId }),
     range,

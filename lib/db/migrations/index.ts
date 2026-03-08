@@ -6,6 +6,7 @@ import { lineageWriteGuardsMigration } from '@/lib/db/migrations/004_lineage_wri
 import { agentsBenchmarkSlotIdentityMigration } from '@/lib/db/migrations/005_agents_benchmark_slot_identity';
 import { decisionLineageMigration } from '@/lib/db/migrations/006_decision_lineage';
 import { tradeBrierLineageMigration } from '@/lib/db/migrations/007_trade_brier_lineage';
+import { performanceChartCacheMigration } from '@/lib/db/migrations/008_performance_chart_cache';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
 const MIGRATIONS: DbMigration[] = [
@@ -14,7 +15,8 @@ const MIGRATIONS: DbMigration[] = [
   lineageWriteGuardsMigration,
   agentsBenchmarkSlotIdentityMigration,
   decisionLineageMigration,
-  tradeBrierLineageMigration
+  tradeBrierLineageMigration,
+  performanceChartCacheMigration
 ];
 
 export function runMigrations(db: Database.Database): void {

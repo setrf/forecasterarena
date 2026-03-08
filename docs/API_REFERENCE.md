@@ -92,8 +92,8 @@ Public routes that use `safeErrorMessage(...)` return a generic internal error s
 
 | Route group | Cache behavior |
 |-------------|----------------|
-| `/api/leaderboard` | `no-store` |
-| `/api/performance-data` | `no-store` |
+| `/api/leaderboard` | `public, max-age=15, stale-while-revalidate=45` |
+| `/api/performance-data` | `public, max-age=15, stale-while-revalidate=45` |
 | `/api/markets` | `no-store` |
 | `/api/decisions/recent` | `public, max-age=120, stale-while-revalidate=30` |
 | Admin routes | `no-store` / uncached |
@@ -192,6 +192,7 @@ Notes:
 - `legacy_model_id` is compatibility metadata only
 - `display_name` is the family-facing label used for comparison views
 - the exact release used by any historical cohort is derived from frozen agent lineage, not directly from the mutable `models` table
+- the endpoint keeps a short-lived in-process cache to avoid recomputing the aggregate leaderboard on every page load
 
 ### GET /api/performance-data
 
@@ -233,6 +234,12 @@ Response shape:
   "updated_at": "2026-03-06T17:40:00.000Z"
 }
 ```
+
+Notes:
+
+- the global chart series is bucketed server-side to keep payloads small
+- the snapshot cron refreshes a persisted chart cache for the global ranges, so cold loads after app restarts avoid recomputing the full month-range series
+- `release_changes` marks family release rollovers so charts can annotate where generation shifts occurred
 
 Important semantics:
 

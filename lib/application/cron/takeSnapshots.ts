@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/queries';
 import { calculatePositionValue } from '@/lib/scoring/pnl';
 import { nowTimestamp } from '@/lib/utils';
+import { refreshPersistedPerformanceCache } from '@/lib/application/performance';
 import { resolveSnapshotYesPrice } from '@/lib/application/cron/snapshotPricing';
 import { errorMessage, failure, ok, type CronAppResult } from '@/lib/application/cron/types';
 import type { Agent, Position } from '@/lib/types';
@@ -91,6 +92,8 @@ export async function takeSnapshots(): Promise<CronAppResult<SnapshotJobSuccess>
         }
       }
     }
+
+    refreshPersistedPerformanceCache();
 
     const duration = Date.now() - startTime;
 
