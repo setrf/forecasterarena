@@ -9,13 +9,13 @@ import type { CohortPerformance } from '@/features/models/detail/types';
 interface ModelCohortPerformancePanelProps {
   cohorts: CohortPerformance[];
   loading: boolean;
-  modelId: string;
+  familySlug: string;
 }
 
 export function ModelCohortPerformancePanel({
   cohorts,
   loading,
-  modelId
+  familySlug
 }: ModelCohortPerformancePanelProps) {
   return (
     <div className="glass-card p-6">
@@ -33,7 +33,7 @@ export function ModelCohortPerformancePanel({
           {cohorts.map((cohort) => (
             <Link
               key={cohort.cohort_number}
-              href={`/cohorts/${cohort.cohort_id}/models/${modelId}`}
+              href={`/cohorts/${cohort.cohort_id}/models/${familySlug}`}
               className="block p-4 bg-[var(--bg-tertiary)] rounded-lg cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors"
               title={`View detailed performance in Cohort #${cohort.cohort_number}`}
             >

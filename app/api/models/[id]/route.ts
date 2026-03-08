@@ -9,8 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const result = getModelDetail(id);
+    const { id: familySlugOrLegacyId } = await params;
+    const result = getModelDetail(familySlugOrLegacyId);
 
     if (result.status === 'not_found') {
       return NextResponse.json(

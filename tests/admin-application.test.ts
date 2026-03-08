@@ -15,7 +15,7 @@ describe('admin application data services', () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {
-      const { queries, cohort, agent, modelId } = await createSingleAgentFixture();
+      const { queries, cohort, agent, legacyModelId } = await createSingleAgentFixture();
       queries.upsertMarket({
         polymarket_id: 'admin-costs-market',
         question: 'Will admin costs include seeded totals?',
@@ -45,7 +45,7 @@ describe('admin application data services', () => {
       const stats = admin.getAdminStats();
       const costs = admin.getAdminCosts();
       const families = getActiveModelFamilies();
-      const family = getModelFamilyByLegacyModelId(modelId);
+      const family = getModelFamilyByLegacyModelId(legacyModelId);
 
       expect(stats).toMatchObject({
         active_cohorts: 1,
@@ -68,7 +68,7 @@ describe('admin application data services', () => {
       expect(costs.costs_by_model.find((cost) => cost.public_model_id === family?.slug)).toMatchObject({
         family_id: family?.id,
         family_slug: family?.slug,
-        legacy_model_id: modelId,
+        legacy_model_id: legacyModelId,
         total_cost: 0.42,
         total_input_tokens: 120,
         total_output_tokens: 45,

@@ -3,9 +3,9 @@ import AgentCohortDetailPageClient from '@/features/cohorts/model-detail/AgentCo
 import { resolveModelFamily } from '@/lib/db/queries';
 
 export default async function AgentCohortDetailPage(
-  { params }: { params: Promise<{ id: string; modelId: string }> }
+  { params }: { params: Promise<{ id: string; familySlugOrLegacyId: string }> }
 ) {
-  const { id, modelId: familySlugOrLegacyId } = await params;
+  const { id, familySlugOrLegacyId } = await params;
   const family = resolveModelFamily(familySlugOrLegacyId);
 
   if (family && family.slug && familySlugOrLegacyId !== family.slug) {

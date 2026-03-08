@@ -110,7 +110,10 @@ export function getAgentById(id: string): Agent | undefined {
   return db.prepare('SELECT * FROM agents WHERE id = ?').get(id) as Agent | undefined;
 }
 
-export function getAgentByCohortAndModel(cohortId: string, modelId: string): Agent | undefined {
+export function getAgentByCohortAndModel(
+  cohortId: string,
+  familySlugOrLegacyId: string
+): Agent | undefined {
   const db = getDb();
   return db.prepare(`
     SELECT a.*
@@ -124,7 +127,13 @@ export function getAgentByCohortAndModel(cohortId: string, modelId: string): Age
         OR abi.legacy_model_id = ?
       )
     LIMIT 1
-  `).get(cohortId, modelId, modelId, modelId, modelId) as Agent | undefined;
+  `).get(
+    cohortId,
+    familySlugOrLegacyId,
+    familySlugOrLegacyId,
+    familySlugOrLegacyId,
+    familySlugOrLegacyId
+  ) as Agent | undefined;
 }
 
 export function createAgentsForCohort(cohortId: string, benchmarkConfigId?: string | null): Agent[] {

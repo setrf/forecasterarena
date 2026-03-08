@@ -7,10 +7,10 @@ async function withCohortRoutes(
     db: ReturnType<typeof import('@/lib/db')['getDb']>;
     queries: typeof import('@/lib/db/queries');
     cohortRoute: typeof import('@/app/api/cohorts/[id]/route');
-    agentRoute: typeof import('@/app/api/cohorts/[id]/models/[modelId]/route');
+    agentRoute: typeof import('@/app/api/cohorts/[id]/models/[familySlugOrLegacyId]/route');
     cohort: Awaited<ReturnType<typeof createSingleAgentFixture>>['cohort'];
     agent: Awaited<ReturnType<typeof createSingleAgentFixture>>['agent'];
-    modelId: string;
+    legacyModelId: string;
   }) => Promise<void>
 ) {
   const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
@@ -18,7 +18,7 @@ async function withCohortRoutes(
   try {
     const fixture = await createSingleAgentFixture();
     const cohortRoute = await import('@/app/api/cohorts/[id]/route');
-    const agentRoute = await import('@/app/api/cohorts/[id]/models/[modelId]/route');
+    const agentRoute = await import('@/app/api/cohorts/[id]/models/[familySlugOrLegacyId]/route');
 
     await run({
       db: fixture.db,
@@ -27,7 +27,7 @@ async function withCohortRoutes(
       agentRoute,
       cohort: fixture.cohort,
       agent: fixture.agent,
-      modelId: fixture.modelId
+      legacyModelId: fixture.legacyModelId
     });
   } finally {
     await ctx.cleanup();
@@ -65,22 +65,24 @@ describe('cohort routes', () => {
   });
 
   it('returns agent cohort detail for an active model in the cohort', async () => {
-    await withCohortRoutes(async ({ db, cohort, modelId, agentRoute }) => {
+    await withCohortRoutes(async ({ db, cohort, legacyModelId, agentRoute }) => {
       const family = db.prepare(`
         SELECT slug
         FROM model_families
         WHERE legacy_model_id = ?
-      `).get(modelId) as { slug: string };
+      `).get(legacyModelId) as { slug: string };
       const response = await agentRoute.GET(
-        new Request(`http://localhost/api/cohorts/${cohort.id}/models/${modelId}`) as any,
-        { params: Promise.resolve({ id: cohort.id, modelId }) }
+        new Request(`http://localhost/api/cohorts/${cohort.id}/models/${legacyModelId}`) as any,
+        { params: Promise.resolve({ id: cohort.id, familySlugOrLegacyId: legacyModelId }) }
       );
       const data = await response.json();
 
       expect(response.status).toBe(200);
       expect(data.cohort.id).toBe(cohort.id);
       expect(data.model.id).toBe(family.slug);
-      expect(data.model.legacy_model_id).toBe(modelId);
+      expect(data.model.family_slug).toBe(family.slug);
+      expect(data.model.legacy_model_id).toBe(legacyModelId);
+      expect(data.agent.family_slug).toBe(family.slug);
       expect(data.agent.total_agents).toBe(1);
       expect(data.positions).toEqual([]);
       expect(data.closed_positions).toEqual([]);
@@ -88,18 +90,18 @@ describe('cohort routes', () => {
   });
 
   it('returns 404 when the model exists but is not active in the cohort', async () => {
-    await withCohortRoutes(async ({ db, cohort, modelId, agentRoute }) => {
+    await withCohortRoutes(async ({ db, cohort, legacyModelId, agentRoute }) => {
       const otherModel = db.prepare(`
         SELECT id
         FROM models
         WHERE id != ?
         ORDER BY id ASC
         LIMIT 1
-      `).get(modelId) as { id: string };
+      `).get(legacyModelId) as { id: string };
 
       const response = await agentRoute.GET(
         new Request(`http://localhost/api/cohorts/${cohort.id}/models/${otherModel.id}`) as any,
-        { params: Promise.resolve({ id: cohort.id, modelId: otherModel.id }) }
+        { params: Promise.resolve({ id: cohort.id, familySlugOrLegacyId: otherModel.id }) }
       );
       const data = await response.json();
 

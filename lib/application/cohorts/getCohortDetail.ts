@@ -39,6 +39,7 @@ export function getCohortDetail(
     return {
       id: agent.id,
       model_id: agent.model.family_slug ?? agent.family_id ?? agent.model_id,
+      family_slug: agent.model.family_slug ?? agent.family_id ?? null,
       model_slug: agent.model.family_slug,
       legacy_model_id: agent.model.legacy_model_id,
       family_id: agent.family_id,

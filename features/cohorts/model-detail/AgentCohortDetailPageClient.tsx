@@ -18,10 +18,10 @@ import type { AgentCohortData, Decision } from '@/features/cohorts/model-detail/
 import { createAgentCohortChartData } from '@/features/cohorts/model-detail/utils';
 
 export default function AgentCohortDetailPageClient() {
-  const params = useParams<{ id: string; modelId: string }>();
+  const params = useParams<{ id: string; familySlugOrLegacyId: string }>();
   const router = useRouter();
   const cohortId = params.id;
-  const familySlugOrLegacyId = params.modelId;
+  const familySlugOrLegacyId = params.familySlugOrLegacyId;
 
   const { data, loading, error } = useAgentCohortDetailData(cohortId, familySlugOrLegacyId);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);

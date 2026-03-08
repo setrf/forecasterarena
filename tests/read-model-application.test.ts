@@ -144,15 +144,18 @@ describe('markets application', () => {
       expect(result.data.positions).toHaveLength(1);
       expect(result.data.positions[0]).toMatchObject({
         agent_id: agent.id,
+        family_slug: expect.any(String),
         decision_id: decision.id
       });
       expect(result.data.trades).toHaveLength(1);
       expect(result.data.trades[0]).toMatchObject({
         id: trade.id,
+        family_slug: expect.any(String),
         decision_id: decision.id
       });
       expect(result.data.brier_scores).toHaveLength(1);
       expect(result.data.brier_scores[0]).toMatchObject({
+        family_slug: expect.any(String),
         trade_id: trade.id,
         brier_score: 0.2025
       });
@@ -347,13 +350,13 @@ describe('models application', () => {
 
 describe('cohort shared application queries', () => {
   it('keeps agent and cohort helper exports working through the preserved shared import path', async () => {
-    await withSingleAgentFixture(async ({ db, queries, cohort, agent, modelId }) => {
+    await withSingleAgentFixture(async ({ db, queries, cohort, agent, legacyModelId }) => {
       const otherModel = db.prepare(`
         SELECT id FROM models
         WHERE id != ?
         ORDER BY id ASC
         LIMIT 1
-      `).get(modelId) as { id: string };
+      `).get(legacyModelId) as { id: string };
 
       db.prepare(`
         UPDATE models
@@ -361,7 +364,7 @@ describe('cohort shared application queries', () => {
         WHERE id = ?
       `).run(otherModel.id);
 
-      const expandedConfig = await createTestBenchmarkConfigForLegacyModels([modelId, otherModel.id]);
+      const expandedConfig = await createTestBenchmarkConfigForLegacyModels([legacyModelId, otherModel.id]);
       const otherAgent = queries.createAgentsForCohort(cohort.id, expandedConfig.id)
         .find((candidate) => candidate.model_id === otherModel.id);
 

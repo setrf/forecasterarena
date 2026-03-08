@@ -8,6 +8,13 @@ export interface Decision {
   model_name: string;
   model_color: string;
   model_provider: string;
+  model_id?: string;
+  family_slug?: string | null;
+  model_slug?: string | null;
+  legacy_model_id?: string | null;
+  model_family_id?: string | null;
+  model_release_id?: string | null;
+  model_release_name?: string | null;
 }
 
 export interface Trade {

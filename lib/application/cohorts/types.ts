@@ -9,6 +9,7 @@ export interface CohortDetailPayload {
   agents: Array<{
     id: string;
     model_id: string;
+    family_slug?: string | null;
     model_slug?: string;
     legacy_model_id?: string | null;
     family_id?: string | null;
@@ -54,6 +55,7 @@ export interface AgentCohortDetailPayload {
   model: {
     id: string;
     family_id?: string;
+    family_slug?: string;
     slug?: string;
     legacy_model_id?: string | null;
     display_name: string;
@@ -66,6 +68,7 @@ export interface AgentCohortDetailPayload {
   agent: {
     id: string;
     model_id?: string;
+    family_slug?: string | null;
     legacy_model_id?: string | null;
     benchmark_config_model_id?: string | null;
     status: string;

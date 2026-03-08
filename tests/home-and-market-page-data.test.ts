@@ -104,9 +104,9 @@ describe('market detail page data helper', () => {
           first_seen_at: '2029-12-01T00:00:00.000Z',
           last_updated_at: '2030-01-01T00:00:00.000Z'
         },
-        positions: [{ id: 'p1' }],
-        trades: [{ id: 't1' }],
-        brier_scores: [{ id: 'b1' }]
+        positions: [{ id: 'p1', family_slug: 'openai-gpt', model_id: 'openai-gpt' }],
+        trades: [{ id: 't1', family_slug: 'openai-gpt', model_id: 'openai-gpt' }],
+        brier_scores: [{ id: 'b1', family_slug: 'openai-gpt', model_id: 'openai-gpt' }]
       }))
       .mockResolvedValueOnce(mockResponse(false, {}, 404))
       .mockResolvedValueOnce(mockResponse(false, {}, 500)));
@@ -115,9 +115,9 @@ describe('market detail page data helper', () => {
       status: 'ok',
       data: {
         market: expect.objectContaining({ id: 'm1' }),
-        positions: [expect.objectContaining({ id: 'p1' })],
-        trades: [expect.objectContaining({ id: 't1' })],
-        brierScores: [expect.objectContaining({ id: 'b1' })]
+        positions: [expect.objectContaining({ id: 'p1', family_slug: 'openai-gpt' })],
+        trades: [expect.objectContaining({ id: 't1', family_slug: 'openai-gpt' })],
+        brierScores: [expect.objectContaining({ id: 'b1', family_slug: 'openai-gpt' })]
       }
     });
     await expect(fetchMarketDetailData('missing')).resolves.toEqual({

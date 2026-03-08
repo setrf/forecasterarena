@@ -2,7 +2,7 @@ import type { AgentStats } from '@/features/cohorts/detail/types';
 
 export function createCohortChartData(
   equityCurves: Record<string, Array<{ date: string; value: number }>>
-): Array<{ date: string; [modelId: string]: string | number }> {
+): Array<{ date: string; [seriesKey: string]: string | number }> {
   if (Object.keys(equityCurves).length === 0) {
     return [];
   }
@@ -15,10 +15,10 @@ export function createCohortChartData(
   });
 
   return Array.from(allDates).sort().map((date) => {
-    const point: { date: string; [modelId: string]: string | number } = { date };
-    Object.entries(equityCurves).forEach(([modelId, curve]) => {
+    const point: { date: string; [seriesKey: string]: string | number } = { date };
+    Object.entries(equityCurves).forEach(([seriesKey, curve]) => {
       const dataPoint = curve.find((entry) => entry.date === date);
-      point[modelId] = dataPoint?.value ?? 10000;
+      point[seriesKey] = dataPoint?.value ?? 10000;
     });
     return point;
   });
@@ -26,7 +26,7 @@ export function createCohortChartData(
 
 export function getCohortChartModels(agents: AgentStats[]) {
   return agents.map((agent) => ({
-    id: agent.model_slug ?? agent.model_id,
+    id: agent.family_slug ?? agent.model_slug ?? agent.model_id,
     name: agent.model_display_name,
     color: agent.model_color ?? '#94A3B8'
   }));

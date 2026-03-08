@@ -14,10 +14,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; modelId: string }> }
+  { params }: { params: Promise<{ id: string; familySlugOrLegacyId: string }> }
 ) {
   try {
-    const { id: cohortId, modelId: familySlugOrLegacyId } = await params;
+    const { id: cohortId, familySlugOrLegacyId } = await params;
     const result = getAgentCohortDetail(cohortId, familySlugOrLegacyId);
 
     if (result.status === 'not_found') {

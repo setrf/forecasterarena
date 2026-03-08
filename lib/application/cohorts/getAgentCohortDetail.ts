@@ -78,6 +78,7 @@ export function getAgentCohortDetail(
       model: {
         id: family.slug ?? family.id,
         family_id: family.id,
+        family_slug: family.slug ?? family.id,
         slug: family.slug,
         legacy_model_id: family.legacy_model_id,
         display_name: agent.model.family_display_name,
@@ -90,6 +91,7 @@ export function getAgentCohortDetail(
       agent: {
         id: agent.id,
         model_id: agent.model.family_slug ?? agent.family_id ?? agent.model_id,
+        family_slug: agent.model.family_slug ?? agent.family_id ?? null,
         legacy_model_id: agent.model.legacy_model_id,
         benchmark_config_model_id: agent.benchmark_config_model_id,
         status: agent.status,

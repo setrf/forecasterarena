@@ -329,6 +329,9 @@ Response shape:
       "id": "position-id",
       "agent_id": "agent-id",
       "model_id": "openai-gpt",
+      "family_slug": "openai-gpt",
+      "model_slug": "openai-gpt",
+      "legacy_model_id": "gpt-5.1",
       "model_display_name": "GPT-5.2",
       "model_color": "#10B981",
       "side": "YES",
@@ -351,6 +354,8 @@ Notes:
 - `positions` only includes **open** positions on the market
 - `brier_scores` is only populated for resolved markets
 - the route attempts to reconstruct the opening `decision_id` even for legacy trades that omitted `position_id`
+- `family_slug` is the clearest canonical model-family key for links and grouping inside `positions`, `trades`, and `brier_scores`
+- `model_id` and `model_slug` remain compatibility aliases
 
 ### GET /api/models/[id]
 
@@ -428,6 +433,7 @@ Response shape:
     {
       "id": "agent-id",
       "model_id": "openai-gpt",
+      "family_slug": "openai-gpt",
       "model_slug": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
       "model_display_name": "GPT-5.2",
@@ -461,7 +467,12 @@ Response shape:
 }
 ```
 
-### GET /api/cohorts/[id]/models/[modelId]
+Notes:
+
+- `family_slug` is the clearest canonical model-family key for cohort leaderboard links and chart series
+- `model_id` and `model_slug` remain compatibility aliases for older consumers
+
+### GET /api/cohorts/[id]/models/[familySlugOrLegacyId]
 
 Returns one model's detailed state within one cohort.
 
@@ -484,6 +495,7 @@ Response shape:
   },
   "model": {
     "id": "openai-gpt",
+    "family_slug": "openai-gpt",
     "slug": "openai-gpt",
     "legacy_model_id": "gpt-5.1",
     "display_name": "GPT-5.2",
@@ -492,6 +504,8 @@ Response shape:
   },
   "agent": {
     "id": "agent-id",
+    "model_id": "openai-gpt",
+    "family_slug": "openai-gpt",
     "status": "active",
     "cash_balance": 9400,
     "total_invested": 600,
@@ -590,7 +604,11 @@ Response shape:
     "model_name": "GPT-5.2",
     "model_color": "#10B981",
     "model_provider": "OpenAI",
-    "model_id": "openai-gpt"
+    "model_id": "openai-gpt",
+    "family_slug": "openai-gpt",
+    "model_slug": "openai-gpt",
+    "legacy_model_id": "gpt-5.1",
+    "model_release_name": "GPT-5.2"
   },
   "trades": [
     {
@@ -603,6 +621,12 @@ Response shape:
   ]
 }
 ```
+
+Notes:
+
+- the path segment accepts the canonical `family_slug` and still tolerates historical legacy ids as compatibility aliases
+- `model.id` and `model.family_slug` both identify the canonical benchmark family; `legacy_model_id` is compatibility metadata only
+- `agent.model_id` is retained for compatibility, while `agent.family_slug` is the clearest route/link key
 
 ---
 
@@ -1066,6 +1090,12 @@ Creates a SQLite backup.
   "duration_ms": 140
 }
 ```
+
+Notes:
+
+- `decision.family_slug` is the clearest canonical benchmark-family key
+- `decision.model_id` and `decision.model_slug` remain compatibility aliases
+- `decision.model_release_name` identifies the exact frozen release used when the decision was made
 
 ---
 

@@ -69,7 +69,7 @@ export default function ModelDetailPageClient() {
         <ModelCohortPerformancePanel
           cohorts={data?.cohort_performance ?? []}
           loading={loading}
-          modelId={canonicalModelSlug}
+          familySlug={canonicalModelSlug}
         />
         <ModelRecentDecisionsPanel
           decisions={data?.recent_decisions ?? []}

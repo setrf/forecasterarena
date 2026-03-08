@@ -55,7 +55,7 @@ const checks = [
   { root: 'app/api/cron/take-snapshots/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'app/cohorts/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/cohorts/[id]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
-  { root: 'app/cohorts/[id]/models/[modelId]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
+  { root: 'app/cohorts/[id]/models/[familySlugOrLegacyId]/page.tsx', maxLines: 25, extensions: new Set(['.tsx']) },
   { root: 'app/api/decisions/[id]/route.ts', maxLines: 50, extensions: new Set(['.ts']) },
   { root: 'app/api/health/route.ts', maxLines: 40, extensions: new Set(['.ts']) },
   { root: 'app/api/leaderboard/route.ts', maxLines: 40, extensions: new Set(['.ts']) },
@@ -269,6 +269,25 @@ function collectFiles(roots, extensions) {
 }
 
 const violations = [];
+
+const adminExportConstantsPath = path.join(
+  process.cwd(),
+  'lib',
+  'application',
+  'admin-export',
+  'constants.ts'
+);
+if (fs.existsSync(adminExportConstantsPath)) {
+  const source = fs.readFileSync(adminExportConstantsPath, 'utf8');
+  const defaultTablesMatch = source.match(/export const DEFAULT_TABLES = \[([\s\S]*?)\] as const;/);
+  if (defaultTablesMatch && /['"]models['"]/.test(defaultTablesMatch[1])) {
+    violations.push({
+      file: path.relative(process.cwd(), adminExportConstantsPath),
+      importPath: 'DEFAULT_TABLES -> models',
+      reason: 'default admin exports must stay lineage-first; the mutable models table is compatibility-only'
+    });
+  }
+}
 
 for (const check of checks) {
   const absoluteRoot = path.join(process.cwd(), check.root);

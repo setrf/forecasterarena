@@ -75,6 +75,6 @@ export async function createSingleAgentFixture() {
     db,
     cohort,
     agent,
-    modelId: firstModel.id
+    legacyModelId: firstModel.id
   };
 }

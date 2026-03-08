@@ -19,7 +19,12 @@ describe('decision detail page data helper', () => {
           created_at: '2026-03-07T00:00:00.000Z',
           model_name: 'GPT-5.2',
           model_color: '#10B981',
-          model_provider: 'OpenAI'
+          model_provider: 'OpenAI',
+          model_id: 'openai-gpt',
+          family_slug: 'openai-gpt',
+          model_slug: 'openai-gpt',
+          legacy_model_id: 'gpt-5.1',
+          model_release_name: 'GPT-5.2'
         },
         trades: [
           {
@@ -63,8 +68,8 @@ describe('agent cohort detail page data helper', () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce(mockResponse(true, {
         cohort: { id: 'c1', cohort_number: 1, started_at: '2026-03-01T00:00:00.000Z', status: 'active' },
-        model: { id: 'openai-gpt', slug: 'openai-gpt', legacy_model_id: 'gpt-5.1', display_name: 'GPT-5.2', color: '#10B981' },
-        agent: { id: 'a1', model_id: 'openai-gpt', legacy_model_id: 'gpt-5.1', display_name: 'GPT-5.2', status: 'active' },
+        model: { id: 'openai-gpt', family_slug: 'openai-gpt', slug: 'openai-gpt', legacy_model_id: 'gpt-5.1', display_name: 'GPT-5.2', color: '#10B981' },
+        agent: { id: 'a1', model_id: 'openai-gpt', family_slug: 'openai-gpt', legacy_model_id: 'gpt-5.1', display_name: 'GPT-5.2', status: 'active' },
         stats: { position_count: 1, trade_count: 2 },
         positions: [],
         closed_positions: [],
@@ -78,7 +83,8 @@ describe('agent cohort detail page data helper', () => {
       status: 'ok',
       data: expect.objectContaining({
         cohort: expect.objectContaining({ id: 'c1' }),
-        model: expect.objectContaining({ id: 'openai-gpt', legacy_model_id: 'gpt-5.1' })
+        model: expect.objectContaining({ id: 'openai-gpt', family_slug: 'openai-gpt', legacy_model_id: 'gpt-5.1' }),
+        agent: expect.objectContaining({ family_slug: 'openai-gpt' })
       })
     });
     await expect(fetchAgentCohortDetailData('c1', 'missing')).resolves.toEqual({

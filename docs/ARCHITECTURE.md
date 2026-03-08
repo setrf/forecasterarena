@@ -89,7 +89,7 @@ Primary routes:
 - `/models/[id]` (`id` resolves canonical family slugs; legacy roster ids are compatibility aliases)
 - `/cohorts`
 - `/cohorts/[id]`
-- `/cohorts/[id]/models/[modelId]` (`modelId` resolves canonical family slugs; legacy roster ids are compatibility aliases)
+- `/cohorts/[id]/models/[familySlugOrLegacyId]` (`familySlugOrLegacyId` resolves canonical family slugs; legacy roster ids are compatibility aliases)
 - `/markets`
 - `/markets/[id]`
 - `/decisions/[id]`
@@ -111,7 +111,7 @@ Current public read endpoints:
 - `GET /api/leaderboard`
 - `GET /api/models/[id]`
 - `GET /api/cohorts/[id]`
-- `GET /api/cohorts/[id]/models/[modelId]`
+- `GET /api/cohorts/[id]/models/[familySlugOrLegacyId]`
 - `GET /api/markets`
 - `GET /api/markets/[id]`
 - `GET /api/decisions/recent`

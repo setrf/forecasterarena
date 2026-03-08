@@ -2,7 +2,7 @@ import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { type TimeRange } from '@/components/charts/TimeRangeSelector';
 
 interface CohortPerformanceSectionProps {
-  chartData: Array<{ date: string; [modelId: string]: string | number }>;
+  chartData: Array<{ date: string; [seriesKey: string]: string | number }>;
   chartModels: Array<{ id: string; name: string; color: string }>;
   timeRange: TimeRange;
   onTimeRangeChange: (timeRange: TimeRange) => void;

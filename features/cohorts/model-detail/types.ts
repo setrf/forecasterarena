@@ -12,6 +12,7 @@ export interface Cohort {
 export interface Model {
   id: string;
   family_id?: string;
+  family_slug?: string;
   slug?: string;
   legacy_model_id?: string | null;
   display_name: string;
@@ -25,6 +26,7 @@ export interface Model {
 export interface Agent {
   id: string;
   model_id?: string;
+  family_slug?: string | null;
   legacy_model_id?: string | null;
   benchmark_config_model_id?: string | null;
   status: string;

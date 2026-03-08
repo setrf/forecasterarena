@@ -4,9 +4,10 @@ export function createStatsMap(entries?: ModelStats[]): Map<string, ModelStats> 
   const stats = new Map<string, ModelStats>();
 
   for (const entry of entries ?? []) {
-    const canonicalId = entry.model_slug ?? entry.model_id;
+    const canonicalId = entry.family_slug ?? entry.model_slug ?? entry.model_id;
     const normalizedEntry = {
       model_id: entry.model_id,
+      family_slug: entry.family_slug ?? null,
       model_slug: entry.model_slug,
       family_id: entry.family_id ?? null,
       legacy_model_id: entry.legacy_model_id ?? null,

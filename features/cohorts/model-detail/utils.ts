@@ -3,7 +3,7 @@ import type { AgentCohortData, Decision } from '@/features/cohorts/model-detail/
 
 export function createAgentCohortChartData(
   data: AgentCohortData | null,
-  modelId: string
+  seriesKey: string
 ): Array<{ date: string; [key: string]: string | number }> {
   if (!data?.equity_curve?.length) {
     return [];
@@ -11,7 +11,7 @@ export function createAgentCohortChartData(
 
   return data.equity_curve.map((point) => ({
     date: point.date,
-    [modelId]: point.value
+    [seriesKey]: point.value
   }));
 }
 

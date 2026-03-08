@@ -31,7 +31,7 @@ describe('admin export lineage queries', () => {
       });
 
       fixture.queries.createApiCost({
-        model_id: fixture.modelId,
+        model_id: fixture.legacyModelId,
         agent_id: fixture.agent.id,
         family_id: fixture.agent.family_id,
         release_id: fixture.agent.release_id,
@@ -58,7 +58,7 @@ describe('admin export lineage queries', () => {
       });
       expect(agentRows[0]).toMatchObject({
         id: fixture.agent.id,
-        model_id: fixture.modelId,
+        model_id: fixture.legacyModelId,
         family_id: expect.any(String),
         release_id: expect.any(String),
         benchmark_config_model_id: expect.any(String)
@@ -70,13 +70,13 @@ describe('admin export lineage queries', () => {
       expect(identityRows[0]).toMatchObject({
         agent_id: fixture.agent.id,
         cohort_id: fixture.cohort.id,
-        legacy_model_id: fixture.modelId,
+        legacy_model_id: fixture.legacyModelId,
         family_id: fixture.agent.family_id,
         release_id: fixture.agent.release_id,
         benchmark_config_model_id: fixture.agent.benchmark_config_model_id
       });
       expect(apiCostRows[0]).toMatchObject({
-        model_id: fixture.modelId,
+        model_id: fixture.legacyModelId,
         agent_id: fixture.agent.id,
         family_id: fixture.agent.family_id,
         release_id: fixture.agent.release_id,

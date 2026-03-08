@@ -22,6 +22,9 @@ export interface MarketPosition {
   id: string;
   agent_id: string;
   model_id: string;
+  family_slug?: string | null;
+  model_slug?: string | null;
+  legacy_model_id?: string | null;
   model_display_name: string;
   model_color: string;
   side: string;
@@ -41,6 +44,10 @@ export interface MarketTrade {
   price: number;
   total_amount: number;
   executed_at: string;
+  model_id?: string;
+  family_slug?: string | null;
+  model_slug?: string | null;
+  legacy_model_id?: string | null;
   model_display_name: string;
   model_color: string;
   decision_id: string | null;
@@ -51,6 +58,10 @@ export interface MarketBrierScore {
   forecast_probability: number;
   actual_outcome: number;
   brier_score: number;
+  model_id?: string;
+  family_slug?: string | null;
+  model_slug?: string | null;
+  legacy_model_id?: string | null;
   model_display_name: string;
   model_color: string;
 }
