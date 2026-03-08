@@ -17,7 +17,7 @@ export function createApiCost(cost: {
     ? db.prepare('SELECT id FROM api_costs WHERE decision_id = ?').get(cost.decision_id) as { id: string } | undefined
     : undefined;
   const id = existing?.id ?? generateId();
-  const inferredLineage = cost.decision_id
+  const decisionLinkedLineage = cost.decision_id
     ? db.prepare(`
         SELECT
           d.agent_id,
@@ -35,9 +35,35 @@ export function createApiCost(cost: {
         benchmark_config_model_id: string | null;
       } | undefined
     : undefined;
+  const agentLinkedLineage = !cost.decision_id && cost.agent_id
+    ? db.prepare(`
+        SELECT
+          id as agent_id,
+          family_id,
+          release_id,
+          benchmark_config_model_id
+        FROM agents
+        WHERE id = ?
+        LIMIT 1
+      `).get(cost.agent_id) as {
+        agent_id: string | null;
+        family_id: string | null;
+        release_id: string | null;
+        benchmark_config_model_id: string | null;
+      } | undefined
+    : undefined;
+  const inferredLineage = decisionLinkedLineage ?? agentLinkedLineage;
   const resolvedAgentId =
     cost.agent_id ??
     (cost.decision_id ? inferredLineage?.agent_id : null);
+  const resolvedFamilyId = cost.family_id ?? inferredLineage?.family_id ?? null;
+  const resolvedReleaseId = cost.release_id ?? inferredLineage?.release_id ?? null;
+  const resolvedBenchmarkConfigModelId =
+    cost.benchmark_config_model_id ?? inferredLineage?.benchmark_config_model_id ?? null;
+
+  if ((resolvedAgentId || cost.decision_id) && (!resolvedFamilyId || !resolvedReleaseId || !resolvedBenchmarkConfigModelId)) {
+    throw new Error('API cost rows linked to a cohort agent must carry complete frozen lineage');
+  }
 
   if (existing) {
     db.prepare(`
@@ -54,9 +80,9 @@ export function createApiCost(cost: {
     `).run(
       cost.model_id,
       resolvedAgentId,
-      cost.family_id ?? inferredLineage?.family_id ?? null,
-      cost.release_id ?? inferredLineage?.release_id ?? null,
-      cost.benchmark_config_model_id ?? inferredLineage?.benchmark_config_model_id ?? null,
+      resolvedFamilyId,
+      resolvedReleaseId,
+      resolvedBenchmarkConfigModelId,
       cost.tokens_input,
       cost.tokens_output,
       cost.cost_usd,
@@ -81,9 +107,9 @@ export function createApiCost(cost: {
       id,
       cost.model_id,
       resolvedAgentId,
-      cost.family_id ?? inferredLineage?.family_id ?? null,
-      cost.release_id ?? inferredLineage?.release_id ?? null,
-      cost.benchmark_config_model_id ?? inferredLineage?.benchmark_config_model_id ?? null,
+      resolvedFamilyId,
+      resolvedReleaseId,
+      resolvedBenchmarkConfigModelId,
       cost.decision_id,
       cost.tokens_input,
       cost.tokens_output,

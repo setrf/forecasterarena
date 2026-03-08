@@ -92,21 +92,94 @@ describe('db query modules - core operations', () => {
     });
   });
 
-  it('throws when an agent row loses its frozen benchmark lineage', async () => {
+  it('rejects attempts to remove an agent row\'s frozen benchmark lineage', async () => {
     await withDbQueryModules(({ agents, cohorts, db }) => {
       const cohort = cohorts.createCohort();
       const [agent] = agents.createAgentsForCohort(cohort.id);
 
+      expect(() => {
+        db.prepare(`
+          UPDATE agents
+          SET family_id = NULL,
+              release_id = NULL,
+              benchmark_config_model_id = NULL
+          WHERE id = ?
+        `).run(agent!.id);
+      }).toThrow(/NOT NULL constraint failed|agents frozen lineage is required/);
+
+      expect(agents.getAgentsWithModelsByCohort(cohort.id)[0]?.id).toBe(agent!.id);
+    });
+  });
+
+  it('throws when a legacy agent row is read before frozen lineage has been backfilled', async () => {
+    await withDbQueryModules(({ agents, cohorts, db, models }) => {
+      const cohort = cohorts.createCohort();
+      const model = models.getActiveModels()[0]!;
+
+      db.pragma('foreign_keys = OFF');
+      db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_insert');
+      db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_update');
+      db.exec('DROP VIEW IF EXISTS agent_benchmark_identity_v');
+      db.exec('ALTER TABLE agents RENAME TO agents_strict_backup');
+      db.exec(`
+        CREATE TABLE agents (
+          id TEXT PRIMARY KEY,
+          cohort_id TEXT NOT NULL,
+          model_id TEXT NOT NULL,
+          family_id TEXT,
+          release_id TEXT,
+          benchmark_config_model_id TEXT,
+          cash_balance REAL NOT NULL DEFAULT 10000.00,
+          total_invested REAL NOT NULL DEFAULT 0.00,
+          status TEXT NOT NULL DEFAULT 'active',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (cohort_id) REFERENCES cohorts(id),
+          FOREIGN KEY (model_id) REFERENCES models(id),
+          FOREIGN KEY (family_id) REFERENCES model_families(id),
+          FOREIGN KEY (release_id) REFERENCES model_releases(id),
+          FOREIGN KEY (benchmark_config_model_id) REFERENCES benchmark_config_models(id),
+          UNIQUE(cohort_id, model_id)
+        )
+      `);
+      db.pragma('foreign_keys = ON');
+      db.exec(`
+        CREATE VIEW agent_benchmark_identity_v AS
+        SELECT
+          a.id as agent_id,
+          a.cohort_id,
+          a.model_id as legacy_model_id,
+          a.family_id as family_id,
+          f.slug as family_slug,
+          bcm.family_display_name_snapshot as family_display_name,
+          bcm.short_display_name_snapshot as short_display_name,
+          a.release_id as release_id,
+          r.release_slug as release_slug,
+          bcm.release_display_name_snapshot as release_display_name,
+          bcm.provider_snapshot as provider,
+          bcm.color_snapshot as color,
+          bcm.openrouter_id_snapshot as openrouter_id,
+          bcm.input_price_per_million_snapshot as input_price_per_million,
+          bcm.output_price_per_million_snapshot as output_price_per_million,
+          bcm.id as benchmark_config_model_id
+        FROM agents a
+        LEFT JOIN benchmark_config_models bcm ON bcm.id = a.benchmark_config_model_id
+        LEFT JOIN model_families f ON f.id = a.family_id
+        LEFT JOIN model_releases r ON r.id = a.release_id
+      `);
+
       db.prepare(`
-        UPDATE agents
-        SET family_id = NULL,
-            release_id = NULL,
-            benchmark_config_model_id = NULL
-        WHERE id = ?
-      `).run(agent!.id);
+        INSERT INTO agents (
+          id,
+          cohort_id,
+          model_id,
+          cash_balance,
+          total_invested,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `).run('agent-legacy-unbackfilled', cohort.id, model.id, 10000, 0, 'active');
 
       expect(() => agents.getAgentsWithModelsByCohort(cohort.id)).toThrow(
-        `Agent ${agent!.id} is missing frozen benchmark lineage`
+        'Agent agent-legacy-unbackfilled is missing frozen benchmark lineage'
       );
     });
   });

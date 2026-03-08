@@ -5,7 +5,7 @@ export interface Cohort {
   status: 'active' | 'completed';
   completed_at: string | null;
   methodology_version: string;
-  benchmark_config_id: string | null;
+  benchmark_config_id: string;
   initial_balance: number;
   created_at: string;
 }
@@ -24,9 +24,9 @@ export interface Agent {
   id: string;
   cohort_id: string;
   model_id: string;
-  family_id: string | null;
-  release_id: string | null;
-  benchmark_config_model_id: string | null;
+  family_id: string;
+  release_id: string;
+  benchmark_config_model_id: string;
   cash_balance: number;
   total_invested: number;
   status: 'active' | 'bankrupt';

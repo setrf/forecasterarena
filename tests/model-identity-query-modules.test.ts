@@ -137,7 +137,7 @@ describe('model identity query modules', () => {
     try {
       const foundation = await import('@/lib/catalog/foundation');
       const dbModule = await import('@/lib/db');
-      const cohorts = await import('@/lib/db/queries/cohorts');
+      const views = await import('@/lib/db/views');
       const agents = await import('@/lib/db/queries/agents');
       const db = dbModule.getDb();
 
@@ -152,7 +152,72 @@ describe('model identity query modules', () => {
         '#111111'
       );
 
-      const cohort = cohorts.createCohort();
+      db.pragma('foreign_keys = OFF');
+      db.exec('DROP TRIGGER IF EXISTS cohorts_require_benchmark_config_insert');
+      db.exec('DROP TRIGGER IF EXISTS cohorts_require_benchmark_config_update');
+      db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_insert');
+      db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_update');
+      db.exec('DROP VIEW IF EXISTS agent_benchmark_identity_v');
+      db.exec('ALTER TABLE cohorts RENAME TO cohorts_strict_backup');
+      db.exec(`
+        CREATE TABLE cohorts (
+          id TEXT PRIMARY KEY,
+          cohort_number INTEGER NOT NULL UNIQUE,
+          started_at TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'active',
+          completed_at TEXT,
+          methodology_version TEXT NOT NULL DEFAULT 'v1',
+          benchmark_config_id TEXT,
+          initial_balance REAL NOT NULL DEFAULT 10000.00,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (methodology_version) REFERENCES methodology_versions(version),
+          FOREIGN KEY (benchmark_config_id) REFERENCES benchmark_configs(id)
+        )
+      `);
+      db.exec('ALTER TABLE agents RENAME TO agents_strict_backup');
+      db.exec(`
+        CREATE TABLE agents (
+          id TEXT PRIMARY KEY,
+          cohort_id TEXT NOT NULL,
+          model_id TEXT NOT NULL,
+          family_id TEXT,
+          release_id TEXT,
+          benchmark_config_model_id TEXT,
+          cash_balance REAL NOT NULL DEFAULT 10000.00,
+          total_invested REAL NOT NULL DEFAULT 0.00,
+          status TEXT NOT NULL DEFAULT 'active',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (cohort_id) REFERENCES cohorts(id),
+          FOREIGN KEY (model_id) REFERENCES models(id),
+          FOREIGN KEY (family_id) REFERENCES model_families(id),
+          FOREIGN KEY (release_id) REFERENCES model_releases(id),
+          FOREIGN KEY (benchmark_config_model_id) REFERENCES benchmark_config_models(id),
+          UNIQUE(cohort_id, model_id)
+        )
+      `);
+      db.pragma('foreign_keys = ON');
+      views.initializeViews(db);
+
+      const cohortId = 'cohort-legacy-custom';
+      db.prepare(`
+        INSERT INTO cohorts (
+          id,
+          cohort_number,
+          started_at,
+          status,
+          methodology_version,
+          benchmark_config_id,
+          initial_balance
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        cohortId,
+        1,
+        '2025-01-05T00:00:00.000Z',
+        'active',
+        'v1',
+        null,
+        10000
+      );
       db.prepare(`
         INSERT INTO agents (
           id,
@@ -164,7 +229,7 @@ describe('model identity query modules', () => {
         ) VALUES (?, ?, ?, ?, ?, ?)
       `).run(
         'agent-legacy-custom',
-        cohort.id,
+        cohortId,
         'legacy-custom',
         10000,
         0,
@@ -172,11 +237,12 @@ describe('model identity query modules', () => {
       );
 
       foundation.ensureModelIdentityFoundation(db);
+      views.initializeViews(db);
 
-      const [agent] = agents.getAgentsWithModelsByCohort(cohort.id);
+      const [agent] = agents.getAgentsWithModelsByCohort(cohortId);
       expect(agent?.family_id).toBe('legacy-custom');
       expect(agent?.release_id).toBe('legacy-custom--legacy-custom');
-      expect(agent?.benchmark_config_model_id).toBe(`benchmark-config-backfill-${cohort.id}--legacy-custom`);
+      expect(agent?.benchmark_config_model_id).toBe(`benchmark-config-backfill-${cohortId}--legacy-custom`);
       expect(agent?.model.family_id).toBe('legacy-custom');
       expect(agent?.model.family_slug).toBe('legacy-custom');
       expect(agent?.model.display_name).toBe('Legacy Custom');
@@ -187,7 +253,7 @@ describe('model identity query modules', () => {
       expect(agent?.model.provider).toBe('CustomAI');
       expect(agent?.model.input_price_per_million).toBe(2);
       expect(agent?.model.output_price_per_million).toBe(8);
-      expect(agents.getAgentByCohortAndModel(cohort.id, 'legacy-custom')?.id).toBe('agent-legacy-custom');
+      expect(agents.getAgentByCohortAndModel(cohortId, 'legacy-custom')?.id).toBe('agent-legacy-custom');
     } finally {
       await ctx.cleanup();
     }
@@ -273,7 +339,14 @@ describe('model identity query modules', () => {
       expect(configuredAgents).toHaveLength(1);
       expect(configuredAgents[0]?.model_id).toBe('custom-family');
 
+      db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run(
+        '2030-01-01T00:00:00.000Z',
+        configuredCohort.id
+      );
       db.prepare('UPDATE benchmark_configs SET is_default_for_future_cohorts = 0').run();
+      expect(() => cohorts.createCohort(null)).toThrow(
+        /No default benchmark config is configured for cohort creation/i
+      );
       db.prepare(`
         INSERT INTO cohorts (
           id,
@@ -281,15 +354,18 @@ describe('model identity query modules', () => {
           started_at,
           methodology_version,
           benchmark_config_id
-        ) VALUES (?, ?, ?, ?, NULL)
+        ) VALUES (?, ?, ?, ?, ?)
       `).run(
         'cohort-without-default',
         2,
         '2030-01-07T00:00:00.000Z',
-        'v1'
+        'v1',
+        config.id
       );
 
-      expect(agents.createAgentsForCohort('cohort-without-default', null)).toEqual([]);
+      expect(() => agents.createAgentsForCohort('cohort-without-default', null)).toThrow(
+        /No default benchmark config is configured for agent creation/i
+      );
     } finally {
       await ctx.cleanup();
     }

@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS cohorts (
   status TEXT NOT NULL DEFAULT 'active',         -- active | completed
   completed_at TEXT,                             -- When all bets resolved
   methodology_version TEXT NOT NULL DEFAULT 'v1',-- Version used
-  benchmark_config_id TEXT,                      -- Frozen lineup/config used
+  benchmark_config_id TEXT NOT NULL,             -- Frozen lineup/config used
   initial_balance REAL NOT NULL DEFAULT 10000.00,-- Starting balance
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (methodology_version) REFERENCES methodology_versions(version),
@@ -62,9 +62,9 @@ CREATE TABLE IF NOT EXISTS agents (
   id TEXT PRIMARY KEY,                           -- UUID
   cohort_id TEXT NOT NULL,                       -- Links to cohorts
   model_id TEXT NOT NULL,                        -- Links to models
-  family_id TEXT,                                -- Stable benchmark family
-  release_id TEXT,                               -- Frozen exact release
-  benchmark_config_model_id TEXT,                -- Frozen config slot
+  family_id TEXT NOT NULL,                       -- Stable benchmark family
+  release_id TEXT NOT NULL,                      -- Frozen exact release
+  benchmark_config_model_id TEXT NOT NULL,       -- Frozen config slot
   cash_balance REAL NOT NULL DEFAULT 10000.00,   -- Available cash
   total_invested REAL NOT NULL DEFAULT 0.00,     -- Sum of open positions
   status TEXT NOT NULL DEFAULT 'active',         -- active | bankrupt

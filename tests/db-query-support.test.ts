@@ -300,7 +300,7 @@ describe('db query modules - support and reporting', () => {
     });
   });
 
-  it('updates existing API cost rows without inferred lineage when the linked agent lineage is missing', async () => {
+  it('keeps API cost lineage stable because agent lineage cannot be nulled once written', async () => {
     await withModules(({ agents, cohorts, costs, db }) => {
       const cohort = cohorts.createCohort();
       const [agent] = agents.createAgentsForCohort(cohort.id);
@@ -321,31 +321,69 @@ describe('db query modules - support and reporting', () => {
         cost_usd: 0.15
       });
 
-      db.prepare(`
+      expect(() => db.prepare(`
         UPDATE agents
         SET family_id = NULL,
             release_id = NULL,
             benchmark_config_model_id = NULL
         WHERE id = ?
-      `).run(agent!.id);
+      `).run(agent!.id)).toThrow();
 
-      const updatedApiCost = costs.createApiCost({
-        model_id: agent!.model_id,
-        decision_id: decisionId,
-        tokens_input: 95,
-        tokens_output: 35,
-        cost_usd: 0.18
-      });
-
-      expect(updatedApiCost.id).toBe(firstApiCost.id);
-      expect(updatedApiCost.agent_id).toBe(agent!.id);
-      expect(updatedApiCost.family_id).toBeNull();
-      expect(updatedApiCost.release_id).toBeNull();
-      expect(updatedApiCost.benchmark_config_model_id).toBeNull();
-      expect(updatedApiCost.cost_usd).toBe(0.18);
       expect(costs.getTotalCostsByModel()).toEqual({
-        [agent!.model_id]: 0.18
+        [agent!.family_id]: 0.15
       });
+    });
+  });
+
+  it('rejects agent-linked API cost rows when a legacy agent is still missing frozen lineage', async () => {
+    await withModules(({ cohorts, costs, db, models }) => {
+      const cohort = cohorts.createCohort();
+      const model = models.getActiveModels()[0]!;
+
+      db.pragma('foreign_keys = OFF');
+      db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_insert');
+      db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_update');
+      db.exec('ALTER TABLE agents RENAME TO agents_strict_backup');
+      db.exec(`
+        CREATE TABLE agents (
+          id TEXT PRIMARY KEY,
+          cohort_id TEXT NOT NULL,
+          model_id TEXT NOT NULL,
+          family_id TEXT,
+          release_id TEXT,
+          benchmark_config_model_id TEXT,
+          cash_balance REAL NOT NULL DEFAULT 10000.00,
+          total_invested REAL NOT NULL DEFAULT 0.00,
+          status TEXT NOT NULL DEFAULT 'active',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (cohort_id) REFERENCES cohorts(id),
+          FOREIGN KEY (model_id) REFERENCES models(id),
+          FOREIGN KEY (family_id) REFERENCES model_families(id),
+          FOREIGN KEY (release_id) REFERENCES model_releases(id),
+          FOREIGN KEY (benchmark_config_model_id) REFERENCES benchmark_config_models(id),
+          UNIQUE(cohort_id, model_id)
+        )
+      `);
+      db.pragma('foreign_keys = ON');
+
+      db.prepare(`
+        INSERT INTO agents (
+          id,
+          cohort_id,
+          model_id,
+          cash_balance,
+          total_invested,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `).run('agent-missing-lineage', cohort.id, model.id, 10000, 0, 'active');
+
+      expect(() => costs.createApiCost({
+        model_id: model.id,
+        agent_id: 'agent-missing-lineage',
+        tokens_input: 10,
+        tokens_output: 5,
+        cost_usd: 0.01
+      })).toThrow('API cost rows linked to a cohort agent must carry complete frozen lineage');
     });
   });
 

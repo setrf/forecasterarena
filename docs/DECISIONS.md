@@ -18,7 +18,7 @@ the current production code unless explicitly marked as superseded.
 As of March 7, 2026, the production codebase currently implements:
 
 - Weekly cohort creation at Sunday 00:00 UTC
-- One agent per active model per cohort
+- One frozen benchmark slot per active family per cohort
 - Top-500 market selection by Polymarket volume
 - Sequential decision execution per cohort to reduce provider contention
 - Timestamped portfolio snapshots (10-minute cadence)
@@ -79,6 +79,7 @@ Implementation constraints:
 
 - Enforced by `UNIQUE(cohort_id, model_id)` in `agents`.
 - Agent creation is safe to rerun because inserts use `INSERT OR IGNORE`.
+- The semantic identity of that cohort participant is frozen by `family_id`, `release_id`, and `benchmark_config_model_id`.
 
 ---
 

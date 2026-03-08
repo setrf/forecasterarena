@@ -103,7 +103,7 @@ Represents one weekly benchmark competition instance.
 | `status` | `TEXT` | Not null, default `active` |
 | `completed_at` | `TEXT` | Nullable |
 | `methodology_version` | `TEXT` | Not null, default `v1` |
-| `benchmark_config_id` | `TEXT` | Nullable frozen lineup/config reference |
+| `benchmark_config_id` | `TEXT` | Not null frozen lineup/config reference |
 | `initial_balance` | `REAL` | Not null, default `10000.00` |
 | `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
 
@@ -281,9 +281,9 @@ Represents one frozen benchmark assignment inside one cohort.
 | `id` | `TEXT` | Primary key |
 | `cohort_id` | `TEXT` | Not null |
 | `model_id` | `TEXT` | Not null legacy compatibility key |
-| `family_id` | `TEXT` | Nullable stable benchmark family |
-| `release_id` | `TEXT` | Nullable exact model release |
-| `benchmark_config_model_id` | `TEXT` | Nullable frozen config slot |
+| `family_id` | `TEXT` | Not null stable benchmark family |
+| `release_id` | `TEXT` | Not null exact model release |
+| `benchmark_config_model_id` | `TEXT` | Not null frozen config slot |
 | `cash_balance` | `REAL` | Not null, default `10000.00` |
 | `total_invested` | `REAL` | Not null, default `0.00` |
 | `status` | `TEXT` | Not null, default `active` |
@@ -569,6 +569,7 @@ Note:
 
 - the main decision flow also stores estimated cost directly on `decisions`
 - `api_costs` exists so cost lineage can stand on its own even if family labels or release mappings evolve later
+- fresh installs enforce non-null cohort/agent lineage in the base schema, and migrated databases install SQLite triggers that reject future writes which try to clear that frozen lineage
 
 ---
 

@@ -2,6 +2,51 @@ import { describe, expect, it } from 'vitest';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
 describe('schema seeds and idempotency behavior', () => {
+  it('enforces frozen cohort and agent lineage at the schema and trigger level', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const dbModule = await import('@/lib/db');
+      const queries = await import('@/lib/db/queries');
+      const db = dbModule.getDb();
+
+      const cohortColumns = db.prepare(`PRAGMA table_info(cohorts)`).all() as Array<{
+        name: string;
+        notnull: number;
+      }>;
+      const agentColumns = db.prepare(`PRAGMA table_info(agents)`).all() as Array<{
+        name: string;
+        notnull: number;
+      }>;
+
+      expect(cohortColumns.find((column) => column.name === 'benchmark_config_id')?.notnull).toBe(1);
+      expect(agentColumns.find((column) => column.name === 'family_id')?.notnull).toBe(1);
+      expect(agentColumns.find((column) => column.name === 'release_id')?.notnull).toBe(1);
+      expect(agentColumns.find((column) => column.name === 'benchmark_config_model_id')?.notnull).toBe(1);
+
+      const cohort = queries.createCohort();
+      const [agent] = queries.createAgentsForCohort(cohort.id);
+
+      expect(() => {
+        db.prepare(`
+          UPDATE cohorts
+          SET benchmark_config_id = NULL
+          WHERE id = ?
+        `).run(cohort.id);
+      }).toThrow(/benchmark_config_id is required/i);
+
+      expect(() => {
+        db.prepare(`
+          UPDATE agents
+          SET family_id = NULL
+          WHERE id = ?
+        `).run(agent.id);
+      }).toThrow(/frozen lineage is required/i);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('preserves existing model rows instead of mutating them during reseed', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 

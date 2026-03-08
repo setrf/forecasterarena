@@ -15,8 +15,30 @@ describe('admin export lineage queries', () => {
         'model_families',
         'model_releases',
         'benchmark_configs',
-        'benchmark_config_models'
+        'benchmark_config_models',
+        'api_costs'
       ]));
+
+      const decision = fixture.queries.createDecision({
+        agent_id: fixture.agent.id,
+        cohort_id: fixture.cohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'HOLD'
+      });
+
+      fixture.queries.createApiCost({
+        model_id: fixture.modelId,
+        agent_id: fixture.agent.id,
+        family_id: fixture.agent.family_id,
+        release_id: fixture.agent.release_id,
+        benchmark_config_model_id: fixture.agent.benchmark_config_model_id,
+        decision_id: decision.id,
+        tokens_input: 10,
+        tokens_output: 5,
+        cost_usd: 0.01
+      });
 
       const queries = buildQueries(false);
       const cohortRows = getRowsForTable(queries, 'cohorts', fixture.cohort.id, '2026-01-01', '2026-12-31');
@@ -25,6 +47,7 @@ describe('admin export lineage queries', () => {
       const releaseRows = getRowsForTable(queries, 'model_releases', fixture.cohort.id, '2026-01-01', '2026-12-31');
       const configRows = getRowsForTable(queries, 'benchmark_configs', fixture.cohort.id, '2026-01-01', '2026-12-31');
       const configModelRows = getRowsForTable(queries, 'benchmark_config_models', fixture.cohort.id, '2026-01-01', '2026-12-31');
+      const apiCostRows = getRowsForTable(queries, 'api_costs', fixture.cohort.id, '2026-01-01', '2026-12-31');
 
       expect(cohortRows[0]).toMatchObject({
         id: fixture.cohort.id,
@@ -41,6 +64,13 @@ describe('admin export lineage queries', () => {
       expect(releaseRows).toHaveLength(1);
       expect(configRows).toHaveLength(1);
       expect(configModelRows).toHaveLength(1);
+      expect(apiCostRows[0]).toMatchObject({
+        model_id: fixture.modelId,
+        agent_id: fixture.agent.id,
+        family_id: fixture.agent.family_id,
+        release_id: fixture.agent.release_id,
+        benchmark_config_model_id: fixture.agent.benchmark_config_model_id
+      });
     } finally {
       await ctx.cleanup();
     }

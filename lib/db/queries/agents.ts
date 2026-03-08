@@ -130,9 +130,11 @@ export function getAgentByCohortAndModel(cohortId: string, modelId: string): Age
 export function createAgentsForCohort(cohortId: string, benchmarkConfigId?: string | null): Agent[] {
   const db = getDb();
   const configId = benchmarkConfigId ?? getDefaultBenchmarkConfig()?.id;
-  const configModels = configId
-    ? getBenchmarkConfigModels(configId)
-    : [];
+  if (!configId) {
+    throw new Error('No default benchmark config is configured for agent creation');
+  }
+
+  const configModels = getBenchmarkConfigModels(configId);
 
   for (const configModel of configModels) {
     db.prepare(`

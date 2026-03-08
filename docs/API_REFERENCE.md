@@ -878,6 +878,11 @@ Rules:
   - `cohorts`
   - `agents`
   - `models`
+  - `model_families`
+  - `model_releases`
+  - `benchmark_configs`
+  - `benchmark_config_models`
+  - `api_costs`
   - `markets`
   - `decisions`
   - `trades`

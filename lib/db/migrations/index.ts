@@ -2,11 +2,13 @@ import type Database from 'better-sqlite3';
 
 import { modelIdentityFoundationMigration } from '@/lib/db/migrations/002_model_identity_foundation';
 import { apiCostLineageMigration } from '@/lib/db/migrations/003_api_cost_lineage';
+import { lineageWriteGuardsMigration } from '@/lib/db/migrations/004_lineage_write_guards';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
 const MIGRATIONS: DbMigration[] = [
   modelIdentityFoundationMigration,
-  apiCostLineageMigration
+  apiCostLineageMigration,
+  lineageWriteGuardsMigration
 ];
 
 export function runMigrations(db: Database.Database): void {

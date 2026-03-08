@@ -425,7 +425,27 @@ HAVING COUNT(*) > 1;
 
 Both queries should return zero rows.
 
-### 7.3 Markets Stuck Closed
+### 7.3 Frozen Lineage Sanity Checks
+
+```sql
+SELECT id, cohort_number
+FROM cohorts
+WHERE benchmark_config_id IS NULL
+ORDER BY cohort_number DESC;
+```
+
+```sql
+SELECT id, cohort_id, model_id
+FROM agents
+WHERE family_id IS NULL
+   OR release_id IS NULL
+   OR benchmark_config_model_id IS NULL
+ORDER BY created_at DESC;
+```
+
+Both queries should return zero rows. Any result indicates the frozen benchmark lineage was bypassed or corrupted.
+
+### 7.4 Markets Stuck Closed
 
 ```sql
 SELECT id, polymarket_id, question, close_date, last_updated_at
@@ -437,7 +457,7 @@ LIMIT 50;
 
 If rows remain here for too long, inspect resolution logs and retry `/api/cron/check-resolutions`.
 
-### 7.4 Open Positions on Closed Markets
+### 7.5 Open Positions on Closed Markets
 
 ```sql
 SELECT p.id, p.agent_id, p.market_id, p.side, p.status, m.status AS market_status

@@ -5,7 +5,6 @@
  */
 
 export { OpenRouterError } from '@/lib/openrouter/client/error';
-export { estimateCost } from '@/lib/openrouter/client/pricing';
 export { estimateCostFromSnapshot } from '@/lib/openrouter/client/pricing';
 export { callOpenRouter } from '@/lib/openrouter/client/request';
 export { callOpenRouterWithRetry } from '@/lib/openrouter/client/retry';

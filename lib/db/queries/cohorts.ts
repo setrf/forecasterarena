@@ -1,6 +1,7 @@
 import { generateId, getDb, withImmediateTransaction } from '../index';
 import { METHODOLOGY_VERSION } from '../../constants';
 import type { Cohort } from '../../types';
+import { getDefaultBenchmarkConfig } from '@/lib/db/queries/benchmark-configs';
 
 function getCurrentWeekStart(now: Date = new Date()): Date {
   const dayOfWeek = now.getUTCDay();
@@ -60,6 +61,7 @@ export function createCohort(benchmarkConfigId?: string | null): Cohort {
   return withImmediateTransaction(() => {
     const db = getDb();
     const startedAt = getCurrentWeekStart().toISOString();
+    const resolvedBenchmarkConfigId = benchmarkConfigId ?? getDefaultBenchmarkConfig()?.id;
     const existing = db.prepare(`
       SELECT * FROM cohorts
       WHERE started_at = ?
@@ -68,6 +70,10 @@ export function createCohort(benchmarkConfigId?: string | null): Cohort {
 
     if (existing) {
       return existing;
+    }
+
+    if (!resolvedBenchmarkConfigId) {
+      throw new Error('No default benchmark config is configured for cohort creation');
     }
 
     const id = generateId();
@@ -81,7 +87,7 @@ export function createCohort(benchmarkConfigId?: string | null): Cohort {
         ?,
         ?
       )
-    `).run(id, startedAt, METHODOLOGY_VERSION, benchmarkConfigId ?? null);
+    `).run(id, startedAt, METHODOLOGY_VERSION, resolvedBenchmarkConfigId);
 
     return getCohortById(id)!;
   });

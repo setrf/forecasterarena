@@ -44,6 +44,15 @@ export function buildQueries(includePrompts: boolean): ExportQueries {
             JOIN cohorts c ON c.benchmark_config_id = bcm.benchmark_config_id
             WHERE c.id = ?`
     },
+    api_costs: {
+      columns: ['id', 'model_id', 'agent_id', 'family_id', 'release_id', 'benchmark_config_model_id', 'decision_id', 'tokens_input', 'tokens_output', 'cost_usd', 'recorded_at'],
+      sql: `SELECT ac.id, ac.model_id, ac.agent_id, ac.family_id, ac.release_id, ac.benchmark_config_model_id, ac.decision_id, ac.tokens_input, ac.tokens_output, ac.cost_usd, ac.recorded_at
+            FROM api_costs ac
+            JOIN agents a ON ac.agent_id = a.id
+            WHERE a.cohort_id = ?
+              AND ac.recorded_at >= ?
+              AND ac.recorded_at <= ?`
+    },
     markets: {
       columns: ['id', 'polymarket_id', 'slug', 'event_slug', 'question', 'description', 'category', 'market_type', 'outcomes', 'close_date', 'status', 'current_price', 'current_prices', 'volume', 'liquidity', 'resolution_outcome', 'resolved_at', 'first_seen_at', 'last_updated_at'],
       sql: `SELECT DISTINCT m.id, m.polymarket_id, m.slug, m.event_slug, m.question, m.description, m.category, m.market_type, m.outcomes, m.close_date, m.status, m.current_price, m.current_prices, m.volume, m.liquidity, m.resolution_outcome, m.resolved_at, m.first_seen_at, m.last_updated_at
@@ -121,6 +130,7 @@ export function getRowsForTable(
     case 'benchmark_config_models':
     case 'markets':
       return db.prepare(query.sql).all(cohortId) as Record<string, unknown>[];
+    case 'api_costs':
     case 'decisions':
     case 'trades':
     case 'portfolio_snapshots':
