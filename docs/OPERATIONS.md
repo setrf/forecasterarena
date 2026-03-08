@@ -180,7 +180,36 @@ Interpretation:
 
 Run these after the Sunday decision window.
 
-### 5.1 Cohort Existence
+### 5.1 Benchmark Lineup Control
+
+The live benchmark now separates:
+
+- `model_families`: stable public competitor slots
+- `model_releases`: exact OpenRouter targets
+- `benchmark_configs`: future lineup manifests
+- `agents`: the frozen family/release/config assignment actually used by a cohort
+
+Operational rule:
+
+- register new releases and promote future configs through the admin benchmark control plane
+- do not mutate old `models` rows expecting historical cohorts to follow along safely
+- active and historical cohorts must continue using the frozen lineage they already carry
+
+Recommended release-rotation workflow:
+
+1. Confirm the new OpenRouter release is reachable and priced correctly.
+2. `POST /api/admin/benchmark/releases` to register the exact release under its existing family.
+3. `POST /api/admin/benchmark/configs` to build the next lineup.
+4. Review the admin benchmark page and confirm every family points to the intended release and price snapshot.
+5. `POST /api/admin/benchmark/default` to make that config the future default.
+6. Verify the next cohort starts with the promoted config while older cohorts keep their previous release lineage.
+
+Rollback rule:
+
+- if the wrong future lineup is promoted, promote the previous config again before the next cohort start
+- do not rewrite active cohorts in place
+
+### 5.2 Cohort Existence
 
 ```bash
 sqlite3 data/forecaster.db "
@@ -195,9 +224,10 @@ Expected:
 
 - one newly created weekly cohort,
 - `started_at` normalized to the week start,
+- `benchmark_config_id` populated for the new cohort,
 - no duplicate cohort rows for the same Sunday.
 
-### 5.2 Decision Coverage
+### 5.3 Decision Coverage
 
 ```bash
 sqlite3 data/forecaster.db "
@@ -216,7 +246,7 @@ Expected:
 
 Because the application now claims a single canonical decision row per agent/week, reruns should overwrite or reuse that row rather than add another one.
 
-### 5.3 Trades Recorded
+### 5.4 Trades Recorded
 
 ```bash
 sqlite3 data/forecaster.db "
@@ -234,7 +264,7 @@ Interpretation:
 - `HOLD` with zero trades is normal.
 - `BET` or `SELL` with zero trades is retryable but indicates an execution problem.
 
-### 5.4 Snapshot Freshness
+### 5.5 Snapshot Freshness
 
 ```bash
 sqlite3 data/forecaster.db "
@@ -283,7 +313,8 @@ Current safeguards:
 
 - the operation is week-unique,
 - repeated calls in the same week return the existing cohort,
-- agent creation is idempotent by `(cohort_id, model_id)`.
+- agent creation is physically idempotent by `(cohort_id, model_id)`,
+- the frozen lineup actually used by the cohort is carried by `benchmark_config_id` and each agent’s `benchmark_config_model_id`.
 
 ### 6.3 Run Decisions
 

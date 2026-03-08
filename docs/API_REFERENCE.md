@@ -186,7 +186,9 @@ Response shape:
 Notes:
 
 - leaderboard rows only appear for models that actually have cohort history
-- `display_name` is the current presentation name, while `model_id` stays stable
+- `model_id` is the public continuity key exposed by the read model
+- `display_name` is the family-facing label used for comparison views
+- the exact release used by any historical cohort is derived from frozen agent lineage, not directly from the mutable `models` table
 
 ### GET /api/performance-data
 
@@ -651,15 +653,114 @@ Returns high-level admin dashboard stats.
 }
 ```
 
+### GET /api/admin/benchmark
+
+Returns the current lineage control-plane snapshot used by the admin benchmark page.
+
+Response shape:
+
+```json
+{
+  "default_config_id": "benchmark-config-bootstrap-default",
+  "families": [
+    {
+      "id": "openai-gpt",
+      "public_display_name": "GPT",
+      "current_release_id": "openai-gpt--gpt-5.2",
+      "current_release_name": "GPT-5.2",
+      "releases": [
+        {
+          "id": "openai-gpt--gpt-5.2",
+          "release_name": "GPT-5.2",
+          "openrouter_id": "openai/gpt-5.2",
+          "default_input_price_per_million": 5,
+          "default_output_price_per_million": 15
+        }
+      ]
+    }
+  ],
+  "configs": [
+    {
+      "id": "benchmark-config-bootstrap-default",
+      "version_name": "bootstrap-default-lineup",
+      "is_default_for_future_cohorts": 1,
+      "models": [
+        {
+          "family_id": "openai-gpt",
+          "release_id": "openai-gpt--gpt-5.2",
+          "release_display_name_snapshot": "GPT-5.2"
+        }
+      ]
+    }
+  ],
+  "updated_at": "2026-03-07T00:00:00.000Z"
+}
+```
+
+### POST /api/admin/benchmark/releases
+
+Registers a new exact release for an existing family.
+
+Body:
+
+```json
+{
+  "family_id": "openai-gpt",
+  "release_name": "GPT-5.4",
+  "openrouter_id": "openai/gpt-5.4",
+  "default_input_price_per_million": 6,
+  "default_output_price_per_million": 18,
+  "notes": "Optional operator note"
+}
+```
+
+### POST /api/admin/benchmark/configs
+
+Creates a future benchmark lineup without affecting active or historical cohorts.
+
+Body:
+
+```json
+{
+  "version_name": "lineup-2026-03-gpt54",
+  "methodology_version": "v1",
+  "notes": "Promote GPT-5.4 for the next cohort",
+  "assignments": [
+    {
+      "family_id": "openai-gpt",
+      "release_id": "openai-gpt--gpt-5.4",
+      "input_price_per_million": 6,
+      "output_price_per_million": 18
+    }
+  ]
+}
+```
+
+### POST /api/admin/benchmark/default
+
+Promotes a benchmark config for future cohort creation.
+
+Body:
+
+```json
+{
+  "config_id": "lineup-config-id"
+}
+```
+
 ### GET /api/admin/costs
 
-Returns cost data aggregated by model and overall summary.
+Returns cost data aggregated by model family and overall summary.
 
 ```json
 {
   "costs_by_model": [
     {
+      "public_model_id": "gpt-5.1",
       "model_id": "gpt-5.1",
+      "family_id": "openai-gpt",
+      "family_slug": "openai-gpt",
+      "legacy_model_id": "gpt-5.1",
       "model_name": "GPT-5.2",
       "color": "#10B981",
       "total_cost": 0.25,
@@ -678,6 +779,13 @@ Returns cost data aggregated by model and overall summary.
   "updated_at": "2026-03-06T17:00:00.000Z"
 }
 ```
+
+Notes:
+
+- `public_model_id` is the family-facing continuity key used by the admin UI
+- `model_id` is retained as a compatibility alias for older consumers
+- `family_id` and `family_slug` are the stable lineage identifiers
+- `legacy_model_id` preserves the old roster key when one exists
 
 ### GET /api/admin/logs
 

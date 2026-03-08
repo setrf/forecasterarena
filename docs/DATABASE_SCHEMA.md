@@ -6,8 +6,8 @@ Last updated: 2026-03-07
 - Driver: `better-sqlite3`
 - Default path: `data/forecaster.db`
 
-This document describes the schema that the application currently initializes in
-`lib/db/schema.ts`. It is intended to be the implementation-aligned reference
+This document describes the schema that the application currently initializes through
+`lib/db/schema/tables`, `lib/db/migrations`, and `lib/db/views`. It is intended to be the implementation-aligned reference
 for analysts, operators, and future migration work.
 
 ---
@@ -47,8 +47,16 @@ methodology_versions
          |
          +----------------------------------< system_logs (logical ops only)
 
-models ----< agents
-models ----< api_costs
+models ----< agents (legacy compatibility key only)
+model_families ----< model_releases
+benchmark_configs ----< benchmark_config_models
+benchmark_configs ----< cohorts
+model_families ----< benchmark_config_models
+model_releases ----< benchmark_config_models
+model_families ----< agents
+model_releases ----< agents
+benchmark_config_models ----< agents
+agents ----< api_costs
 decisions ----< api_costs
 ```
 
@@ -95,12 +103,14 @@ Represents one weekly benchmark competition instance.
 | `status` | `TEXT` | Not null, default `active` |
 | `completed_at` | `TEXT` | Nullable |
 | `methodology_version` | `TEXT` | Not null, default `v1` |
+| `benchmark_config_id` | `TEXT` | Nullable frozen lineup/config reference |
 | `initial_balance` | `REAL` | Not null, default `10000.00` |
 | `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
 
 Foreign keys:
 
 - `methodology_version -> methodology_versions(version)`
+- `benchmark_config_id -> benchmark_configs(id)`
 
 Uniqueness:
 
@@ -117,7 +127,7 @@ Why `started_at` uniqueness matters:
 
 ### 3.3 `models`
 
-Reference table for the active model roster.
+Legacy compatibility table for the active model roster.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -144,18 +154,136 @@ Current seeded roster in code:
 Important note:
 
 - the stable internal `id` is not guaranteed to match the newest display name
+- historical benchmark identity should not be read from this table directly; use family/release/config lineage instead
+
+---
+
+### 3.3a Lineage Model
+
+The benchmark now separates model identity into four layers:
+
+- `model_families`: the stable competitor slot shown publicly
+- `model_releases`: the exact deployed model used for execution
+- `benchmark_configs`: the future lineup definition promoted by operators
+- `agents`: the cohort-bound frozen assignment of family, release, and config slot
+
+This is what prevents a future release rotation from rewriting active or historical cohorts.
+
+---
+
+### 3.3b `model_families`
+
+Stable benchmark families such as `openai-gpt` or `google-gemini`.
+
+Important columns:
+
+- `id`
+- `slug`
+- `legacy_model_id`
+- `provider`
+- `family_name`
+- `public_display_name`
+- `short_display_name`
+- `color`
+- `status`
+- `sort_order`
+- `created_at`
+- `retired_at`
+
+Notes:
+
+- `legacy_model_id` preserves compatibility with older routes and exports
+- `status` controls whether a family should appear in future default lineups
+
+---
+
+### 3.3c `model_releases`
+
+Immutable execution targets for one family.
+
+Important columns:
+
+- `id`
+- `family_id`
+- `release_name`
+- `release_slug`
+- `openrouter_id`
+- `provider`
+- `metadata_json`
+- `release_status`
+- `created_at`
+- `retired_at`
+- `first_used_cohort_number`
+- `last_used_cohort_number`
+
+Notes:
+
+- one family can have many releases over time
+- `metadata_json` may store operator notes and default pricing hints
+
+---
+
+### 3.3d `benchmark_configs`
+
+Frozen future lineups used when starting new cohorts.
+
+Important columns:
+
+- `id`
+- `version_name`
+- `methodology_version`
+- `notes`
+- `created_by`
+- `is_default_for_future_cohorts`
+- `created_at`
+
+Operational note:
+
+- current and future cohorts may point at the promoted default config
+- legacy cohorts backfilled during migration can receive cohort-specific `benchmark-config-backfill-<cohort_id>` configs so historical assignments are frozen without rewriting the shared future default
+
+---
+
+### 3.3e `benchmark_config_models`
+
+Frozen family/release assignments inside one benchmark config.
+
+Important columns:
+
+- `id`
+- `benchmark_config_id`
+- `family_id`
+- `release_id`
+- `slot_order`
+- `family_display_name_snapshot`
+- `short_display_name_snapshot`
+- `release_display_name_snapshot`
+- `provider_snapshot`
+- `color_snapshot`
+- `openrouter_id_snapshot`
+- `input_price_per_million_snapshot`
+- `output_price_per_million_snapshot`
+- `created_at`
+
+Notes:
+
+- this is the authoritative pricing snapshot for cost reproducibility
+- future vendor pricing changes do not rewrite old cohort costs
 
 ---
 
 ### 3.4 `agents`
 
-Represents one model instance inside one cohort.
+Represents one frozen benchmark assignment inside one cohort.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `TEXT` | Primary key |
 | `cohort_id` | `TEXT` | Not null |
-| `model_id` | `TEXT` | Not null |
+| `model_id` | `TEXT` | Not null legacy compatibility key |
+| `family_id` | `TEXT` | Nullable stable benchmark family |
+| `release_id` | `TEXT` | Nullable exact model release |
+| `benchmark_config_model_id` | `TEXT` | Nullable frozen config slot |
 | `cash_balance` | `REAL` | Not null, default `10000.00` |
 | `total_invested` | `REAL` | Not null, default `0.00` |
 | `status` | `TEXT` | Not null, default `active` |
@@ -165,12 +293,19 @@ Foreign keys:
 
 - `cohort_id -> cohorts(id)`
 - `model_id -> models(id)`
+- `family_id -> model_families(id)`
+- `release_id -> model_releases(id)`
+- `benchmark_config_model_id -> benchmark_config_models(id)`
 
 Uniqueness:
 
 - `UNIQUE(cohort_id, model_id)`
 
-This is what guarantees one agent per model per cohort.
+Interpretation:
+
+- the physical uniqueness guard is still `(cohort_id, model_id)`
+- the historical truth for execution and display is carried by `family_id`, `release_id`, and `benchmark_config_model_id`
+- the application centralizes joined historical reads through the `agent_benchmark_identity_v` view
 
 ---
 
@@ -405,12 +540,16 @@ Behavior note:
 
 ### 3.11 `api_costs`
 
-Optional cost-tracking table for model usage.
+Optional cost-tracking table for model usage with frozen lineage.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `TEXT` | Primary key |
-| `model_id` | `TEXT` | Not null |
+| `model_id` | `TEXT` | Not null legacy compatibility key |
+| `agent_id` | `TEXT` | Nullable frozen agent assignment |
+| `family_id` | `TEXT` | Nullable stable benchmark family |
+| `release_id` | `TEXT` | Nullable exact model release |
+| `benchmark_config_model_id` | `TEXT` | Nullable frozen config slot |
 | `decision_id` | `TEXT` | Nullable |
 | `tokens_input` | `INTEGER` | Nullable |
 | `tokens_output` | `INTEGER` | Nullable |
@@ -420,11 +559,16 @@ Optional cost-tracking table for model usage.
 Foreign keys:
 
 - `model_id -> models(id)`
+- `agent_id -> agents(id)`
+- `family_id -> model_families(id)`
+- `release_id -> model_releases(id)`
+- `benchmark_config_model_id -> benchmark_config_models(id)`
 - `decision_id -> decisions(id)`
 
 Note:
 
 - the main decision flow also stores estimated cost directly on `decisions`
+- `api_costs` exists so cost lineage can stand on its own even if family labels or release mappings evolve later
 
 ---
 

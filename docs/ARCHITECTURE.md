@@ -129,6 +129,10 @@ Authenticated by signed `forecaster_admin` cookie:
 - `GET /api/admin/stats`
 - `GET /api/admin/logs`
 - `GET /api/admin/costs`
+- `GET /api/admin/benchmark`
+- `POST /api/admin/benchmark/releases`
+- `POST /api/admin/benchmark/configs`
+- `POST /api/admin/benchmark/default`
 - `POST /api/admin/action`
 - `POST /api/admin/export`
 - `GET /api/admin/export`
@@ -457,8 +461,9 @@ These are the most important invariants the code currently relies on:
 1. One cohort start per week
    - Enforced by unique `started_at`.
 
-2. One agent per model per cohort
-   - Enforced by unique `(cohort_id, model_id)`.
+2. One frozen benchmark slot per cohort participant
+   - Physically enforced by unique `(cohort_id, model_id)`.
+   - Semantically carried by `agents.family_id`, `agents.release_id`, and `agents.benchmark_config_model_id`.
 
 3. One open position per `(agent, market, side)`
    - Enforced by unique `(agent_id, market_id, side)`.

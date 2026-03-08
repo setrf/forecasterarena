@@ -34,23 +34,29 @@ The benchmark is intentionally built around future events so the models cannot r
 
 ## Current Model Roster
 
-The codebase separates **stable internal IDs** from **current display names / OpenRouter targets**. The public UI shows `displayName`, while the database and routes still use the stable `id`.
+The codebase now separates **legacy model IDs**, **stable benchmark families**, and **exact releases**.
 
-| Internal ID | Display Name | Provider | OpenRouter ID |
-|-------------|--------------|----------|---------------|
-| `gpt-5.1` | GPT-5.2 | OpenAI | `openai/gpt-5.2` |
-| `gemini-2.5-flash` | Gemini 3 Pro | Google | `google/gemini-3-pro-preview` |
-| `grok-4` | Grok 4.1 | xAI | `x-ai/grok-4.1-fast` |
-| `claude-opus-4.5` | Claude Opus 4.5 | Anthropic | `anthropic/claude-opus-4.5` |
-| `deepseek-v3.1` | DeepSeek V3.2 | DeepSeek | `deepseek/deepseek-v3.2` |
-| `kimi-k2` | Kimi K2 | Moonshot AI | `moonshotai/kimi-k2-thinking` |
-| `qwen-3-next` | Qwen 3 | Alibaba | `qwen/qwen3-235b-a22b-2507` |
+- `models.id` remains as a legacy compatibility key
+- `model_families` defines the long-lived benchmark slot
+- `model_releases` defines the exact deployed model
+- `benchmark_configs` freeze the lineup used for future cohorts
+- `agents.family_id`, `agents.release_id`, and `agents.benchmark_config_model_id` freeze that identity onto each cohort participant
+
+| Family | Legacy ID | Current Release | Provider | OpenRouter ID |
+|--------|-----------|-----------------|----------|---------------|
+| `openai-gpt` | `gpt-5.1` | GPT-5.2 | OpenAI | `openai/gpt-5.2` |
+| `google-gemini` | `gemini-2.5-flash` | Gemini 3 Pro | Google | `google/gemini-3-pro-preview` |
+| `xai-grok` | `grok-4` | Grok 4.1 | xAI | `x-ai/grok-4.1-fast` |
+| `anthropic-claude-opus` | `claude-opus-4.5` | Claude Opus 4.5 | Anthropic | `anthropic/claude-opus-4.5` |
+| `deepseek-v3` | `deepseek-v3.1` | DeepSeek V3.2 | DeepSeek | `deepseek/deepseek-v3.2` |
+| `moonshot-kimi` | `kimi-k2` | Kimi K2 | Moonshot AI | `moonshotai/kimi-k2-thinking` |
+| `alibaba-qwen` | `qwen-3-next` | Qwen 3 | Alibaba | `qwen/qwen3-235b-a22b-2507` |
 
 Why this matters:
 
-- API paths and database rows use the **internal ID**
-- Charts and UI labels use the **display name**
-- Documentation should refer to both when ambiguity would be costly
+- public continuity pages use the **family**
+- active and historical cohorts keep the exact **release** they started with
+- legacy IDs still appear in compatibility paths and exports, but they are no longer the source of truth for historical identity
 
 ---
 
@@ -97,7 +103,7 @@ Recent changes in the codebase materially changed the system guarantees. The doc
 
 - Cohorts are keyed by a normalized weekly `started_at`
 - repeated or concurrent start attempts resolve to the same cohort
-- agent creation is idempotent per `(cohort_id, model_id)`
+- agent creation is physically idempotent per `(cohort_id, model_id)` and semantically frozen by `benchmark_config_model_id`
 
 ### 2. Decisions are unique per agent / cohort / week
 
