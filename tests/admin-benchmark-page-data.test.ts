@@ -80,7 +80,7 @@ describe('admin benchmark page api helpers', () => {
 
     await expect(promoteAdminBenchmarkConfig('config-1')).resolves.toEqual({
       type: 'success',
-      message: 'lineup-v2 promoted for future cohorts'
+      message: 'lineup-v2 promoted as the default lineup'
     });
   });
 });

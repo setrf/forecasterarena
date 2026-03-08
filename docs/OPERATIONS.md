@@ -186,7 +186,7 @@ The live benchmark now separates:
 
 - `model_families`: stable public competitor slots
 - `model_releases`: exact OpenRouter targets
-- `benchmark_configs`: future lineup manifests
+- `benchmark_configs`: default lineup manifests that can seed future cohorts and refresh active cohorts
 - `agents`: the frozen family/release/config assignment actually used by a cohort
 
 Operational rule:

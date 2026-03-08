@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { seededRoutes } from './constants';
 import { loginAsAdmin } from './helpers';
 
-test('admin benchmark control registers a release and promotes a future lineup', async ({ page }) => {
+test('admin benchmark control registers a release and promotes the default lineup', async ({ page }) => {
   await loginAsAdmin(page);
   await page.goto(seededRoutes.adminBenchmark);
   await page.waitForLoadState('domcontentloaded');
@@ -30,7 +30,7 @@ test('admin benchmark control registers a release and promotes a future lineup',
 
   await page.getByRole('button', { name: 'Promote playwright-lineup-gpt54' }).click();
 
-  await expect(page.getByText('playwright-lineup-gpt54 promoted for future cohorts')).toBeVisible();
+  await expect(page.getByText('playwright-lineup-gpt54 promoted as the default lineup')).toBeVisible();
   await expect(page.locator('tr').filter({ hasText: 'playwright-lineup-gpt54' }).getByText('Default')).toBeVisible();
   await expect(page.locator('table').first()).toContainText('GPT-5.4');
 });

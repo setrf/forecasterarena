@@ -3,6 +3,7 @@ import type { ResultMessage } from '@/features/admin/dashboard/types';
 
 export type BenchmarkOverview = AdminBenchmarkOverview;
 export type BenchmarkResultMessage = ResultMessage;
+export type BenchmarkRolloverPreview = import('@/lib/application/admin-benchmark').AdminBenchmarkRolloverPreview;
 
 export interface ReleaseFormState {
   familyId: string;

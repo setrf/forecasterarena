@@ -164,7 +164,7 @@ The benchmark now separates model identity into four layers:
 
 - `model_families`: the stable competitor slot shown publicly
 - `model_releases`: the exact deployed model used for execution
-- `benchmark_configs`: the future lineup definition promoted by operators
+- `benchmark_configs`: the default lineup definition promoted by operators
 - `agents`: the cohort-bound frozen assignment of family, release, and config slot
 
 This is what prevents a future release rotation from rewriting active or historical cohorts.
@@ -225,7 +225,7 @@ Notes:
 
 ### 3.3d `benchmark_configs`
 
-Frozen future lineups used when starting new cohorts.
+Frozen lineup manifests used when starting new cohorts and, when applied, for active cohort rollovers.
 
 Important columns:
 
