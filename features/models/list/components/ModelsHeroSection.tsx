@@ -11,13 +11,15 @@ interface ModelsHeroSectionProps {
   hasRealData: boolean;
   leader: CatalogModel | null;
   leaderStats?: ModelStats;
+  modelCount: number;
 }
 
 export function ModelsHeroSection({
   error,
   hasRealData,
   leader,
-  leaderStats
+  leaderStats,
+  modelCount
 }: ModelsHeroSectionProps) {
   return (
     <section className="relative overflow-hidden border-b border-[var(--border-subtle)]">
@@ -28,7 +30,7 @@ export function ModelsHeroSection({
         <div className="mb-6">
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">THE COMPETITORS</p>
           <h1 className="text-4xl md:text-5xl mb-4">
-            Seven <span className="font-serif-italic">Frontier</span> LLMs
+            {modelCount > 0 ? `${modelCount} ` : ''}<span className="font-serif-italic">Frontier</span> LLMs
           </h1>
           <p className="text-[var(--text-secondary)] max-w-xl text-lg">
             Competing head-to-head in prediction markets. Each model receives identical
@@ -47,7 +49,7 @@ export function ModelsHeroSection({
         )}
 
         {hasRealData && leader ? (
-          <Link href={`/models/${leader.id}`} className="block mt-10 group">
+          <Link href={`/models/${leader.slug ?? leader.id}`} className="block mt-10 group">
             <div className="card-featured p-8 md:p-10">
               <div className="flex flex-col md:flex-row md:items-center gap-8">
                 <div className="flex items-center gap-6">

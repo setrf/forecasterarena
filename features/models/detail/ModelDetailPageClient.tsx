@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { MODELS } from '@/lib/constants';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
 import { useModelDetailData } from '@/features/models/detail/useModelDetailData';
 import { ModelCohortPerformancePanel } from '@/features/models/detail/components/ModelCohortPerformancePanel';
@@ -18,25 +17,38 @@ import { createModelChartData } from '@/features/models/detail/utils';
 export default function ModelDetailPageClient() {
   const params = useParams<{ id: string }>();
   const modelId = params.id;
-  const model = MODELS.find((entry) => entry.id === modelId);
   const [selectedDecision, setSelectedDecision] = useState<ModelDecision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
   const { data, loading } = useModelDetailData(modelId);
+  const model = data ? {
+    id: data.model.id,
+    family_id: data.model.family_id,
+    slug: data.model.slug,
+    legacy_model_id: data.model.legacy_model_id,
+    displayName: data.model.display_name,
+    shortDisplayName: data.model.short_display_name,
+    provider: data.model.provider,
+    color: data.model.color,
+    openrouterId: data.model.openrouter_id ?? undefined,
+    currentReleaseId: data.model.current_release_id ?? undefined,
+    currentReleaseName: data.model.current_release_name ?? undefined
+  } : null;
 
-  if (!model) {
+  if (!loading && !model) {
     return <ModelDetailNotFound message="Model Not Found" />;
   }
 
-  const chartData = useMemo(() => createModelChartData(modelId, data), [data, modelId]);
-  const chartModels = [{
-    id: model.id,
+  const chartModelId = model?.id ?? modelId;
+  const chartData = useMemo(() => createModelChartData(chartModelId, data), [chartModelId, data]);
+  const chartModels = model ? [{
+    id: chartModelId,
     name: model.displayName,
     color: model.color
-  }];
+  }] : [];
 
   return (
     <div className="container-wide mx-auto px-6 py-12">
-      <ModelDetailHeader model={model} />
+      {model && <ModelDetailHeader model={model} />}
       <ModelStatsGrid
         avgBrier={data?.avg_brier_score ?? null}
         avgPnlPercent={data?.avg_pnl_percent ?? 0}
@@ -56,7 +68,7 @@ export default function ModelDetailPageClient() {
         <ModelCohortPerformancePanel
           cohorts={data?.cohort_performance ?? []}
           loading={loading}
-          modelId={modelId}
+          modelId={model?.slug ?? chartModelId}
         />
         <ModelRecentDecisionsPanel
           decisions={data?.recent_decisions ?? []}

@@ -1,4 +1,4 @@
-import { MODELS } from '@/lib/constants';
+import { getPublicCatalogModels } from '@/lib/catalog/public';
 import { getDb } from '@/lib/db';
 
 export type PerformanceTimeRange = '10M' | '1H' | '1D' | '1W' | '1M' | '3M' | 'ALL';
@@ -49,13 +49,14 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
   let query = `
     SELECT
       ps.snapshot_timestamp,
-      m.id as model_id,
-      m.display_name,
-      m.color,
+      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as model_id,
+      abi.family_id,
+      COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
+      COALESCE(abi.color, '#94A3B8') as color,
       ps.total_value
     FROM portfolio_snapshots ps
     JOIN agents a ON ps.agent_id = a.id
-    JOIN models m ON a.model_id = m.id
+    LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     WHERE ps.snapshot_timestamp >= ?
   `;
 
@@ -64,11 +65,14 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
     params.push(cohortId);
   }
 
-  query += ' ORDER BY ps.snapshot_timestamp ASC, m.display_name ASC';
+  query += ' ORDER BY ps.snapshot_timestamp ASC, display_name ASC';
 
   const rows = db.prepare(query).all(...params) as Array<{
     snapshot_timestamp: string;
     model_id: string;
+    family_id: string | null;
+    display_name: string;
+    color: string;
     total_value: number;
   }>;
 
@@ -104,11 +108,7 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
 
   return {
     data: Array.from(dataByDate.values()),
-    models: MODELS.map((model) => ({
-      id: model.id,
-      name: model.displayName,
-      color: model.color
-    })),
+    models: getPublicCatalogModels(),
     range,
     updated_at: new Date().toISOString()
   };

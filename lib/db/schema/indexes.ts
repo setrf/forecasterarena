@@ -7,6 +7,9 @@ export const INDEXES_SQL = `
 -- Agents
 CREATE INDEX IF NOT EXISTS idx_agents_cohort ON agents(cohort_id);
 CREATE INDEX IF NOT EXISTS idx_agents_model ON agents(model_id);
+CREATE INDEX IF NOT EXISTS idx_agents_family ON agents(family_id);
+CREATE INDEX IF NOT EXISTS idx_agents_release ON agents(release_id);
+CREATE INDEX IF NOT EXISTS idx_agents_config_model ON agents(benchmark_config_model_id);
 CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
 
 -- Positions
@@ -54,6 +57,14 @@ CREATE INDEX IF NOT EXISTS idx_brier_trade ON brier_scores(trade_id);
 -- API Costs
 CREATE INDEX IF NOT EXISTS idx_api_costs_recorded ON api_costs(recorded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_api_costs_model ON api_costs(model_id);
+
+-- Model Lineage
+CREATE INDEX IF NOT EXISTS idx_model_families_status_order ON model_families(status, sort_order);
+CREATE INDEX IF NOT EXISTS idx_model_releases_family_status ON model_releases(family_id, release_status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_model_releases_openrouter ON model_releases(openrouter_id);
+CREATE INDEX IF NOT EXISTS idx_benchmark_configs_default ON benchmark_configs(is_default_for_future_cohorts, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_benchmark_config_models_config_slot ON benchmark_config_models(benchmark_config_id, slot_order);
+CREATE INDEX IF NOT EXISTS idx_benchmark_config_models_release ON benchmark_config_models(release_id);
 
 -- Additional composite indexes for optimized queries
 CREATE INDEX IF NOT EXISTS idx_trades_market_executed ON trades(market_id, executed_at DESC);

@@ -26,12 +26,16 @@ export function listRecentDecisions(limit: number) {
         d.decision_timestamp,
         d.action,
         d.reasoning,
-        m.display_name as model_display_name,
-        m.color as model_color,
+        COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_display_name,
+        COALESCE(abi.color, '#94A3B8') as model_color,
+        COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as model_id,
+        abi.family_id as model_family_id,
+        abi.release_id as model_release_id,
+        abi.release_display_name as model_release_name,
         c.cohort_number
       FROM decisions d
       JOIN agents a ON d.agent_id = a.id
-      JOIN models m ON a.model_id = m.id
+      LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
       JOIN cohorts c ON d.cohort_id = c.id
       WHERE d.action != 'ERROR'
       ORDER BY d.decision_timestamp DESC
@@ -47,13 +51,16 @@ export function getDecisionDetail(decisionId: string): DecisionDetailResult {
   const decision = db.prepare(`
     SELECT
       d.*,
-      mod.display_name as model_name,
-      mod.color as model_color,
-      mod.provider as model_provider,
-      mod.id as model_id
+      COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_name,
+      COALESCE(abi.color, '#94A3B8') as model_color,
+      COALESCE(abi.provider, 'Unknown') as model_provider,
+      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as model_id,
+      abi.family_id as model_family_id,
+      abi.release_id as model_release_id,
+      abi.release_display_name as model_release_name
     FROM decisions d
     JOIN agents a ON d.agent_id = a.id
-    JOIN models mod ON a.model_id = mod.id
+    LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     WHERE d.id = ?
   `).get(decisionId) as Record<string, unknown> | undefined;
 

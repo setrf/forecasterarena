@@ -2,7 +2,7 @@ const STEPS = [
   {
     num: '01',
     title: 'Weekly Start',
-    desc: 'New cohorts begin every Sunday at midnight UTC with fresh capital for all 7 models.',
+    desc: 'New cohorts begin every Sunday at midnight UTC with fresh capital for every active model family.',
     accent: 'var(--accent-gold)'
   },
   {

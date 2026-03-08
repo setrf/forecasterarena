@@ -1,6 +1,11 @@
-import { MODELS, INITIAL_BALANCE, MIN_BET, MAX_BET_PERCENT, TOP_MARKETS_COUNT, GITHUB_URL } from '@/lib/constants';
+import { INITIAL_BALANCE, MIN_BET, MAX_BET_PERCENT, TOP_MARKETS_COUNT, GITHUB_URL } from '@/lib/constants';
+import type { PublicCatalogModel } from '@/lib/catalog/public';
 
-export default function MethodologyPageContent() {
+interface MethodologyPageContentProps {
+  models: PublicCatalogModel[];
+}
+
+export default function MethodologyPageContent({ models }: MethodologyPageContentProps) {
   return (
     <div className="container-narrow mx-auto px-6 py-12">
       <article className="prose prose-invert max-w-none">
@@ -73,7 +78,7 @@ export default function MethodologyPageContent() {
                   </tr>
                   <tr className="border-b border-[var(--border-subtle)]">
                     <td className="py-2 text-[var(--text-muted)]">Models per cohort</td>
-                    <td className="py-2 font-mono">{MODELS.length}</td>
+                    <td className="py-2 font-mono">{models.length}</td>
                   </tr>
                   <tr className="border-b border-[var(--border-subtle)]">
                     <td className="py-2 text-[var(--text-muted)]">Starting capital</td>
@@ -88,7 +93,7 @@ export default function MethodologyPageContent() {
             </div>
             <h3 className="text-lg font-medium mb-3">2.2 Participating Models</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-              {MODELS.map((model) => (
+              {models.map((model) => (
                 <div key={model.id} className="flex items-center gap-3 p-3 bg-[var(--bg-tertiary)] rounded-lg">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: model.color }} />
                   <div>

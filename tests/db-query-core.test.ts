@@ -66,7 +66,8 @@ describe('db query modules - core operations', () => {
 
       const agentsWithModels = agents.getAgentsWithModelsByCohort(cohort.id);
       expect(agentsWithModels).toHaveLength(activeModels.length);
-      expect(agentsWithModels[0]?.model.id).toBe(agentsWithModels[0]?.model_id);
+      expect(agentsWithModels[0]?.model.family_id).toBeTruthy();
+      expect(agentsWithModels[0]?.model.legacy_model_id).toBe(agentsWithModels[0]?.model_id);
       expect(agentsWithModels[0]?.model.openrouter_id).toBeTruthy();
 
       agents.updateAgentBalance(agent.id, 0, 0);

@@ -31,6 +31,7 @@ describe('home page data helpers', () => {
       })));
 
     await expect(fetchHomeSummary()).resolves.toEqual({
+      models: [],
       leaderboard: [
         expect.objectContaining({
           model_id: 'gpt-5.1',
@@ -52,6 +53,25 @@ describe('home page data helpers', () => {
       .mockResolvedValueOnce(mockResponse(false, {})));
 
     await expect(fetchHomePerformanceData('1M')).rejects.toThrow('Performance data is temporarily unavailable.');
+  });
+
+  it('normalizes performance model payloads from either displayName or legacy name fields', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(mockResponse(true, {
+        data: [{ date: '2030-01-01T00:00:00.000Z', 'kimi-k2': 10002 }],
+        models: [
+          { id: 'kimi-k2', name: 'Kimi', color: '#EC4899', provider: 'Moonshot AI' },
+          { id: 'gpt-5.1', displayName: 'GPT', color: '#10B981', provider: 'OpenAI' }
+        ]
+      })));
+
+    await expect(fetchHomePerformanceData('1M')).resolves.toEqual({
+      data: [{ date: '2030-01-01T00:00:00.000Z', 'kimi-k2': 10002 }],
+      models: [
+        expect.objectContaining({ id: 'kimi-k2', displayName: 'Kimi' }),
+        expect.objectContaining({ id: 'gpt-5.1', displayName: 'GPT' })
+      ]
+    });
   });
 });
 

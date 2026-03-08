@@ -22,7 +22,7 @@ export default function AdminCostsPageClient() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2">API Costs</h1>
         <p className="text-[var(--text-secondary)]">
-          Track OpenRouter API spending across all models
+          Track OpenRouter API spending across all model families
         </p>
       </div>
 
@@ -54,7 +54,7 @@ export default function AdminCostsPageClient() {
       </div>
 
       <div className="glass-card p-6 mb-8">
-        <h3 className="text-lg font-semibold mb-4">Spend by Model</h3>
+        <h3 className="text-lg font-semibold mb-4">Spend by Model Family</h3>
         {loading ? (
           <div className="h-64 flex items-center justify-center text-[var(--text-muted)]">
             Loading...
@@ -137,7 +137,7 @@ export default function AdminCostsPageClient() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Model</th>
+                  <th>Family</th>
                   <th className="text-right">Decisions</th>
                   <th className="text-right">Input Tokens</th>
                   <th className="text-right">Output Tokens</th>

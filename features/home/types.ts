@@ -1,7 +1,6 @@
-import { MODELS } from '@/lib/constants';
-
 export interface LeaderboardEntry {
   model_id: string;
+  model_slug?: string;
   display_name: string;
   provider: string;
   color: string;
@@ -13,15 +12,31 @@ export interface LeaderboardEntry {
   win_rate: number | null;
 }
 
-export const emptyLeaderboard: LeaderboardEntry[] = MODELS.map((model) => ({
-  model_id: model.id,
-  display_name: model.displayName,
-  provider: model.provider,
-  color: model.color,
-  total_pnl: 0,
-  total_pnl_percent: 0,
-  avg_brier_score: null,
-  num_cohorts: 0,
-  num_resolved_bets: 0,
-  win_rate: null,
-}));
+export interface CatalogModel {
+  id: string;
+  family_id?: string;
+  slug?: string;
+  legacy_model_id?: string | null;
+  displayName: string;
+  shortDisplayName?: string;
+  provider: string;
+  color: string;
+  openrouterId?: string | null;
+  currentReleaseId?: string | null;
+  currentReleaseName?: string | null;
+}
+
+export function createEmptyLeaderboard(models: CatalogModel[]): LeaderboardEntry[] {
+  return models.map((model) => ({
+    model_id: model.id,
+    display_name: model.displayName,
+    provider: model.provider,
+    color: model.color,
+    total_pnl: 0,
+    total_pnl_percent: 0,
+    avg_brier_score: null,
+    num_cohorts: 0,
+    num_resolved_bets: 0,
+    win_rate: null
+  }));
+}

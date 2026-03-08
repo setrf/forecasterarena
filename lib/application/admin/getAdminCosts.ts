@@ -1,5 +1,5 @@
-import { MODELS } from '@/lib/constants';
 import { getDb } from '@/lib/db';
+import { getActiveModelFamilies } from '@/lib/db/queries';
 
 type RawModelCost = {
   model_id: string;
@@ -16,26 +16,34 @@ export function getAdminCosts() {
 
   const rawCosts = db.prepare(`
     SELECT
-      m.id as model_id,
-      m.display_name as model_name,
-      m.color,
+      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as model_id,
+      abi.family_id,
+      COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_name,
+      COALESCE(abi.color, '#94A3B8') as color,
       COALESCE(SUM(d.api_cost_usd), 0) as total_cost,
       COALESCE(SUM(d.tokens_input), 0) as total_input_tokens,
       COALESCE(SUM(d.tokens_output), 0) as total_output_tokens,
       COUNT(d.id) as decision_count
-    FROM models m
-    LEFT JOIN agents a ON m.id = a.model_id
+    FROM agents a
+    LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     LEFT JOIN decisions d ON a.id = d.agent_id
-    GROUP BY m.id, m.display_name, m.color
+    GROUP BY
+      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id),
+      abi.family_id,
+      COALESCE(abi.family_display_name, abi.release_display_name, a.model_id),
+      COALESCE(abi.color, '#94A3B8')
     ORDER BY total_cost DESC
   `).all() as RawModelCost[];
 
-  const costsByModel = MODELS.map((model) => {
-    const existing = rawCosts.find((cost) => cost.model_id === model.id);
+  const families = getActiveModelFamilies();
+
+  const costsByModel = families.map((family) => {
+    const publicModelId = family.legacy_model_id ?? family.slug ?? family.id;
+    const existing = rawCosts.find((cost) => cost.model_id === publicModelId);
     return existing || {
-      model_id: model.id,
-      model_name: model.displayName,
-      color: model.color,
+      model_id: publicModelId,
+      model_name: family.public_display_name,
+      color: family.color ?? '#94A3B8',
       total_cost: 0,
       total_input_tokens: 0,
       total_output_tokens: 0,

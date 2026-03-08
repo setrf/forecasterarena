@@ -1,4 +1,5 @@
 import MethodologyPageContent from '@/features/methodology/MethodologyPageContent';
+import { getPublicCatalogModels } from '@/lib/catalog/public';
 
 export const metadata = {
   title: 'Methodology | Forecaster Arena',
@@ -6,5 +7,5 @@ export const metadata = {
 };
 
 export default function MethodologyPage() {
-  return <MethodologyPageContent />;
+  return <MethodologyPageContent models={getPublicCatalogModels()} />;
 }

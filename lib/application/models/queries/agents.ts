@@ -3,7 +3,7 @@ import type { Db } from '@/lib/application/models/queries/types';
 
 export function getAgentsWithCohorts(
   db: Db,
-  modelId: string
+  familyId: string
 ): AgentWithCohort[] {
   return db.prepare(`
     SELECT
@@ -13,7 +13,7 @@ export function getAgentsWithCohorts(
       c.status as cohort_status
     FROM agents a
     JOIN cohorts c ON a.cohort_id = c.id
-    WHERE a.model_id = ?
+    WHERE a.family_id = ?
     ORDER BY c.started_at DESC
-  `).all(modelId) as AgentWithCohort[];
+  `).all(familyId) as AgentWithCohort[];
 }

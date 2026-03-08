@@ -10,10 +10,17 @@ const PRICING_PER_MILLION: Record<string, { input: number; output: number }> = {
   'qwen/qwen3-235b-a22b-2507': { input: 1, output: 4 },
 };
 
-export function estimateCost(usage: TokenUsage, modelId: string): number {
-  const pricing = PRICING_PER_MILLION[modelId] || { input: 2, output: 8 };
+export function estimateCostFromSnapshot(
+  usage: TokenUsage,
+  pricing: { input: number; output: number }
+): number {
   const inputCost = (usage.prompt_tokens / 1_000_000) * pricing.input;
   const outputCost = (usage.completion_tokens / 1_000_000) * pricing.output;
 
   return inputCost + outputCost;
+}
+
+export function estimateCost(usage: TokenUsage, modelId: string): number {
+  const pricing = PRICING_PER_MILLION[modelId] || { input: 2, output: 8 };
+  return estimateCostFromSnapshot(usage, pricing);
 }

@@ -7,6 +7,9 @@
 
 export * from './queries/cohorts';
 export * from './queries/models';
+export * from './queries/model-families';
+export * from './queries/model-releases';
+export * from './queries/benchmark-configs';
 export * from './queries/agents';
 export * from './queries/markets';
 export * from './queries/positions';

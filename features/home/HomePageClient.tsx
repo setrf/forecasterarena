@@ -10,11 +10,13 @@ import { useHomePageData } from '@/features/home/useHomePageData';
 
 export default function HomePageClient() {
   const {
+    models,
     leaderboard,
     hasRealData,
     leaderboardError,
     marketCount,
     chartData,
+    chartModels,
     chartError,
     timeRange,
     setTimeRange
@@ -34,9 +36,11 @@ export default function HomePageClient() {
         leader={leaderboard[0] || null}
         hasRealData={hasRealData}
         marketCount={marketCount}
+        modelCount={models.length}
       />
       <PerformanceSection
         chartData={chartData}
+        models={chartModels.length > 0 ? chartModels : models}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
         error={chartError}

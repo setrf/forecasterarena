@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSingleAgentFixture } from '@/tests/helpers/db-fixtures';
+import {
+  createSingleAgentFixture,
+  createTestBenchmarkConfigForLegacyModels
+} from '@/tests/helpers/db-fixtures';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
 type SingleAgentFixture = Awaited<ReturnType<typeof createSingleAgentFixture>>;
@@ -177,14 +180,16 @@ describe('models application', () => {
         SET is_active = CASE WHEN id = ? THEN 1 ELSE 0 END
       `).run(firstModel.id);
 
+      const benchmarkConfig = await createTestBenchmarkConfigForLegacyModels([firstModel.id]);
+
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-03-02T12:00:00.000Z'));
-      const cohort1 = queries.createCohort();
-      const [agent1] = queries.createAgentsForCohort(cohort1.id);
+      const cohort1 = queries.createCohort(benchmarkConfig.id);
+      const [agent1] = queries.createAgentsForCohort(cohort1.id, benchmarkConfig.id);
 
       vi.setSystemTime(new Date('2026-03-09T12:00:00.000Z'));
-      const cohort2 = queries.createCohort();
-      const [agent2] = queries.createAgentsForCohort(cohort2.id);
+      const cohort2 = queries.createCohort(benchmarkConfig.id);
+      const [agent2] = queries.createAgentsForCohort(cohort2.id, benchmarkConfig.id);
       vi.useRealTimers();
 
       const market1 = queries.upsertMarket({
@@ -350,7 +355,8 @@ describe('cohort shared application queries', () => {
         WHERE id = ?
       `).run(otherModel.id);
 
-      const otherAgent = queries.createAgentsForCohort(cohort.id)
+      const expandedConfig = await createTestBenchmarkConfigForLegacyModels([modelId, otherModel.id]);
+      const otherAgent = queries.createAgentsForCohort(cohort.id, expandedConfig.id)
         .find((candidate) => candidate.model_id === otherModel.id);
 
       if (!otherAgent) {

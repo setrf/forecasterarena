@@ -5,16 +5,44 @@ import type { ExportQueries } from '@/lib/application/admin-export/types';
 export function buildQueries(includePrompts: boolean): ExportQueries {
   return {
     cohorts: {
-      columns: ['id', 'cohort_number', 'started_at', 'status', 'completed_at', 'methodology_version', 'initial_balance', 'created_at'],
-      sql: 'SELECT id, cohort_number, started_at, status, completed_at, methodology_version, initial_balance, created_at FROM cohorts WHERE id = ?'
+      columns: ['id', 'cohort_number', 'started_at', 'status', 'completed_at', 'methodology_version', 'benchmark_config_id', 'initial_balance', 'created_at'],
+      sql: 'SELECT id, cohort_number, started_at, status, completed_at, methodology_version, benchmark_config_id, initial_balance, created_at FROM cohorts WHERE id = ?'
     },
     agents: {
-      columns: ['id', 'cohort_id', 'model_id', 'cash_balance', 'total_invested', 'status', 'created_at'],
-      sql: 'SELECT id, cohort_id, model_id, cash_balance, total_invested, status, created_at FROM agents WHERE cohort_id = ?'
+      columns: ['id', 'cohort_id', 'model_id', 'family_id', 'release_id', 'benchmark_config_model_id', 'cash_balance', 'total_invested', 'status', 'created_at'],
+      sql: 'SELECT id, cohort_id, model_id, family_id, release_id, benchmark_config_model_id, cash_balance, total_invested, status, created_at FROM agents WHERE cohort_id = ?'
     },
     models: {
       columns: ['id', 'openrouter_id', 'display_name', 'provider', 'color', 'is_active', 'added_at'],
       sql: 'SELECT id, openrouter_id, display_name, provider, color, is_active, added_at FROM models WHERE id IN (SELECT DISTINCT model_id FROM agents WHERE cohort_id = ?)'
+    },
+    model_families: {
+      columns: ['id', 'slug', 'legacy_model_id', 'provider', 'family_name', 'public_display_name', 'short_display_name', 'color', 'status', 'sort_order', 'created_at', 'retired_at'],
+      sql: `SELECT DISTINCT mf.id, mf.slug, mf.legacy_model_id, mf.provider, mf.family_name, mf.public_display_name, mf.short_display_name, mf.color, mf.status, mf.sort_order, mf.created_at, mf.retired_at
+            FROM model_families mf
+            JOIN agents a ON a.family_id = mf.id
+            WHERE a.cohort_id = ?`
+    },
+    model_releases: {
+      columns: ['id', 'family_id', 'release_name', 'release_slug', 'openrouter_id', 'provider', 'metadata_json', 'release_status', 'created_at', 'retired_at', 'first_used_cohort_number', 'last_used_cohort_number'],
+      sql: `SELECT DISTINCT mr.id, mr.family_id, mr.release_name, mr.release_slug, mr.openrouter_id, mr.provider, mr.metadata_json, mr.release_status, mr.created_at, mr.retired_at, mr.first_used_cohort_number, mr.last_used_cohort_number
+            FROM model_releases mr
+            JOIN agents a ON a.release_id = mr.id
+            WHERE a.cohort_id = ?`
+    },
+    benchmark_configs: {
+      columns: ['id', 'version_name', 'methodology_version', 'notes', 'created_by', 'is_default_for_future_cohorts', 'created_at'],
+      sql: `SELECT bc.id, bc.version_name, bc.methodology_version, bc.notes, bc.created_by, bc.is_default_for_future_cohorts, bc.created_at
+            FROM benchmark_configs bc
+            JOIN cohorts c ON c.benchmark_config_id = bc.id
+            WHERE c.id = ?`
+    },
+    benchmark_config_models: {
+      columns: ['id', 'benchmark_config_id', 'family_id', 'release_id', 'slot_order', 'family_display_name_snapshot', 'short_display_name_snapshot', 'release_display_name_snapshot', 'provider_snapshot', 'color_snapshot', 'openrouter_id_snapshot', 'input_price_per_million_snapshot', 'output_price_per_million_snapshot', 'created_at'],
+      sql: `SELECT bcm.id, bcm.benchmark_config_id, bcm.family_id, bcm.release_id, bcm.slot_order, bcm.family_display_name_snapshot, bcm.short_display_name_snapshot, bcm.release_display_name_snapshot, bcm.provider_snapshot, bcm.color_snapshot, bcm.openrouter_id_snapshot, bcm.input_price_per_million_snapshot, bcm.output_price_per_million_snapshot, bcm.created_at
+            FROM benchmark_config_models bcm
+            JOIN cohorts c ON c.benchmark_config_id = bcm.benchmark_config_id
+            WHERE c.id = ?`
     },
     markets: {
       columns: ['id', 'polymarket_id', 'slug', 'event_slug', 'question', 'description', 'category', 'market_type', 'outcomes', 'close_date', 'status', 'current_price', 'current_prices', 'volume', 'liquidity', 'resolution_outcome', 'resolved_at', 'first_seen_at', 'last_updated_at'],
@@ -87,6 +115,10 @@ export function getRowsForTable(
     case 'cohorts':
     case 'agents':
     case 'models':
+    case 'model_families':
+    case 'model_releases':
+    case 'benchmark_configs':
+    case 'benchmark_config_models':
     case 'markets':
       return db.prepare(query.sql).all(cohortId) as Record<string, unknown>[];
     case 'decisions':

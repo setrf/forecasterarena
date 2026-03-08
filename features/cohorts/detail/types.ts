@@ -11,6 +11,7 @@ export interface Cohort {
 export interface AgentStats {
   id: string;
   model_id: string;
+  model_slug?: string;
   model_display_name: string;
   model_color: string;
   cash_balance: number;

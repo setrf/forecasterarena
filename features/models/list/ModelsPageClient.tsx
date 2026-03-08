@@ -5,10 +5,11 @@ import { hasLiveCompetitionData } from '@/lib/competition-state';
 import { ModelsGrid } from '@/features/models/list/components/ModelsGrid';
 import { ModelsHeroSection } from '@/features/models/list/components/ModelsHeroSection';
 import { ModelsMethodologySection } from '@/features/models/list/components/ModelsMethodologySection';
-import type { LeaderboardResponse, ModelStats } from '@/features/models/list/types';
+import type { CatalogModel, LeaderboardResponse, ModelStats } from '@/features/models/list/types';
 import { createStatsMap, sortModelsByPnl } from '@/features/models/list/utils';
 
 export default function ModelsPageClient() {
+  const [models, setModels] = useState<CatalogModel[]>([]);
   const [stats, setStats] = useState<Map<string, ModelStats>>(() => new Map());
   const [loading, setLoading] = useState(true);
   const [hasRealData, setHasRealData] = useState(false);
@@ -32,6 +33,7 @@ export default function ModelsPageClient() {
           return;
         }
 
+        setModels(data.models ?? []);
         setStats(createStatsMap(data.leaderboard));
         setHasRealData(hasLiveCompetitionData({
           leaderboard: data.leaderboard,
@@ -56,7 +58,7 @@ export default function ModelsPageClient() {
     };
   }, []);
 
-  const sortedModels = sortModelsByPnl(stats);
+  const sortedModels = sortModelsByPnl(models, stats);
   const leader = hasRealData ? (sortedModels[0] ?? null) : null;
   const leaderStats = leader ? stats.get(leader.id) : undefined;
   const otherModels = hasRealData ? sortedModels.slice(1) : sortedModels;
@@ -68,6 +70,7 @@ export default function ModelsPageClient() {
         hasRealData={hasRealData}
         leader={leader}
         leaderStats={leaderStats}
+        modelCount={models.length}
       />
 
       {error && (

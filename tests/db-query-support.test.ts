@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
+import { createTestBenchmarkConfigForLegacyModels } from '@/tests/helpers/db-fixtures';
 
 type DbModule = typeof import('@/lib/db');
 type AgentsModule = typeof import('@/lib/db/queries/agents');
@@ -296,15 +297,16 @@ describe('db query modules - support and reporting', () => {
   });
 
   it('covers aggregate leaderboard calculations', async () => {
-    await withModules(({ agents, brierScores, cohorts, db, leaderboard, markets, models, positions, snapshots, trades }) => {
+    await withModules(async ({ agents, brierScores, cohorts, db, leaderboard, markets, models, positions, snapshots, trades }) => {
       const activeModels = models.getActiveModels();
       const allowedIds = activeModels.slice(0, 2).map(model => model.id);
       db.prepare(
         `UPDATE models SET is_active = CASE WHEN id IN (?, ?) THEN 1 ELSE 0 END`
       ).run(allowedIds[0], allowedIds[1]);
 
-      const cohort = cohorts.createCohort();
-      const createdAgents = agents.createAgentsForCohort(cohort.id);
+      const benchmarkConfig = await createTestBenchmarkConfigForLegacyModels(allowedIds);
+      const cohort = cohorts.createCohort(benchmarkConfig.id);
+      const createdAgents = agents.createAgentsForCohort(cohort.id, benchmarkConfig.id);
       const agentOne = createdAgents.find(agent => agent.model_id === allowedIds[0])!;
       const agentTwo = createdAgents.find(agent => agent.model_id === allowedIds[1])!;
 
@@ -402,15 +404,16 @@ describe('db query modules - support and reporting', () => {
   });
 
   it('falls back to live position values when snapshots have not been taken yet', async () => {
-    await withModules(({ agents, cohorts, db, leaderboard, markets, models, positions }) => {
+    await withModules(async ({ agents, cohorts, db, leaderboard, markets, models, positions }) => {
       const activeModels = models.getActiveModels();
       const allowedIds = activeModels.slice(0, 2).map(model => model.id);
       db.prepare(
         `UPDATE models SET is_active = CASE WHEN id IN (?, ?) THEN 1 ELSE 0 END`
       ).run(allowedIds[0], allowedIds[1]);
 
-      const cohort = cohorts.createCohort();
-      const createdAgents = agents.createAgentsForCohort(cohort.id);
+      const benchmarkConfig = await createTestBenchmarkConfigForLegacyModels(allowedIds);
+      const cohort = cohorts.createCohort(benchmarkConfig.id);
+      const createdAgents = agents.createAgentsForCohort(cohort.id, benchmarkConfig.id);
       const agentOne = createdAgents.find(agent => agent.model_id === allowedIds[0])!;
       const agentTwo = createdAgents.find(agent => agent.model_id === allowedIds[1])!;
 

@@ -1,6 +1,10 @@
 import { INITIAL_BALANCE } from '@/lib/constants';
 import { getDb } from '@/lib/db';
-import { getModelById } from '@/lib/db/queries';
+import {
+  getCurrentReleaseForFamily,
+  getModelReleasesByFamily,
+  resolveModelFamily
+} from '@/lib/db/queries';
 import {
   buildCohortPerformance,
   buildEquityCurve,
@@ -21,23 +25,37 @@ import type {
 export function getModelDetail(
   modelId: string
 ): OkResult<ModelDetailPayload> | ModelDetailNotFoundResult {
-  const model = getModelById(modelId);
+  const family = resolveModelFamily(modelId);
 
-  if (!model) {
+  if (!family) {
     return { status: 'not_found', error: 'Model not found' };
   }
 
   const db = getDb();
-  const agents = getAgentsWithCohorts(db, modelId);
+  const currentRelease = getCurrentReleaseForFamily(family.id)
+    ?? getModelReleasesByFamily(family.id)[0]
+    ?? null;
+  const agents = getAgentsWithCohorts(db, family.id);
   const cohortPerformance = buildCohortPerformance(agents);
   const totalPnl = cohortPerformance.reduce((sum, cohort) => sum + cohort.total_pnl, 0);
   const totalCapital = cohortPerformance.length * INITIAL_BALANCE;
-  const winRateResult = getModelWinRate(db, modelId);
+  const winRateResult = getModelWinRate(db, family.id);
 
   return {
     status: 'ok',
     data: {
-      model,
+      model: {
+        id: family.legacy_model_id ?? family.slug ?? family.id,
+        family_id: family.id,
+        slug: family.slug,
+        legacy_model_id: family.legacy_model_id,
+        display_name: family.public_display_name,
+        short_display_name: family.short_display_name,
+        provider: family.provider,
+        color: family.color,
+        current_release_id: currentRelease?.id ?? null,
+        current_release_name: currentRelease?.release_name ?? null
+      },
       num_cohorts: agents.length,
       total_pnl: totalPnl,
       avg_pnl_percent: totalCapital > 0 ? (totalPnl / totalCapital) * 100 : 0,
@@ -46,8 +64,8 @@ export function getModelDetail(
         ? winRateResult.wins / winRateResult.total
         : null,
       cohort_performance: cohortPerformance,
-      recent_decisions: getRecentModelDecisions(db, modelId),
-      equity_curve: buildEquityCurve(getModelEquitySnapshots(db, modelId)),
+      recent_decisions: getRecentModelDecisions(db, family.id),
+      equity_curve: buildEquityCurve(getModelEquitySnapshots(db, family.id)),
       updated_at: new Date().toISOString()
     }
   };

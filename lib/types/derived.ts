@@ -1,10 +1,39 @@
-import type { Agent, Market, Model, Position } from '@/lib/types/entities';
+import type {
+  Agent,
+  BenchmarkConfigModel,
+  Market,
+  Model,
+  ModelFamily,
+  ModelRelease,
+  Position
+} from '@/lib/types/entities';
+
+export interface AgentBenchmarkModelIdentity {
+  id: string;
+  legacy_model_id: string;
+  family_id: string;
+  family_slug: string;
+  display_name: string;
+  family_display_name: string;
+  short_display_name: string;
+  release_id: string;
+  release_name: string;
+  release_slug: string;
+  openrouter_id: string;
+  provider: string;
+  color: string | null;
+  input_price_per_million: number | null;
+  output_price_per_million: number | null;
+  family: ModelFamily | null;
+  release: ModelRelease | null;
+  config_model: BenchmarkConfigModel | null;
+}
 
 /**
  * Derived and joined application types.
  */
 export interface AgentWithModel extends Agent {
-  model: Model;
+  model: AgentBenchmarkModelIdentity;
 }
 
 export interface PositionWithMarket extends Position {
@@ -15,6 +44,7 @@ export interface PositionWithMarket extends Position {
 
 export interface LeaderboardEntry {
   model_id: string;
+  model_slug?: string;
   display_name: string;
   provider: string;
   color: string;

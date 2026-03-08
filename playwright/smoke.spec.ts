@@ -5,11 +5,11 @@ test('public routes render the seeded benchmark state', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: /AI Models/i })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Models' }).first()).toBeVisible();
-  await expect(page.getByRole('link', { name: /1 Kimi K2/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /1 Kimi/i })).toBeVisible();
 
   await page.goto(seededRoutes.model);
-  await expect(page.getByRole('heading', { level: 1, name: 'GPT-5.2' })).toBeVisible();
-  await expect(page.getByText(/OpenRouter ID/i)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'GPT' })).toBeVisible();
+  await expect(page.getByText(/Current Release:/i)).toBeVisible();
 
   await page.goto(seededRoutes.cohort);
   await expect(page.getByRole('heading', { level: 1, name: 'Cohort #1' })).toBeVisible();
@@ -19,7 +19,7 @@ test('public routes render the seeded benchmark state', async ({ page }) => {
   await expect(page.getByText('Model Reasoning')).toBeVisible();
 
   await page.goto(seededRoutes.cohortModel);
-  await expect(page.getByRole('heading', { level: 1, name: 'GPT-5.2' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'GPT' })).toBeVisible();
   await expect(page.getByText('Rank', { exact: true })).toBeVisible();
 
   await page.goto(seededRoutes.market);

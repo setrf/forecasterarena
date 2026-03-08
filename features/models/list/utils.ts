@@ -1,4 +1,3 @@
-import { MODELS } from '@/lib/constants';
 import type { CatalogModel, ModelStats } from '@/features/models/list/types';
 
 export function createStatsMap(entries?: ModelStats[]): Map<string, ModelStats> {
@@ -17,8 +16,8 @@ export function createStatsMap(entries?: ModelStats[]): Map<string, ModelStats> 
   return stats;
 }
 
-export function sortModelsByPnl(stats: Map<string, ModelStats>): CatalogModel[] {
-  return [...MODELS].sort((a, b) => {
+export function sortModelsByPnl(models: CatalogModel[], stats: Map<string, ModelStats>): CatalogModel[] {
+  return [...models].sort((a, b) => {
     const pnlA = stats.get(a.id)?.total_pnl ?? 0;
     const pnlB = stats.get(b.id)?.total_pnl ?? 0;
     return pnlB - pnlA;

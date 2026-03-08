@@ -39,8 +39,12 @@ export function getCohortDetail(
     return {
       id: agent.id,
       model_id: agent.model_id,
+      model_slug: agent.model.family_slug,
+      family_id: agent.family_id,
+      release_id: agent.release_id,
       model_display_name: agent.model.display_name,
       model_color: agent.model.color,
+      model_release_name: agent.model.release_name,
       cash_balance: agent.cash_balance,
       total_invested: agent.total_invested,
       status: agent.status,
@@ -60,7 +64,7 @@ export function getCohortDetail(
 
   const equityCurves = Object.fromEntries(
     rawAgents.map((agent) => [
-      agent.model_id,
+      agent.model.legacy_model_id ?? agent.model.family_slug ?? agent.family_id ?? agent.model_id,
       getSnapshotsByAgent(agent.id).map((snapshot) => ({
         date: snapshot.snapshot_timestamp,
         value: snapshot.total_value

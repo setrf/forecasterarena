@@ -6,7 +6,7 @@ test('market detail rows drill into decision detail and back again', async ({ pa
   await expect(page.getByRole('heading', { level: 1, name: /seeded e2e market/i })).toBeVisible();
 
   const tradeRow = page.locator('tbody tr')
-    .filter({ hasText: 'GPT-5.2' })
+    .filter({ hasText: 'GPT' })
     .filter({ hasText: 'BUY' })
     .first();
   await expect(tradeRow).toBeVisible();
@@ -27,9 +27,9 @@ test('cohort detail links drill into the seeded cohort-model page', async ({ pag
   await firstDecision.click();
   await expect(page.getByText('Model Reasoning')).toBeVisible();
 
-  await page.locator('tbody tr').filter({ hasText: 'GPT-5.2' }).first().click();
+  await page.locator('tbody tr').filter({ hasText: 'GPT' }).first().click();
   await expect(page).toHaveURL(new RegExp(`${seededRoutes.cohortModel}$`));
-  await expect(page.getByRole('heading', { level: 1, name: 'GPT-5.2' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'GPT' })).toBeVisible();
 
   await page.getByRole('link', { name: /View Full Cohort Leaderboard/i }).click();
   await expect(page).toHaveURL(new RegExp(`${seededRoutes.cohort}$`));

@@ -47,8 +47,8 @@ test('admin login unlocks dashboard, actions, costs, logs, and export download',
   await page.waitForLoadState('domcontentloaded');
   await expect(page.getByRole('heading', { level: 1, name: 'API Costs' })).toBeVisible();
   await expect(page.getByText('$0.600')).toBeVisible();
-  await expect(page.locator('tbody tr').filter({ hasText: 'GPT-5.2' })).toHaveCount(1);
-  await expect(page.locator('tbody tr').filter({ hasText: 'Gemini 3 Pro' })).toHaveCount(1);
+  await expect(page.locator('tbody tr').filter({ hasText: 'GPT' })).toHaveCount(1);
+  await expect(page.locator('tbody tr').filter({ hasText: 'Gemini' })).toHaveCount(1);
 
   await page.goto('/admin/logs');
   await page.waitForLoadState('domcontentloaded');

@@ -1,5 +1,3 @@
-import { MODELS } from '@/lib/constants';
-
 export interface CohortPerformance {
   cohort_id: string;
   cohort_number: number;
@@ -31,9 +29,16 @@ export interface EquityPoint {
 export interface ModelDetailData {
   model: {
     id: string;
+    family_id?: string;
+    slug?: string;
+    legacy_model_id?: string | null;
     display_name: string;
+    short_display_name?: string;
     provider: string;
     color: string;
+    current_release_id?: string | null;
+    current_release_name?: string | null;
+    openrouter_id?: string | null;
   };
   num_cohorts: number;
   total_pnl: number;
@@ -45,4 +50,16 @@ export interface ModelDetailData {
   equity_curve: EquityPoint[];
 }
 
-export type CatalogModel = (typeof MODELS)[number];
+export interface CatalogModel {
+  id: string;
+  family_id?: string;
+  slug?: string;
+  legacy_model_id?: string | null;
+  displayName: string;
+  shortDisplayName?: string;
+  provider: string;
+  color: string;
+  openrouterId?: string | null;
+  currentReleaseId?: string | null;
+  currentReleaseName?: string | null;
+}

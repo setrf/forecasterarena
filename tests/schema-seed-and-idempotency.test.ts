@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
 describe('schema seeds and idempotency behavior', () => {
-  it('upserts model seed data onto existing rows', async () => {
+  it('preserves existing model rows instead of mutating them during reseed', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {
@@ -24,8 +24,8 @@ describe('schema seeds and idempotency behavior', () => {
         WHERE id = 'gpt-5.1'
       `).get() as { openrouter_id: string; display_name: string };
 
-      expect(row.openrouter_id).toBe('openai/gpt-5.2');
-      expect(row.display_name).toBe('GPT-5.2');
+      expect(row.openrouter_id).toBe('openai/gpt-legacy');
+      expect(row.display_name).toBe('GPT Legacy');
     } finally {
       await ctx.cleanup();
     }

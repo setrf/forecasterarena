@@ -5,6 +5,7 @@ import CohortDetailPageClient from '@/features/cohorts/detail/CohortDetailPageCl
 import HomePageClient from '@/features/home/HomePageClient';
 import MarketDetailPageClient from '@/features/markets/detail/MarketDetailPageClient';
 import ModelDetailPageClient from '@/features/models/detail/ModelDetailPageClient';
+import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
 describe('page wiring', () => {
   beforeAll(() => {
@@ -32,7 +33,17 @@ describe('page wiring', () => {
   });
 
   it('keeps the model detail route bound to the model detail feature shell', async () => {
-    const module = await import('@/app/models/[id]/page');
-    expect(module.default().type).toBe(ModelDetailPageClient);
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const module = await import('@/app/models/[id]/page');
+      const rendered = await module.default({
+        params: Promise.resolve({ id: 'openai-gpt' })
+      });
+
+      expect((rendered.type as { name?: string }).name).toBe('ModelDetailPageClient');
+    } finally {
+      await ctx.cleanup();
+    }
   });
 });

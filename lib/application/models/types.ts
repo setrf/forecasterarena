@@ -1,9 +1,9 @@
-import { getModelById } from '@/lib/db/queries';
-
 export interface AgentWithCohort {
   id: string;
   cohort_id: string;
   model_id: string;
+  family_id: string | null;
+  release_id: string | null;
   cash_balance: number;
   total_invested: number;
   status: string;
@@ -13,8 +13,21 @@ export interface AgentWithCohort {
   cohort_status: string;
 }
 
+export interface ModelDetailIdentity {
+  id: string;
+  family_id: string;
+  slug: string;
+  legacy_model_id: string | null;
+  display_name: string;
+  short_display_name: string;
+  provider: string;
+  color: string | null;
+  current_release_id: string | null;
+  current_release_name: string | null;
+}
+
 export interface ModelDetailPayload {
-  model: NonNullable<ReturnType<typeof getModelById>>;
+  model: ModelDetailIdentity;
   num_cohorts: number;
   total_pnl: number;
   avg_pnl_percent: number;

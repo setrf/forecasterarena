@@ -9,8 +9,12 @@ export interface CohortDetailPayload {
   agents: Array<{
     id: string;
     model_id: string;
+    model_slug?: string;
+    family_id?: string | null;
+    release_id?: string | null;
     model_display_name: string;
     model_color: string | null;
+    model_release_name?: string;
     cash_balance: number;
     total_invested: number;
     status: string;
@@ -46,12 +50,17 @@ export interface AgentCohortDetailPayload {
   };
   model: {
     id: string;
+    family_id?: string;
+    slug?: string;
     display_name: string;
     provider: string;
     color: string | null;
+    release_id?: string;
+    release_name?: string;
   };
   agent: {
     id: string;
+    model_id?: string;
     status: string;
     cash_balance: number;
     total_invested: number;

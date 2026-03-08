@@ -1,5 +1,3 @@
-import { MODELS } from '@/lib/constants';
-
 export interface ModelStats {
   model_id: string;
   total_pnl: number;
@@ -10,9 +8,22 @@ export interface ModelStats {
 
 export interface LeaderboardResponse {
   leaderboard?: ModelStats[];
+  models?: CatalogModel[];
   cohorts?: Array<{
     total_markets_traded?: number | null;
   }>;
 }
 
-export type CatalogModel = (typeof MODELS)[number];
+export interface CatalogModel {
+  id: string;
+  family_id?: string;
+  slug?: string;
+  legacy_model_id?: string | null;
+  displayName: string;
+  shortDisplayName?: string;
+  provider: string;
+  color: string;
+  openrouterId?: string | null;
+  currentReleaseId?: string | null;
+  currentReleaseName?: string | null;
+}

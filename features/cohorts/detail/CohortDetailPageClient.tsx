@@ -21,8 +21,8 @@ export default function CohortDetailPageClient() {
   const { cohort, agents, stats, equityCurves, decisions, loading, error } = useCohortDetailData(cohortId);
 
   const chartData = useMemo(() => createCohortChartData(equityCurves), [equityCurves]);
-  const chartModels = useMemo(() => getCohortChartModels(), []);
   const sortedAgents = useMemo(() => sortAgentsByValue(agents), [agents]);
+  const chartModels = useMemo(() => getCohortChartModels(sortedAgents), [sortedAgents]);
 
   if (loading) {
     return (

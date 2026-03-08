@@ -1,9 +1,14 @@
 import { hasLiveCompetitionData } from '@/lib/competition-state';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
-import { emptyLeaderboard, type LeaderboardEntry } from '@/features/home/types';
+import {
+  createEmptyLeaderboard,
+  type CatalogModel,
+  type LeaderboardEntry
+} from '@/features/home/types';
 
 interface HomeLeaderboardPayload {
   leaderboard?: LeaderboardEntry[];
+  models?: CatalogModel[];
   cohorts?: Array<{
     total_markets_traded?: number | null;
   }>;
@@ -17,9 +22,11 @@ interface HomeMarketsPayload {
 
 interface HomePerformancePayload {
   data?: Array<{ date: string; [key: string]: number | string }>;
+  models?: Array<CatalogModel & { name?: string }>;
 }
 
 export async function fetchHomeSummary(): Promise<{
+  models: CatalogModel[];
   leaderboard: LeaderboardEntry[];
   hasRealData: boolean;
   marketCount: number | null;
@@ -40,11 +47,13 @@ export async function fetchHomeSummary(): Promise<{
       : Promise.resolve<HomeMarketsPayload | null>(null)
   ]);
 
+  const models = leaderboardData.models ?? [];
   const leaderboard = leaderboardData.leaderboard && leaderboardData.leaderboard.length > 0
     ? leaderboardData.leaderboard
-    : emptyLeaderboard;
+    : createEmptyLeaderboard(models);
 
   return {
+    models,
     leaderboard,
     hasRealData: hasLiveCompetitionData({
       leaderboard: leaderboardData.leaderboard,
@@ -56,7 +65,10 @@ export async function fetchHomeSummary(): Promise<{
 
 export async function fetchHomePerformanceData(
   timeRange: TimeRange
-): Promise<Array<{ date: string; [key: string]: number | string }>> {
+): Promise<{
+  data: Array<{ date: string; [key: string]: number | string }>;
+  models: CatalogModel[];
+}> {
   const response = await fetch(`/api/performance-data?range=${timeRange}`, {
     cache: 'no-store'
   });
@@ -66,5 +78,11 @@ export async function fetchHomePerformanceData(
   }
 
   const json = await response.json() as HomePerformancePayload;
-  return json.data || [];
+  return {
+    data: json.data || [],
+    models: (json.models || []).map((model) => ({
+      ...model,
+      displayName: model.displayName ?? model.name ?? model.shortDisplayName ?? model.id
+    }))
+  };
 }

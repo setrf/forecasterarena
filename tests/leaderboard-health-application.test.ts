@@ -7,14 +7,17 @@ describe('leaderboard application', () => {
     const fixedNow = new Date('2026-03-06T12:34:56.789Z');
     const leaderboard = [{ model_id: 'model-1', total_pnl: 42 }] as any;
     const cohorts = [{ id: 'cohort-1', cohort_number: 1 }] as any;
+    const models = [{ id: 'openai-gpt', displayName: 'GPT' }] as any;
 
     expect(getLeaderboardData({
       getAggregateLeaderboard: () => leaderboard,
       getCohortSummaries: () => cohorts,
+      getPublicCatalogModels: () => models,
       now: () => fixedNow
     })).toEqual({
       leaderboard,
       cohorts,
+      models,
       updated_at: fixedNow.toISOString()
     });
   });

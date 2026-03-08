@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
-import { createSingleAgentFixture } from '@/tests/helpers/db-fixtures';
+import {
+  createSingleAgentFixture,
+  createTestBenchmarkConfigForLegacyModels
+} from '@/tests/helpers/db-fixtures';
 
 let marketCounter = 0;
 function nextMarketId() {
@@ -22,6 +25,14 @@ function response(content: string) {
   };
 }
 
+function mockOpenRouterModule(callOpenRouterWithRetry: ReturnType<typeof vi.fn>) {
+  return {
+    callOpenRouterWithRetry,
+    estimateCost: vi.fn(() => 0.001),
+    estimateCostFromSnapshot: vi.fn(() => 0.001)
+  };
+}
+
 async function createMultiAgentFixture(activeModelCount: number = 2) {
   const queries = await import('@/lib/db/queries');
   const dbModule = await import('@/lib/db');
@@ -39,8 +50,11 @@ async function createMultiAgentFixture(activeModelCount: number = 2) {
     SET is_active = CASE WHEN id IN (${placeholders}) THEN 1 ELSE 0 END
   `).run(...modelRows.map(row => row.id));
 
-  const cohort = queries.createCohort();
-  const agents = queries.createAgentsForCohort(cohort.id);
+  const benchmarkConfig = await createTestBenchmarkConfigForLegacyModels(
+    modelRows.map((row) => row.id)
+  );
+  const cohort = queries.createCohort(benchmarkConfig.id);
+  const agents = queries.createAgentsForCohort(cohort.id, benchmarkConfig.id);
 
   return { queries, dbModule, db, cohort, agents };
 }
@@ -50,10 +64,7 @@ describe('engine/decision', () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
     const callOpenRouterWithRetry = vi.fn();
 
-    vi.doMock('@/lib/openrouter/client', () => ({
-      callOpenRouterWithRetry,
-      estimateCost: vi.fn(() => 0.001)
-    }));
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
 
     try {
       const { cohort, agent } = await createSingleAgentFixture();
@@ -91,10 +102,7 @@ describe('engine/decision', () => {
       )
     );
 
-    vi.doMock('@/lib/openrouter/client', () => ({
-      callOpenRouterWithRetry,
-      estimateCost: vi.fn(() => 0.001)
-    }));
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
 
     try {
       const { queries, cohort, agent } = await createSingleAgentFixture();
@@ -137,10 +145,7 @@ describe('engine/decision', () => {
       )
     );
 
-    vi.doMock('@/lib/openrouter/client', () => ({
-      callOpenRouterWithRetry,
-      estimateCost: vi.fn(() => 0.001)
-    }));
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
 
     try {
       const { queries, cohort, agent } = await createSingleAgentFixture();
@@ -193,10 +198,7 @@ describe('engine/decision', () => {
         )
       );
 
-    vi.doMock('@/lib/openrouter/client', () => ({
-      callOpenRouterWithRetry,
-      estimateCost: vi.fn(() => 0.001)
-    }));
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
 
     try {
       const { queries, cohort, agent } = await createSingleAgentFixture();
@@ -238,10 +240,7 @@ describe('engine/decision', () => {
       )
     );
 
-    vi.doMock('@/lib/openrouter/client', () => ({
-      callOpenRouterWithRetry,
-      estimateCost: vi.fn(() => 0.001)
-    }));
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
 
     try {
       const { queries, cohort, agent } = await createSingleAgentFixture();
@@ -285,10 +284,7 @@ describe('engine/decision', () => {
       { success: false, error: 'Market temporarily unavailable' }
     ]);
 
-    vi.doMock('@/lib/openrouter/client', () => ({
-      callOpenRouterWithRetry,
-      estimateCost: vi.fn(() => 0.001)
-    }));
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
     vi.doMock('@/lib/engine/execution', async () => {
       const actual = await vi.importActual<typeof import('@/lib/engine/execution')>('@/lib/engine/execution');
       return {
@@ -342,10 +338,7 @@ describe('engine/decision', () => {
       )
     );
 
-    vi.doMock('@/lib/openrouter/client', () => ({
-      callOpenRouterWithRetry,
-      estimateCost: vi.fn(() => 0.001)
-    }));
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
 
     try {
       const { queries, cohort, agents } = await createMultiAgentFixture(2);

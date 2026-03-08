@@ -1,11 +1,12 @@
 'use client';
 
-import { MODELS } from '@/lib/constants';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
+import type { CatalogModel } from '@/features/home/types';
 
 interface PerformanceSectionProps {
   chartData: Array<{ date: string; [key: string]: number | string }>;
+  models: CatalogModel[];
   timeRange: TimeRange;
   onTimeRangeChange: (timeRange: TimeRange) => void;
   error: string | null;
@@ -13,11 +14,12 @@ interface PerformanceSectionProps {
 
 export function PerformanceSection({
   chartData,
+  models,
   timeRange,
   onTimeRangeChange,
   error,
 }: PerformanceSectionProps) {
-  const modelConfigs = MODELS.map((model) => ({
+  const modelConfigs = models.map((model) => ({
     id: model.id,
     name: model.displayName,
     color: model.color

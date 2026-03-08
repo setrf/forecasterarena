@@ -1,7 +1,27 @@
 import { generateId, getDb } from '../index';
 import { INITIAL_BALANCE } from '../../constants';
 import type { Agent, AgentWithModel } from '../../types';
-import { getActiveModels } from './models';
+import {
+  getBenchmarkConfigModels,
+  getDefaultBenchmarkConfig
+} from './benchmark-configs';
+
+type AgentIdentityRow = Record<string, unknown> & {
+  identity_family_id: string | null;
+  identity_family_slug: string | null;
+  identity_legacy_model_id: string | null;
+  identity_family_display_name: string | null;
+  identity_short_display_name: string | null;
+  identity_release_id: string | null;
+  identity_release_name: string | null;
+  identity_release_slug: string | null;
+  identity_provider: string | null;
+  identity_color: string | null;
+  identity_openrouter_id: string | null;
+  identity_input_price_per_million: number | null;
+  identity_output_price_per_million: number | null;
+  identity_benchmark_config_model_id: string | null;
+};
 
 export function getAgentsByCohort(cohortId: string): Agent[] {
   const db = getDb();
@@ -17,34 +37,64 @@ export function getAgentsWithModelsByCohort(cohortId: string): AgentWithModel[] 
   return db.prepare(`
     SELECT
       a.*,
-      m.id as model_id,
-      m.openrouter_id as model_openrouter_id,
-      m.display_name as model_display_name,
-      m.provider as model_provider,
-      m.color as model_color,
-      m.is_active as model_is_active
+      abi.family_id as identity_family_id,
+      abi.family_slug as identity_family_slug,
+      abi.legacy_model_id as identity_legacy_model_id,
+      abi.family_display_name as identity_family_display_name,
+      abi.short_display_name as identity_short_display_name,
+      abi.release_id as identity_release_id,
+      abi.release_display_name as identity_release_name,
+      abi.release_slug as identity_release_slug,
+      abi.provider as identity_provider,
+      abi.color as identity_color,
+      abi.openrouter_id as identity_openrouter_id,
+      abi.input_price_per_million as identity_input_price_per_million,
+      abi.output_price_per_million as identity_output_price_per_million,
+      abi.benchmark_config_model_id as identity_benchmark_config_model_id
     FROM agents a
-    JOIN models m ON a.model_id = m.id
+    LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     WHERE a.cohort_id = ?
     ORDER BY a.cash_balance DESC
   `).all(cohortId).map(row => {
-    const r = row as Record<string, unknown>;
+    const r = row as AgentIdentityRow;
+    const familyId = (r.identity_family_id as string | null) ?? (r.model_id as string);
+    const releaseId = (r.identity_release_id as string | null) ?? `${familyId}--unknown`;
+    const legacyModelId = r.identity_legacy_model_id as string;
+    const displayName = r.identity_family_display_name as string;
+    const benchmarkConfigModelId = (r.benchmark_config_model_id as string | null) ?? null;
+    const familySlug = (r.identity_family_slug as string | null) ?? legacyModelId;
+    const releaseSlug = (r.identity_release_slug as string | null) ?? 'unknown';
+
     return {
       id: r.id as string,
       cohort_id: r.cohort_id as string,
       model_id: r.model_id as string,
+      family_id: familyId,
+      release_id: releaseId,
+      benchmark_config_model_id: benchmarkConfigModelId,
       cash_balance: r.cash_balance as number,
       total_invested: r.total_invested as number,
       status: r.status as 'active' | 'bankrupt',
       created_at: r.created_at as string,
       model: {
-        id: r.model_id as string,
-        openrouter_id: r.model_openrouter_id as string,
-        display_name: r.model_display_name as string,
-        provider: r.model_provider as string,
-        color: r.model_color as string | null,
-        is_active: r.model_is_active as number,
-        added_at: ''
+        id: familyId,
+        legacy_model_id: legacyModelId,
+        family_id: familyId,
+        family_slug: familySlug,
+        display_name: displayName,
+        family_display_name: displayName,
+        short_display_name: r.identity_short_display_name as string,
+        release_id: releaseId,
+        release_name: r.identity_release_name as string,
+        release_slug: releaseSlug,
+        openrouter_id: r.identity_openrouter_id as string,
+        provider: r.identity_provider as string,
+        color: r.identity_color as string | null,
+        input_price_per_million: r.identity_input_price_per_million as number | null,
+        output_price_per_million: r.identity_output_price_per_million as number | null,
+        family: null,
+        release: null,
+        config_model: null
       }
     } as AgentWithModel;
   });
@@ -58,20 +108,49 @@ export function getAgentById(id: string): Agent | undefined {
 export function getAgentByCohortAndModel(cohortId: string, modelId: string): Agent | undefined {
   const db = getDb();
   return db.prepare(`
-    SELECT * FROM agents
-    WHERE cohort_id = ? AND model_id = ?
-  `).get(cohortId, modelId) as Agent | undefined;
+    SELECT a.*
+    FROM agents a
+    LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
+    WHERE a.cohort_id = ?
+      AND (
+        a.model_id = ?
+        OR a.family_id = ?
+        OR abi.family_slug = ?
+        OR abi.legacy_model_id = ?
+      )
+    LIMIT 1
+  `).get(cohortId, modelId, modelId, modelId, modelId) as Agent | undefined;
 }
 
-export function createAgentsForCohort(cohortId: string): Agent[] {
+export function createAgentsForCohort(cohortId: string, benchmarkConfigId?: string | null): Agent[] {
   const db = getDb();
-  const models = getActiveModels();
+  const configId = benchmarkConfigId ?? getDefaultBenchmarkConfig()?.id;
+  const configModels = configId
+    ? getBenchmarkConfigModels(configId)
+    : [];
 
-  for (const model of models) {
+  for (const configModel of configModels) {
     db.prepare(`
-      INSERT OR IGNORE INTO agents (id, cohort_id, model_id, cash_balance, total_invested, status)
-      VALUES (?, ?, ?, ?, 0, 'active')
-    `).run(generateId(), cohortId, model.id, INITIAL_BALANCE);
+      INSERT OR IGNORE INTO agents (
+        id,
+        cohort_id,
+        model_id,
+        family_id,
+        release_id,
+        benchmark_config_model_id,
+        cash_balance,
+        total_invested,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'active')
+    `).run(
+      generateId(),
+      cohortId,
+      configModel.legacy_model_id ?? configModel.family_id,
+      configModel.family_id,
+      configModel.release_id,
+      configModel.id,
+      INITIAL_BALANCE
+    );
   }
 
   return getAgentsByCohort(cohortId);

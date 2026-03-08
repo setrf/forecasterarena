@@ -2,12 +2,12 @@ import { INITIAL_BALANCE } from '@/lib/constants';
 import { getDb } from '@/lib/db';
 import {
   calculateActualPortfolioValue,
-  getAgentByCohortAndModel,
   getAverageBrierScore,
   getClosedPositionsWithMarkets,
   getCohortById,
-  getModelById,
+  getAgentsWithModelsByCohort,
   getPositionsWithMarkets,
+  resolveModelFamily,
   getSnapshotsByAgent
 } from '@/lib/db/queries';
 import {
@@ -36,12 +36,18 @@ export function getAgentCohortDetail(
     return { status: 'not_found', error: 'Cohort not found' };
   }
 
-  const model = getModelById(modelId);
-  if (!model) {
+  const family = resolveModelFamily(modelId);
+  if (!family) {
     return { status: 'not_found', error: 'Model not found' };
   }
 
-  const agent = getAgentByCohortAndModel(cohortId, modelId);
+  const agentWithModel = getAgentsWithModelsByCohort(cohortId).find((candidate) => (
+    candidate.family_id === family.id ||
+    candidate.model_id === modelId ||
+    candidate.model.family_slug === modelId
+  ));
+
+  const agent = agentWithModel;
   if (!agent) {
     return { status: 'not_found', error: 'Agent not found in this cohort' };
   }
@@ -69,13 +75,18 @@ export function getAgentCohortDetail(
         total_markets: getCohortMarketCount(db, cohortId)
       },
       model: {
-        id: model.id,
-        display_name: model.display_name,
-        provider: model.provider,
-        color: model.color
+        id: family.legacy_model_id ?? family.slug ?? family.id,
+        family_id: family.id,
+        slug: family.slug,
+        display_name: agent.model.family_display_name,
+        provider: agent.model.provider,
+        color: agent.model.color,
+        release_id: agent.model.release_id,
+        release_name: agent.model.release_name
       },
       agent: {
         id: agent.id,
+        model_id: agent.model_id,
         status: agent.status,
         cash_balance: agent.cash_balance,
         total_invested: agent.total_invested,

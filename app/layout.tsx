@@ -33,7 +33,7 @@ function Footer() {
               Forecaster Arena
             </Link>
             <p className="text-[var(--text-secondary)] text-sm leading-relaxed max-w-sm mb-6">
-              Reality as the ultimate benchmark. Seven frontier LLMs compete in prediction markets.
+              Reality as the ultimate benchmark. Frontier LLMs compete in prediction markets.
               No memorization possible - only genuine forecasting ability.
             </p>
             <div className="flex items-center gap-1">

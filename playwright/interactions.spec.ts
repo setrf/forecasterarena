@@ -8,12 +8,13 @@ test('home chart controls work against the seeded performance data', async ({ pa
   await page.getByRole('button', { name: '$ Value' }).click();
   await expect(page.getByRole('button', { name: '% Return' })).toBeVisible();
 
-  const leaderLegendButton = page.getByRole('button', { name: /Kimi K2/i });
+  const leaderLegendButton = page.locator('button').filter({ hasText: /Kimi/i }).first();
+  await expect(leaderLegendButton).toBeVisible();
   await leaderLegendButton.click();
-  await expect(page.getByText('Showing only Kimi K2')).toBeVisible();
+  await expect(page.getByText('Showing only Kimi')).toBeVisible();
 
   await leaderLegendButton.click();
-  await expect(page.getByText('Showing only Kimi K2')).toHaveCount(0);
+  await expect(page.getByText('Showing only Kimi')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'ALL' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Current Standings' })).toBeVisible();
@@ -21,7 +22,7 @@ test('home chart controls work against the seeded performance data', async ({ pa
 
 test('model detail recent decisions open and close the reasoning modal', async ({ page }) => {
   await page.goto(seededRoutes.model);
-  await expect(page.getByRole('heading', { level: 1, name: 'GPT-5.2' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'GPT' })).toBeVisible();
 
   await page.getByRole('button', { name: /Cohort #1, Week 1/i }).click();
   const modal = page.locator('.fixed.inset-0').last();

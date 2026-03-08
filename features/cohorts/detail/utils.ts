@@ -1,4 +1,3 @@
-import { MODELS } from '@/lib/constants';
 import type { AgentStats } from '@/features/cohorts/detail/types';
 
 export function createCohortChartData(
@@ -25,11 +24,11 @@ export function createCohortChartData(
   });
 }
 
-export function getCohortChartModels() {
-  return MODELS.map((model) => ({
-    id: model.id,
-    name: model.displayName,
-    color: model.color
+export function getCohortChartModels(agents: AgentStats[]) {
+  return agents.map((agent) => ({
+    id: agent.model_id,
+    name: agent.model_display_name,
+    color: agent.model_color ?? '#94A3B8'
   }));
 }
 

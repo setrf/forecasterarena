@@ -1,5 +1,5 @@
 import { finalizeDecision } from '@/lib/db/queries';
-import { estimateCost } from '@/lib/openrouter/client';
+import { estimateCost, estimateCostFromSnapshot } from '@/lib/openrouter/client';
 import type { DecisionAttempt } from '@/lib/engine/decision/processAgentDecision/llm';
 import type { AgentWithModel } from '@/lib/types';
 
@@ -11,6 +11,14 @@ export function finalizeProcessedDecision(args: {
   decisionAttempt: DecisionAttempt;
 }) {
   const { agent, decisionId, systemPrompt, userPrompt, decisionAttempt } = args;
+  const inputPrice = agent.model.input_price_per_million;
+  const outputPrice = agent.model.output_price_per_million;
+  const apiCostUsd = inputPrice !== null && outputPrice !== null
+    ? estimateCostFromSnapshot(decisionAttempt.response.usage, {
+      input: inputPrice,
+      output: outputPrice
+    })
+    : estimateCost(decisionAttempt.response.usage, agent.model.openrouter_id);
 
   return finalizeDecision(decisionId, {
     prompt_system: systemPrompt,
@@ -22,7 +30,7 @@ export function finalizeProcessedDecision(args: {
     reasoning: decisionAttempt.parsed.reasoning,
     tokens_input: decisionAttempt.response.usage.prompt_tokens,
     tokens_output: decisionAttempt.response.usage.completion_tokens,
-    api_cost_usd: estimateCost(decisionAttempt.response.usage, agent.model.openrouter_id),
+    api_cost_usd: apiCostUsd,
     response_time_ms: decisionAttempt.response.response_time_ms,
     error_message: null
   });

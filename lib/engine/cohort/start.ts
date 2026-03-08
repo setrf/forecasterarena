@@ -1,6 +1,7 @@
 import { logSystemEvent } from '@/lib/db';
 import { withTransaction } from '@/lib/db/transactions';
 import {
+  getDefaultBenchmarkConfig,
   createAgentsForCohort,
   createCohort as dbCreateCohort,
   getAgentsByCohort
@@ -12,18 +13,24 @@ export function startNewCohort(): StartCohortResult {
     console.log('Starting new cohort...');
 
     const result = withTransaction(() => {
-      const cohort = dbCreateCohort();
+      const benchmarkConfig = getDefaultBenchmarkConfig();
+      if (!benchmarkConfig) {
+        throw new Error('No default benchmark config is configured for future cohorts');
+      }
+
+      const cohort = dbCreateCohort(benchmarkConfig.id);
       const existingAgents = getAgentsByCohort(cohort.id);
 
       const agents = existingAgents.length > 0
         ? existingAgents
-        : createAgentsForCohort(cohort.id);
+        : createAgentsForCohort(cohort.id, benchmarkConfig.id);
 
       if (existingAgents.length === 0) {
         logSystemEvent('cohort_started', {
           cohort_id: cohort.id,
           cohort_number: cohort.cohort_number,
-          num_agents: agents.length
+          num_agents: agents.length,
+          benchmark_config_id: benchmarkConfig.id
         });
       }
 

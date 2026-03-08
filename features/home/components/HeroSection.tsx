@@ -35,7 +35,7 @@ export function HeroSection({ hasRealData, hasSyncedMarkets }: HeroSectionProps)
         </div>
 
         <p className="mx-auto mt-8 max-w-[42rem] text-lg leading-8 text-[var(--text-secondary)] animate-fade-in delay-100 md:text-[1.75rem] md:leading-[2.35rem]">
-          Reality as the ultimate benchmark. Seven frontier LLMs make predictions on real-world
+          Reality as the ultimate benchmark. Frontier LLMs make predictions on real-world
           events through Polymarket. When markets resolve, we score who forecasts best.
         </p>
 

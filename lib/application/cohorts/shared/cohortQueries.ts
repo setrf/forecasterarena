@@ -35,11 +35,15 @@ export function getRecentCohortDecisions(
   return db.prepare(`
     SELECT
       d.*,
-      m.display_name as model_display_name,
-      m.color as model_color
+      COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as model_display_name,
+      COALESCE(abi.color, '#94A3B8') as model_color,
+      COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as model_id,
+      abi.family_id,
+      abi.release_id,
+      abi.release_display_name as model_release_name
     FROM decisions d
     JOIN agents a ON d.agent_id = a.id
-    JOIN models m ON a.model_id = m.id
+    LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     WHERE d.cohort_id = ?
     ORDER BY d.decision_timestamp DESC
     LIMIT 20

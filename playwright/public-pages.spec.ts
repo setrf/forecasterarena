@@ -5,11 +5,11 @@ test('models and research pages stay navigable from real UI links', async ({ pag
   await page.goto('/');
   await page.getByRole('link', { name: 'View All Models' }).click();
   await expect(page).toHaveURL(/\/models$/);
-  await expect(page.getByRole('heading', { level: 1, name: /Seven Frontier LLMs/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /Frontier LLMs/i })).toBeVisible();
 
   await page.getByRole('link', { name: /Current Leader/i }).click();
   await expect(page).toHaveURL(new RegExp(`${seededRoutes.leaderModel}$`));
-  await expect(page.getByRole('heading', { level: 1, name: 'Kimi K2' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Kimi' })).toBeVisible();
 
   await page.goto('/');
   await page.getByRole('link', { name: 'Read the Methodology' }).click();

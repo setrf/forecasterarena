@@ -32,10 +32,16 @@ export function ModelDetailHeader({ model }: ModelDetailHeaderProps) {
             <span className="badge badge-active">Active</span>
           </div>
           <p className="text-[var(--text-secondary)]">
-            {model.provider} • OpenRouter ID:{' '}
-            <code className="text-sm font-mono bg-[var(--bg-tertiary)] px-2 py-0.5 rounded">
-              {model.openrouterId}
-            </code>
+            {model.provider}
+            {model.currentReleaseName ? ` • Current Release: ${model.currentReleaseName}` : ''}
+            {model.openrouterId ? (
+              <>
+                {' • OpenRouter ID: '}
+                <code className="text-sm font-mono bg-[var(--bg-tertiary)] px-2 py-0.5 rounded">
+                  {model.openrouterId}
+                </code>
+              </>
+            ) : null}
           </p>
         </div>
       </div>

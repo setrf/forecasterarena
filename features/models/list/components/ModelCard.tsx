@@ -29,7 +29,7 @@ export function ModelCard({
 
   return (
     <Link
-      href={`/models/${model.id}`}
+      href={`/models/${model.slug ?? model.id}`}
       className="card p-6 group animate-fade-in"
       style={{ animationDelay: `${animationDelayMs}ms` }}
     >

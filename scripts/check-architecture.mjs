@@ -240,6 +240,18 @@ function collectImports(filePath) {
   return imports;
 }
 
+function collectFiles(roots, extensions) {
+  return roots.flatMap((root) => {
+    const absoluteRoot = path.join(process.cwd(), root);
+    if (!fs.existsSync(absoluteRoot)) {
+      return [];
+    }
+
+    const stats = fs.statSync(absoluteRoot);
+    return stats.isDirectory() ? walk(absoluteRoot, extensions) : [absoluteRoot];
+  });
+}
+
 const violations = [];
 
 for (const check of checks) {
@@ -284,6 +296,50 @@ for (const rule of boundaryRules) {
       });
     }
   }
+}
+
+const staticCatalogFiles = collectFiles(
+  ['app', 'features', 'lib'],
+  new Set(['.ts', '.tsx'])
+).filter((filePath) => !filePath.includes(path.join(process.cwd(), 'lib/constants')));
+
+for (const filePath of staticCatalogFiles) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const importsStaticModels =
+    /import\s*\{[^}]*\bMODELS\b[^}]*\}\s*from\s*['"]@\/lib\/constants(?:\/models)?['"]/.test(source) ||
+    /import\s*\{[^}]*\bMODELS\b[^}]*\}\s*from\s*['"]@\/lib\/constants\/models\/catalog['"]/.test(source);
+
+  if (!importsStaticModels) {
+    continue;
+  }
+
+  violations.push({
+    file: path.relative(process.cwd(), filePath),
+    importPath: '@/lib/constants -> MODELS',
+    reason: 'runtime code must use the database-backed public catalog, not the static MODELS constant'
+  });
+}
+
+const mutableHistoryJoinFiles = collectFiles(
+  ['lib/application', 'lib/db/queries'],
+  new Set(['.ts'])
+).filter((filePath) => !filePath.endsWith(path.join('lib', 'db', 'queries', 'models.ts')));
+
+for (const filePath of mutableHistoryJoinFiles) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const rewritesHistory =
+    /JOIN\s+models\s+\w+\s+ON\s+a\.model_id\s*=\s*\w+\.id/.test(source) ||
+    /LEFT\s+JOIN\s+agents\s+\w+\s+ON\s+\w+\.id\s*=\s*\w+\.model_id/.test(source);
+
+  if (!rewritesHistory) {
+    continue;
+  }
+
+  violations.push({
+    file: path.relative(process.cwd(), filePath),
+    importPath: 'SQL JOIN models ... agents.model_id',
+    reason: 'historical reads must use frozen family/release/config lineage instead of mutable model rows'
+  });
 }
 
 if (violations.length > 0) {

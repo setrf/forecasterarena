@@ -56,7 +56,7 @@ export function getLatestCohortNumber(): number {
   return result.max || 0;
 }
 
-export function createCohort(): Cohort {
+export function createCohort(benchmarkConfigId?: string | null): Cohort {
   return withImmediateTransaction(() => {
     const db = getDb();
     const startedAt = getCurrentWeekStart().toISOString();
@@ -73,14 +73,15 @@ export function createCohort(): Cohort {
     const id = generateId();
 
     db.prepare(`
-      INSERT INTO cohorts (id, cohort_number, started_at, methodology_version)
+      INSERT INTO cohorts (id, cohort_number, started_at, methodology_version, benchmark_config_id)
       VALUES (
         ?,
         COALESCE((SELECT MAX(cohort_number) FROM cohorts), 0) + 1,
         ?,
+        ?,
         ?
       )
-    `).run(id, startedAt, METHODOLOGY_VERSION);
+    `).run(id, startedAt, METHODOLOGY_VERSION, benchmarkConfigId ?? null);
 
     return getCohortById(id)!;
   });

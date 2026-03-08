@@ -19,9 +19,24 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       WHERE p.status = 'open'
       GROUP BY p.agent_id
     ),
+    agent_identity AS (
+      SELECT
+        a.id as agent_id,
+        COALESCE(abi.legacy_model_id, abi.family_slug, abi.family_id, a.model_id) as public_model_id,
+        COALESCE(abi.family_slug, abi.legacy_model_id, abi.family_id, a.model_id) as public_model_slug,
+        COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
+        COALESCE(abi.provider, 'Unknown') as provider,
+        COALESCE(abi.color, '#94A3B8') as color
+      FROM agents a
+      LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
+    ),
     agent_stats AS (
       SELECT
-        a.model_id,
+        ai.public_model_id as model_id,
+        ai.public_model_slug as model_slug,
+        ai.display_name,
+        ai.provider,
+        ai.color,
         COUNT(DISTINCT a.id) as num_cohorts,
         SUM(
           COALESCE(
@@ -31,21 +46,23 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         ) as total_pnl,
         SUM(COALESCE(ls.num_resolved_bets, 0)) as total_resolved_bets
       FROM agents a
+      JOIN agent_identity ai ON ai.agent_id = a.id
       LEFT JOIN latest_snapshots ls ON a.id = ls.agent_id AND ls.rn = 1
       LEFT JOIN open_position_values op ON a.id = op.agent_id
-      GROUP BY a.model_id
+      GROUP BY ai.public_model_id, ai.public_model_slug, ai.display_name, ai.provider, ai.color
     ),
     brier_stats AS (
       SELECT
-        a.model_id,
+        ai.public_model_id as model_id,
         AVG(bs.brier_score) as avg_brier_score
       FROM brier_scores bs
       JOIN agents a ON bs.agent_id = a.id
-      GROUP BY a.model_id
+      JOIN agent_identity ai ON ai.agent_id = a.id
+      GROUP BY ai.public_model_id
     ),
     win_stats AS (
       SELECT
-        a.model_id,
+        ai.public_model_id as model_id,
         COUNT(CASE WHEN
           (t.side = 'YES' AND m.resolution_outcome = 'YES') OR
           (t.side = 'NO' AND m.resolution_outcome = 'NO') OR
@@ -54,16 +71,18 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         COUNT(*) as total_bets
       FROM brier_scores bs
       JOIN agents a ON bs.agent_id = a.id
+      JOIN agent_identity ai ON ai.agent_id = a.id
       JOIN trades t ON bs.trade_id = t.id
       JOIN markets m ON bs.market_id = m.id
       WHERE m.status = 'resolved'
-      GROUP BY a.model_id
+      GROUP BY ai.public_model_id
     )
     SELECT
-      m.id as model_id,
-      m.display_name,
-      m.provider,
-      m.color,
+      s.model_id,
+      s.model_slug,
+      s.display_name,
+      s.provider,
+      s.color,
       COALESCE(s.total_pnl, 0) as total_pnl,
       CASE WHEN s.num_cohorts > 0
         THEN (COALESCE(s.total_pnl, 0) / (s.num_cohorts * ?)) * 100
@@ -76,11 +95,10 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         THEN CAST(w.wins AS REAL) / w.total_bets
         ELSE NULL
       END as win_rate
-    FROM models m
-    LEFT JOIN agent_stats s ON m.id = s.model_id
-    LEFT JOIN brier_stats b ON m.id = b.model_id
-    LEFT JOIN win_stats w ON m.id = w.model_id
-    WHERE m.is_active = 1 AND COALESCE(s.num_cohorts, 0) > 0
+    FROM agent_stats s
+    LEFT JOIN brier_stats b ON s.model_id = b.model_id
+    LEFT JOIN win_stats w ON s.model_id = w.model_id
+    WHERE COALESCE(s.num_cohorts, 0) > 0
     ORDER BY total_pnl DESC
   `).all(INITIAL_BALANCE, INITIAL_BALANCE) as LeaderboardEntry[];
 
