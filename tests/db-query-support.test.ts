@@ -245,6 +245,110 @@ describe('db query modules - support and reporting', () => {
     });
   });
 
+  it('infers frozen lineage for decision-linked API cost rows', async () => {
+    await withModules(async ({ agents, cohorts, costs, db }) => {
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+      const decisionId = uniqueId('decision');
+
+      db.prepare(`
+        INSERT INTO decisions (
+          id, agent_id, cohort_id, decision_week, decision_timestamp,
+          prompt_system, prompt_user, retry_count, action
+        ) VALUES (?, ?, ?, 1, ?, 'system', 'user', 0, 'HOLD')
+      `).run(decisionId, agent!.id, cohort.id, '2025-01-01T00:00:00.000Z');
+
+      const apiCost = costs.createApiCost({
+        model_id: agent!.model_id,
+        decision_id: decisionId,
+        tokens_input: 120,
+        tokens_output: 45,
+        cost_usd: 0.42
+      });
+      const inferredUpdateApiCost = costs.createApiCost({
+        model_id: agent!.model_id,
+        decision_id: decisionId,
+        tokens_input: 130,
+        tokens_output: 48,
+        cost_usd: 0.46
+      });
+      const updatedApiCost = costs.createApiCost({
+        model_id: agent!.model_id,
+        agent_id: agent!.id,
+        family_id: agent!.family_id,
+        release_id: agent!.release_id,
+        benchmark_config_model_id: agent!.benchmark_config_model_id,
+        decision_id: decisionId,
+        tokens_input: 140,
+        tokens_output: 50,
+        cost_usd: 0.5
+      });
+
+      expect(apiCost).toMatchObject({
+        decision_id: decisionId,
+        agent_id: agent!.id,
+        family_id: agent!.family_id,
+        release_id: agent!.release_id,
+        benchmark_config_model_id: agent!.benchmark_config_model_id
+      });
+      expect(inferredUpdateApiCost.id).toBe(apiCost.id);
+      expect(inferredUpdateApiCost.agent_id).toBe(agent!.id);
+      expect(inferredUpdateApiCost.cost_usd).toBe(0.46);
+      expect(updatedApiCost.id).toBe(apiCost.id);
+      expect(updatedApiCost.cost_usd).toBe(0.5);
+      expect(costs.getTotalCostsByModel()[agent!.family_id!]).toBe(0.5);
+    });
+  });
+
+  it('updates existing API cost rows without inferred lineage when the linked agent lineage is missing', async () => {
+    await withModules(({ agents, cohorts, costs, db }) => {
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+      const decisionId = uniqueId('decision');
+
+      db.prepare(`
+        INSERT INTO decisions (
+          id, agent_id, cohort_id, decision_week, decision_timestamp,
+          prompt_system, prompt_user, retry_count, action
+        ) VALUES (?, ?, ?, 1, ?, 'system', 'user', 0, 'HOLD')
+      `).run(decisionId, agent!.id, cohort.id, '2025-01-01T00:00:00.000Z');
+
+      const firstApiCost = costs.createApiCost({
+        model_id: agent!.model_id,
+        decision_id: decisionId,
+        tokens_input: 90,
+        tokens_output: 30,
+        cost_usd: 0.15
+      });
+
+      db.prepare(`
+        UPDATE agents
+        SET family_id = NULL,
+            release_id = NULL,
+            benchmark_config_model_id = NULL
+        WHERE id = ?
+      `).run(agent!.id);
+
+      const updatedApiCost = costs.createApiCost({
+        model_id: agent!.model_id,
+        decision_id: decisionId,
+        tokens_input: 95,
+        tokens_output: 35,
+        cost_usd: 0.18
+      });
+
+      expect(updatedApiCost.id).toBe(firstApiCost.id);
+      expect(updatedApiCost.agent_id).toBe(agent!.id);
+      expect(updatedApiCost.family_id).toBeNull();
+      expect(updatedApiCost.release_id).toBeNull();
+      expect(updatedApiCost.benchmark_config_model_id).toBeNull();
+      expect(updatedApiCost.cost_usd).toBe(0.18);
+      expect(costs.getTotalCostsByModel()).toEqual({
+        [agent!.model_id]: 0.18
+      });
+    });
+  });
+
   it('covers snapshot upserts and query ordering helpers', async () => {
     await withModules(({ agents, cohorts, snapshots }) => {
       const cohort = cohorts.createCohort();

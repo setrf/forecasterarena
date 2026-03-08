@@ -174,6 +174,63 @@ describe('engine/decision', () => {
     }
   });
 
+  it('records a lineage-aware api_costs row when a decision is finalized', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+    const callOpenRouterWithRetry = vi.fn().mockResolvedValue(
+      response(
+        JSON.stringify({
+          action: 'HOLD',
+          reasoning: 'No trade, but still bill tokens.'
+        })
+      )
+    );
+
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
+
+    try {
+      const { queries, cohort, agent, db } = await createSingleAgentFixture();
+      queries.upsertMarket({
+        polymarket_id: nextMarketId(),
+        question: 'Will finalized decisions write lineage-aware API costs?',
+        market_type: 'binary',
+        status: 'active',
+        current_price: 0.51,
+        close_date: '2099-01-01T00:00:00.000Z',
+        volume: 11_000
+      });
+
+      const decisionEngine = await import('@/lib/engine/decision');
+      const result = await decisionEngine.runCohortDecisions(cohort.id);
+      expect(result.decisions[0]?.success).toBe(true);
+
+      const decision = queries.getDecisionsByAgent(agent.id, 1)[0]!;
+      const apiCost = db.prepare(`
+        SELECT *
+        FROM api_costs
+        WHERE decision_id = ?
+      `).get(decision.id) as {
+        model_id: string;
+        agent_id: string;
+        family_id: string;
+        release_id: string;
+        benchmark_config_model_id: string;
+        cost_usd: number;
+      } | undefined;
+
+      expect(apiCost).toMatchObject({
+        model_id: agent.model_id,
+        agent_id: agent.id,
+        family_id: agent.family_id,
+        release_id: agent.release_id,
+        benchmark_config_model_id: agent.benchmark_config_model_id,
+        cost_usd: 0.001
+      });
+    } finally {
+      vi.doUnmock('@/lib/openrouter/client');
+      await ctx.cleanup();
+    }
+  });
+
   it('retries malformed model output up to configured retry limit', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 

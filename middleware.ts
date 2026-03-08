@@ -1,13 +1,87 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { ADMIN_PASSWORD, IS_PRODUCTION } from '@/lib/constants';
+import {
+  ADMIN_SESSION_COOKIE_NAME,
+  ADMIN_SESSION_MAX_AGE_MS
+} from '@/lib/auth/adminSessionShared';
 import { getRateLimitKey } from '@/lib/middleware/ip';
 import { matchRateLimitPolicy } from '@/lib/middleware/policies';
 import { applyRateLimit } from '@/lib/middleware/rateLimit';
 
-export function middleware(request: NextRequest) {
+const textEncoder = new TextEncoder();
+
+function decodeToken(token: string): string {
+  if (typeof atob === 'function') {
+    return atob(token);
+  }
+
+  throw new Error('Base64 decoding is unavailable in the current runtime');
+}
+
+async function verifyAdminSessionTokenForMiddleware(
+  token: string | undefined,
+  adminPassword: string,
+  now: number = Date.now()
+): Promise<boolean> {
+  if (!token || !adminPassword) {
+    return false;
+  }
+
+  try {
+    const decoded = decodeToken(token);
+    const parts = decoded.split(':');
+    if (parts.length !== 3) {
+      return false;
+    }
+
+    const [role, timestamp, signature] = parts;
+    if (role !== 'admin') {
+      return false;
+    }
+
+    const tokenTime = parseInt(timestamp, 10);
+    if (isNaN(tokenTime) || now - tokenTime > ADMIN_SESSION_MAX_AGE_MS) {
+      return false;
+    }
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      textEncoder.encode(adminPassword),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signed = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      textEncoder.encode(`${role}:${timestamp}`)
+    );
+    const expectedSignature = Array.from(new Uint8Array(signed))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+
+    return signature === expectedSignature;
+  } catch {
+    return false;
+  }
+}
+
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const policy = matchRateLimitPolicy(path, request.method);
   if (!policy) {
+    return NextResponse.next();
+  }
+
+  if (
+    policy.bucket === 'admin' &&
+    (!IS_PRODUCTION || ADMIN_PASSWORD) &&
+    await verifyAdminSessionTokenForMiddleware(
+      request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value,
+      ADMIN_PASSWORD
+    )
+  ) {
     return NextResponse.next();
   }
 

@@ -1,10 +1,12 @@
-import { createHmac } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { ADMIN_PASSWORD, IS_PRODUCTION } from '@/lib/constants';
 import { logSystemEvent } from '@/lib/db';
+import { ADMIN_SESSION_COOKIE_NAME } from '@/lib/auth/adminSessionShared';
+import {
+  createAdminSessionToken
+} from '@/lib/auth/adminSession';
 import { verifyAdminPassword } from '@/lib/utils/security';
 
-const COOKIE_NAME = 'forecaster_admin';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 10 * 60 * 1000;
@@ -80,15 +82,13 @@ export function createAdminLoginResponse(request: NextRequest, body: unknown): N
     );
   }
 
-  const sessionPayload = `admin:${Date.now()}`;
-  const signature = createHmac('sha256', ADMIN_PASSWORD).update(sessionPayload).digest('hex');
-  const token = Buffer.from(`${sessionPayload}:${signature}`).toString('base64');
+  const token = createAdminSessionToken(ADMIN_PASSWORD);
 
   logSystemEvent('admin_login_success', { ip });
   clearAttempts(ip);
 
   const response = NextResponse.json({ success: true });
-  response.cookies.set(COOKIE_NAME, token, {
+  response.cookies.set(ADMIN_SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -101,6 +101,6 @@ export function createAdminLoginResponse(request: NextRequest, body: unknown): N
 
 export function createAdminLogoutResponse(): NextResponse {
   const response = NextResponse.json({ success: true });
-  response.cookies.delete(COOKIE_NAME);
+  response.cookies.delete(ADMIN_SESSION_COOKIE_NAME);
   return response;
 }

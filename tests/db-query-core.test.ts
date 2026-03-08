@@ -92,6 +92,44 @@ describe('db query modules - core operations', () => {
     });
   });
 
+  it('throws when an agent row loses its frozen benchmark lineage', async () => {
+    await withDbQueryModules(({ agents, cohorts, db }) => {
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+
+      db.prepare(`
+        UPDATE agents
+        SET family_id = NULL,
+            release_id = NULL,
+            benchmark_config_model_id = NULL
+        WHERE id = ?
+      `).run(agent!.id);
+
+      expect(() => agents.getAgentsWithModelsByCohort(cohort.id)).toThrow(
+        `Agent ${agent!.id} is missing frozen benchmark lineage`
+      );
+    });
+  });
+
+  it('falls back to frozen family and release ids when catalog slug rows are missing', async () => {
+    await withDbQueryModules(({ agents, cohorts, db }) => {
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+      const hydratedAgent = agents.getAgentsWithModelsByCohort(cohort.id)[0]!;
+
+      db.pragma('foreign_keys = OFF');
+      db.prepare('DELETE FROM model_releases WHERE id = ?').run(hydratedAgent.release_id);
+      db.prepare('DELETE FROM model_families WHERE id = ?').run(hydratedAgent.family_id);
+      db.pragma('foreign_keys = ON');
+
+      const degradedAgent = agents.getAgentsWithModelsByCohort(cohort.id)[0]!;
+      expect(degradedAgent.model.family_slug).toBe(hydratedAgent.family_id);
+      expect(degradedAgent.model.release_slug).toBe(hydratedAgent.release_id);
+      expect(degradedAgent.model.display_name).toBe(hydratedAgent.model.display_name);
+      expect(degradedAgent.model.release_name).toBe(hydratedAgent.model.release_name);
+    });
+  });
+
   it('covers market inserts, updates, reads, sorting, and resolution transitions', async () => {
     await withDbQueryModules(({ markets }) => {
       const defaulted = markets.upsertMarket({

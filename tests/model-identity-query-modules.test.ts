@@ -89,6 +89,10 @@ describe('model identity query modules', () => {
       });
 
       expect(benchmarkConfigs.getBenchmarkConfigById(nonDefaultConfig.id)?.id).toBe(nonDefaultConfig.id);
+      expect(benchmarkConfigs.getAllBenchmarkConfigs().map((config) => config.id)).toEqual(
+        expect.arrayContaining([seededDefault!.id, nonDefaultConfig.id])
+      );
+      expect(benchmarkConfigs.getAllBenchmarkConfigs(1)).toHaveLength(1);
       expect(benchmarkConfigs.getBenchmarkConfigModels(nonDefaultConfig.id).map((row) => row.id)).toContain(nonDefaultAssignment.id);
       expect(benchmarkConfigs.getBenchmarkConfigModelByFamily(nonDefaultConfig.id, family!.id)?.id).toBe(nonDefaultAssignment.id);
       expect(benchmarkConfigs.getDefaultBenchmarkConfig()?.id).toBe(seededDefault?.id);
@@ -127,10 +131,11 @@ describe('model identity query modules', () => {
     }
   });
 
-  it('keeps agent identity fallbacks stable for legacy rows without family metadata', async () => {
+  it('backfills frozen lineage for legacy rows that were inserted without family metadata', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {
+      const foundation = await import('@/lib/catalog/foundation');
       const dbModule = await import('@/lib/db');
       const cohorts = await import('@/lib/db/queries/cohorts');
       const agents = await import('@/lib/db/queries/agents');
@@ -166,20 +171,22 @@ describe('model identity query modules', () => {
         'active'
       );
 
+      foundation.ensureModelIdentityFoundation(db);
+
       const [agent] = agents.getAgentsWithModelsByCohort(cohort.id);
       expect(agent?.family_id).toBe('legacy-custom');
-      expect(agent?.release_id).toBe('legacy-custom--unknown');
-      expect(agent?.benchmark_config_model_id).toBeNull();
+      expect(agent?.release_id).toBe('legacy-custom--legacy-custom');
+      expect(agent?.benchmark_config_model_id).toBe(`benchmark-config-backfill-${cohort.id}--legacy-custom`);
       expect(agent?.model.family_id).toBe('legacy-custom');
       expect(agent?.model.family_slug).toBe('legacy-custom');
       expect(agent?.model.display_name).toBe('Legacy Custom');
       expect(agent?.model.short_display_name).toBe('Legacy Custom');
       expect(agent?.model.release_name).toBe('Legacy Custom');
-      expect(agent?.model.release_slug).toBe('unknown');
+      expect(agent?.model.release_slug).toBe('legacy-custom');
       expect(agent?.model.openrouter_id).toBe('custom/legacy-model');
       expect(agent?.model.provider).toBe('CustomAI');
-      expect(agent?.model.input_price_per_million).toBeNull();
-      expect(agent?.model.output_price_per_million).toBeNull();
+      expect(agent?.model.input_price_per_million).toBe(2);
+      expect(agent?.model.output_price_per_million).toBe(8);
       expect(agents.getAgentByCohortAndModel(cohort.id, 'legacy-custom')?.id).toBe('agent-legacy-custom');
     } finally {
       await ctx.cleanup();

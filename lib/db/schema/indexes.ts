@@ -57,6 +57,13 @@ CREATE INDEX IF NOT EXISTS idx_brier_trade ON brier_scores(trade_id);
 -- API Costs
 CREATE INDEX IF NOT EXISTS idx_api_costs_recorded ON api_costs(recorded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_api_costs_model ON api_costs(model_id);
+CREATE INDEX IF NOT EXISTS idx_api_costs_agent ON api_costs(agent_id);
+CREATE INDEX IF NOT EXISTS idx_api_costs_family ON api_costs(family_id);
+CREATE INDEX IF NOT EXISTS idx_api_costs_release ON api_costs(release_id);
+CREATE INDEX IF NOT EXISTS idx_api_costs_config_model ON api_costs(benchmark_config_model_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_api_costs_decision_unique
+  ON api_costs(decision_id)
+  WHERE decision_id IS NOT NULL;
 
 -- Model Lineage
 CREATE INDEX IF NOT EXISTS idx_model_families_status_order ON model_families(status, sort_order);
@@ -65,6 +72,9 @@ CREATE INDEX IF NOT EXISTS idx_model_releases_openrouter ON model_releases(openr
 CREATE INDEX IF NOT EXISTS idx_benchmark_configs_default ON benchmark_configs(is_default_for_future_cohorts, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_benchmark_config_models_config_slot ON benchmark_config_models(benchmark_config_id, slot_order);
 CREATE INDEX IF NOT EXISTS idx_benchmark_config_models_release ON benchmark_config_models(release_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_cohort_config_model_unique
+  ON agents(cohort_id, benchmark_config_model_id)
+  WHERE benchmark_config_model_id IS NOT NULL;
 
 -- Additional composite indexes for optimized queries
 CREATE INDEX IF NOT EXISTS idx_trades_market_executed ON trades(market_id, executed_at DESC);

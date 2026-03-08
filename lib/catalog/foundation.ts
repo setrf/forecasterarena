@@ -2,142 +2,43 @@ import type Database from 'better-sqlite3';
 
 import { METHODOLOGY_VERSION } from '@/lib/constants';
 import {
-  MODEL_FAMILY_BOOTSTRAP,
-  findBootstrapFamilyByFamilyId,
-  findBootstrapFamilyByLegacyModelId
-} from '@/lib/catalog/bootstrap';
+  type CohortBackfillAgentRow,
+  ensureBootstrapFamilies,
+  ensureModelFamilyForLegacyModel,
+  ensureReleaseForLegacyModel,
+  getAllLegacyModels,
+  getModelById,
+  getModelFamilyById,
+  getOrCreateDefaultBenchmarkConfig,
+  insertConfigModelSnapshot
+} from '@/lib/catalog/foundation/helpers';
 
-interface LegacyModelRow {
-  id: string;
-  openrouter_id: string;
-  display_name: string;
-  provider: string;
-  color: string | null;
-  is_active: number;
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 64) || 'release';
-}
-
-function buildReleaseId(familyId: string, releaseSlug: string): string {
-  return `${familyId}--${releaseSlug}`;
-}
-
-function getPricingSnapshot(familyId: string): {
-  input: number;
-  output: number;
-} {
-  const bootstrap = findBootstrapFamilyByFamilyId(familyId);
-  if (!bootstrap) {
-    return { input: 2, output: 8 };
-  }
-
-  return {
-    input: bootstrap.inputPricePerMillion,
-    output: bootstrap.outputPricePerMillion
-  };
-}
-
-function ensureModelFamilies(db: Database.Database): void {
-  const statement = db.prepare(`
-    INSERT INTO model_families (
-      id,
-      slug,
-      legacy_model_id,
-      provider,
-      family_name,
-      public_display_name,
-      short_display_name,
-      color,
-      status,
-      sort_order
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
-    ON CONFLICT(id) DO UPDATE SET
-      slug = excluded.slug,
-      legacy_model_id = excluded.legacy_model_id,
-      provider = excluded.provider,
-      family_name = excluded.family_name,
-      public_display_name = excluded.public_display_name,
-      short_display_name = excluded.short_display_name,
-      color = excluded.color,
-      sort_order = excluded.sort_order,
-      status = 'active',
-      retired_at = NULL
-  `);
-
-  for (const family of MODEL_FAMILY_BOOTSTRAP) {
-    statement.run(
-      family.familyId,
-      family.slug,
-      family.legacyModelId,
-      family.provider,
-      family.familyName,
-      family.publicDisplayName,
-      family.shortDisplayName,
-      family.color,
-      family.sortOrder
-    );
-  }
-}
-
-function ensureReleaseForLegacyModel(
+function ensureDefaultBenchmarkConfigModels(
   db: Database.Database,
-  familyId: string,
-  model: LegacyModelRow
-): string {
-  const bootstrap = findBootstrapFamilyByLegacyModelId(model.id);
-  const releaseSlug = bootstrap && bootstrap.initialOpenrouterId === model.openrouter_id
-    ? bootstrap.initialReleaseSlug
-    : slugify(model.display_name);
-  const releaseId = buildReleaseId(familyId, releaseSlug);
+  configId: string
+): void {
+  const activeModels = getAllLegacyModels(db).filter((model) => model.is_active === 1);
 
-  db.prepare(`
-    INSERT INTO model_releases (
-      id,
-      family_id,
-      release_name,
-      release_slug,
-      openrouter_id,
-      provider,
-      metadata_json,
-      release_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-    ON CONFLICT(id) DO NOTHING
-  `).run(
-    releaseId,
-    familyId,
-    model.display_name,
-    releaseSlug,
-    model.openrouter_id,
-    model.provider,
-    JSON.stringify({
-      seeded_from_legacy_model_id: model.id,
-      seeded_at: new Date().toISOString()
-    })
-  );
+  for (const model of activeModels) {
+    const family = ensureModelFamilyForLegacyModel(db, model);
+    const releaseId = ensureReleaseForLegacyModel(db, family.id, model);
 
-  return releaseId;
+    insertConfigModelSnapshot(db, {
+      configId,
+      configModelId: `${configId}--${family.id}`,
+      family,
+      releaseId,
+      model
+    });
+  }
 }
 
-function getOrCreateDefaultBenchmarkConfig(db: Database.Database): string {
-  const existingDefault = db.prepare(`
-    SELECT id
-    FROM benchmark_configs
-    WHERE is_default_for_future_cohorts = 1
-    ORDER BY created_at DESC
-    LIMIT 1
-  `).get() as { id: string } | undefined;
+function createOrUpdateBackfillConfigForCohort(
+  db: Database.Database,
+  cohort: { id: string; cohort_number: number }
+): string {
+  const configId = `benchmark-config-backfill-${cohort.id}`;
 
-  if (existingDefault) {
-    return existingDefault.id;
-  }
-
-  const configId = 'benchmark-config-bootstrap-default';
   db.prepare(`
     INSERT INTO benchmark_configs (
       id,
@@ -146,125 +47,99 @@ function getOrCreateDefaultBenchmarkConfig(db: Database.Database): string {
       notes,
       created_by,
       is_default_for_future_cohorts
-    ) VALUES (?, ?, ?, ?, ?, 1)
-    ON CONFLICT(id) DO NOTHING
+    ) VALUES (?, ?, ?, ?, ?, 0)
+    ON CONFLICT(id) DO UPDATE SET
+      version_name = excluded.version_name,
+      methodology_version = excluded.methodology_version,
+      notes = excluded.notes,
+      created_by = excluded.created_by
   `).run(
     configId,
-    'bootstrap-default-lineup',
+    `legacy-backfill-cohort-${cohort.cohort_number}`,
     METHODOLOGY_VERSION,
-    'Bootstrapped default lineup created during model identity migration.',
-    'system:migration'
+    'Backfilled from legacy agent/model rows. Release lineage is inferred from the legacy catalog state at migration time.',
+    'system:legacy-backfill'
   );
 
-  db.prepare(`
-    UPDATE benchmark_configs
-    SET is_default_for_future_cohorts = CASE WHEN id = ? THEN 1 ELSE 0 END
-  `).run(configId);
+  const agentRows = db.prepare(`
+    SELECT model_id, family_id, release_id, benchmark_config_model_id
+    FROM agents
+    WHERE cohort_id = ?
+    ORDER BY model_id ASC
+  `).all(cohort.id) as CohortBackfillAgentRow[];
+
+  for (const row of agentRows) {
+    if (row.benchmark_config_model_id) {
+      continue;
+    }
+
+    const model = getModelById(db, row.model_id);
+    if (!model) {
+      continue;
+    }
+
+    const family = row.family_id
+      ? getModelFamilyById(db, row.family_id) ?? ensureModelFamilyForLegacyModel(db, model)
+      : ensureModelFamilyForLegacyModel(db, model);
+    const releaseId = row.release_id ?? ensureReleaseForLegacyModel(db, family.id, model);
+
+    insertConfigModelSnapshot(db, {
+      configId,
+      configModelId: `${configId}--${family.id}`,
+      family,
+      releaseId,
+      model
+    });
+  }
 
   return configId;
 }
 
-function ensureDefaultBenchmarkConfigModels(
-  db: Database.Database,
-  configId: string
-): void {
-  const activeModels = db.prepare(`
-    SELECT *
-    FROM models
-    WHERE is_active = 1
-    ORDER BY display_name ASC
-  `).all() as LegacyModelRow[];
+function backfillCohortConfigs(db: Database.Database): void {
+  const cohorts = db.prepare(`
+    SELECT id, cohort_number
+    FROM cohorts
+    WHERE benchmark_config_id IS NULL
+    ORDER BY cohort_number ASC
+  `).all() as Array<{ id: string; cohort_number: number }>;
 
-  const insertConfigModel = db.prepare(`
-    INSERT INTO benchmark_config_models (
-      id,
-      benchmark_config_id,
-      family_id,
-      release_id,
-      slot_order,
-      family_display_name_snapshot,
-      short_display_name_snapshot,
-      release_display_name_snapshot,
-      provider_snapshot,
-      color_snapshot,
-      openrouter_id_snapshot,
-      input_price_per_million_snapshot,
-      output_price_per_million_snapshot
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(benchmark_config_id, family_id) DO NOTHING
+  const updateCohort = db.prepare(`
+    UPDATE cohorts
+    SET benchmark_config_id = ?
+    WHERE id = ?
   `);
 
-  for (const family of MODEL_FAMILY_BOOTSTRAP) {
-    const matchingModel = activeModels.find((model) => model.id === family.legacyModelId);
-    if (!matchingModel) {
-      continue;
-    }
-
-    const releaseId = ensureReleaseForLegacyModel(db, family.familyId, matchingModel);
-    const pricing = getPricingSnapshot(family.familyId);
-
-    insertConfigModel.run(
-      `${configId}--${family.familyId}`,
-      configId,
-      family.familyId,
-      releaseId,
-      family.sortOrder,
-      family.publicDisplayName,
-      family.shortDisplayName,
-      matchingModel.display_name,
-      matchingModel.provider,
-      matchingModel.color,
-      matchingModel.openrouter_id,
-      pricing.input,
-      pricing.output
-    );
+  for (const cohort of cohorts) {
+    const configId = createOrUpdateBackfillConfigForCohort(db, cohort);
+    updateCohort.run(configId, cohort.id);
   }
 }
 
-function backfillCohortConfigs(
-  db: Database.Database,
-  configId: string
-): void {
-  db.prepare(`
-    UPDATE cohorts
-    SET benchmark_config_id = COALESCE(benchmark_config_id, ?)
-    WHERE benchmark_config_id IS NULL
-  `).run(configId);
-}
-
-function backfillAgents(
-  db: Database.Database
-): void {
+function backfillAgents(db: Database.Database): void {
   const rows = db.prepare(`
     SELECT
       a.id,
       a.model_id,
-      a.family_id,
-      a.release_id,
-      a.benchmark_config_model_id,
-      c.benchmark_config_id,
-      bcm.id as resolved_config_model_id,
-      bcm.release_id as resolved_release_id,
-      bcm.family_id as resolved_family_id
+      COALESCE(a.family_id, mf.id) as resolved_family_id,
+      COALESCE(a.release_id, r.id) as resolved_release_id,
+      bcm.id as resolved_config_model_id
     FROM agents a
     JOIN cohorts c ON c.id = a.cohort_id
     LEFT JOIN model_families mf ON mf.legacy_model_id = a.model_id
+    LEFT JOIN model_releases r
+      ON r.family_id = COALESCE(a.family_id, mf.id)
+     AND r.openrouter_id = (SELECT openrouter_id FROM models WHERE id = a.model_id)
     LEFT JOIN benchmark_config_models bcm
       ON bcm.benchmark_config_id = c.benchmark_config_id
-      AND bcm.family_id = COALESCE(a.family_id, mf.id)
+     AND bcm.family_id = COALESCE(a.family_id, mf.id)
     WHERE a.family_id IS NULL
        OR a.release_id IS NULL
        OR a.benchmark_config_model_id IS NULL
   `).all() as Array<{
     id: string;
-    model_id: string;
-    family_id: string | null;
-    release_id: string | null;
-    benchmark_config_model_id: string | null;
-    benchmark_config_id: string | null;
-    resolved_config_model_id: string | null;
-    resolved_release_id: string | null;
     resolved_family_id: string | null;
+    resolved_release_id: string | null;
+    resolved_config_model_id: string | null;
   }>;
 
   const updateAgent = db.prepare(`
@@ -327,21 +202,42 @@ function refreshReleaseUsage(db: Database.Database): void {
   }
 }
 
+function assertModelIdentityFoundationComplete(db: Database.Database): void {
+  const missingCohortConfig = db.prepare(`
+    SELECT COUNT(*) as count
+    FROM cohorts
+    WHERE benchmark_config_id IS NULL
+  `).get() as { count: number };
+
+  if (missingCohortConfig.count > 0) {
+    throw new Error('Model identity foundation is incomplete: cohorts are missing benchmark_config_id values');
+  }
+
+  const missingAgentLineage = db.prepare(`
+    SELECT COUNT(*) as count
+    FROM agents
+    WHERE family_id IS NULL
+       OR release_id IS NULL
+       OR benchmark_config_model_id IS NULL
+  `).get() as { count: number };
+
+  if (missingAgentLineage.count > 0) {
+    throw new Error('Model identity foundation is incomplete: agents are missing frozen family/release/config lineage');
+  }
+}
+
 export function ensureModelIdentityFoundation(db: Database.Database): void {
-  ensureModelFamilies(db);
+  ensureBootstrapFamilies(db);
 
-  for (const model of db.prepare('SELECT * FROM models').all() as LegacyModelRow[]) {
-    const family = findBootstrapFamilyByLegacyModelId(model.id);
-    if (!family) {
-      continue;
-    }
-
-    ensureReleaseForLegacyModel(db, family.familyId, model);
+  for (const model of getAllLegacyModels(db)) {
+    const family = ensureModelFamilyForLegacyModel(db, model);
+    ensureReleaseForLegacyModel(db, family.id, model);
   }
 
   const defaultConfigId = getOrCreateDefaultBenchmarkConfig(db);
   ensureDefaultBenchmarkConfigModels(db, defaultConfigId);
-  backfillCohortConfigs(db, defaultConfigId);
+  backfillCohortConfigs(db);
   backfillAgents(db);
+  assertModelIdentityFoundationComplete(db);
   refreshReleaseUsage(db);
 }

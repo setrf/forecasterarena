@@ -57,13 +57,18 @@ export function getAgentsWithModelsByCohort(cohortId: string): AgentWithModel[] 
     ORDER BY a.cash_balance DESC
   `).all(cohortId).map(row => {
     const r = row as AgentIdentityRow;
-    const familyId = (r.identity_family_id as string | null) ?? (r.model_id as string);
-    const releaseId = (r.identity_release_id as string | null) ?? `${familyId}--unknown`;
-    const legacyModelId = r.identity_legacy_model_id as string;
+    const familyId = r.identity_family_id as string | null;
+    const releaseId = r.identity_release_id as string | null;
+    const benchmarkConfigModelId = r.identity_benchmark_config_model_id as string | null;
+
+    if (!familyId || !releaseId || !benchmarkConfigModelId) {
+      throw new Error(`Agent ${r.id as string} is missing frozen benchmark lineage`);
+    }
+
+    const legacyModelId = r.model_id as string;
     const displayName = r.identity_family_display_name as string;
-    const benchmarkConfigModelId = (r.benchmark_config_model_id as string | null) ?? null;
-    const familySlug = (r.identity_family_slug as string | null) ?? legacyModelId;
-    const releaseSlug = (r.identity_release_slug as string | null) ?? 'unknown';
+    const familySlug = (r.identity_family_slug as string | null) ?? familyId;
+    const releaseSlug = (r.identity_release_slug as string | null) ?? releaseId;
 
     return {
       id: r.id as string,
