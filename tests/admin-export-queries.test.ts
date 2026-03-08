@@ -16,6 +16,7 @@ describe('admin export lineage queries', () => {
         'model_releases',
         'benchmark_configs',
         'benchmark_config_models',
+        'agent_benchmark_identity',
         'api_costs'
       ]));
 
@@ -47,6 +48,7 @@ describe('admin export lineage queries', () => {
       const releaseRows = getRowsForTable(queries, 'model_releases', fixture.cohort.id, '2026-01-01', '2026-12-31');
       const configRows = getRowsForTable(queries, 'benchmark_configs', fixture.cohort.id, '2026-01-01', '2026-12-31');
       const configModelRows = getRowsForTable(queries, 'benchmark_config_models', fixture.cohort.id, '2026-01-01', '2026-12-31');
+      const identityRows = getRowsForTable(queries, 'agent_benchmark_identity', fixture.cohort.id, '2026-01-01', '2026-12-31');
       const apiCostRows = getRowsForTable(queries, 'api_costs', fixture.cohort.id, '2026-01-01', '2026-12-31');
 
       expect(cohortRows[0]).toMatchObject({
@@ -64,6 +66,14 @@ describe('admin export lineage queries', () => {
       expect(releaseRows).toHaveLength(1);
       expect(configRows).toHaveLength(1);
       expect(configModelRows).toHaveLength(1);
+      expect(identityRows[0]).toMatchObject({
+        agent_id: fixture.agent.id,
+        cohort_id: fixture.cohort.id,
+        legacy_model_id: fixture.modelId,
+        family_id: fixture.agent.family_id,
+        release_id: fixture.agent.release_id,
+        benchmark_config_model_id: fixture.agent.benchmark_config_model_id
+      });
       expect(apiCostRows[0]).toMatchObject({
         model_id: fixture.modelId,
         agent_id: fixture.agent.id,

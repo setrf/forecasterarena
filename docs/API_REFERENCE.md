@@ -896,6 +896,7 @@ Rules:
   - `model_releases`
   - `benchmark_configs`
   - `benchmark_config_models`
+  - `agent_benchmark_identity` (canonical frozen family/release/config lineage per agent)
   - `api_costs`
   - `markets`
   - `decisions`
@@ -904,7 +905,7 @@ Rules:
   - `portfolio_snapshots`
 - ZIP filenames are sanitized and generated server-side
 - exports are cleaned up after roughly 24 hours
-- historical identity should be reconstructed from `model_families`, `model_releases`, `benchmark_configs`, `benchmark_config_models`, and frozen lineage columns on `agents` / `api_costs`, not from the mutable `models` table alone
+- historical identity should be reconstructed from `agent_benchmark_identity`, `model_families`, `model_releases`, `benchmark_configs`, `benchmark_config_models`, and frozen lineage columns on `agents` / `api_costs`, not from the mutable `models` table alone
 
 Success response:
 

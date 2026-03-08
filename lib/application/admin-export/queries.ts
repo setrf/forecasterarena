@@ -44,6 +44,29 @@ export function buildQueries(includePrompts: boolean): ExportQueries {
             JOIN cohorts c ON c.benchmark_config_id = bcm.benchmark_config_id
             WHERE c.id = ?`
     },
+    agent_benchmark_identity: {
+      columns: [
+        'agent_id',
+        'cohort_id',
+        'legacy_model_id',
+        'family_id',
+        'family_slug',
+        'family_display_name',
+        'short_display_name',
+        'release_id',
+        'release_slug',
+        'release_display_name',
+        'provider',
+        'color',
+        'openrouter_id',
+        'input_price_per_million',
+        'output_price_per_million',
+        'benchmark_config_model_id'
+      ],
+      sql: `SELECT agent_id, cohort_id, legacy_model_id, family_id, family_slug, family_display_name, short_display_name, release_id, release_slug, release_display_name, provider, color, openrouter_id, input_price_per_million, output_price_per_million, benchmark_config_model_id
+            FROM agent_benchmark_identity_v
+            WHERE cohort_id = ?`
+    },
     api_costs: {
       columns: ['id', 'model_id', 'agent_id', 'family_id', 'release_id', 'benchmark_config_model_id', 'decision_id', 'tokens_input', 'tokens_output', 'cost_usd', 'recorded_at'],
       sql: `SELECT ac.id, ac.model_id, ac.agent_id, ac.family_id, ac.release_id, ac.benchmark_config_model_id, ac.decision_id, ac.tokens_input, ac.tokens_output, ac.cost_usd, ac.recorded_at
@@ -128,6 +151,7 @@ export function getRowsForTable(
     case 'model_releases':
     case 'benchmark_configs':
     case 'benchmark_config_models':
+    case 'agent_benchmark_identity':
     case 'markets':
       return db.prepare(query.sql).all(cohortId) as Record<string, unknown>[];
     case 'api_costs':

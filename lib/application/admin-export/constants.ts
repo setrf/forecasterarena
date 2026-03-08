@@ -10,6 +10,7 @@ export const DEFAULT_TABLES = [
   'model_releases',
   'benchmark_configs',
   'benchmark_config_models',
+  'agent_benchmark_identity',
   'api_costs',
   'markets',
   'decisions',
