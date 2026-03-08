@@ -8,7 +8,7 @@ interface DesktopNavigationLinksProps {
 
 export function DesktopNavigationLinks({ pathname }: DesktopNavigationLinksProps) {
   return (
-    <>
+    <div className="flex items-center gap-1">
       <nav className="hidden md:flex items-center gap-1">
         {PUBLIC_NAV_LINKS.map((link) => (
           <Link
@@ -27,6 +27,6 @@ export function DesktopNavigationLinks({ pathname }: DesktopNavigationLinksProps
       >
         {ABOUT_NAV_LINK.label}
       </Link>
-    </>
+    </div>
   );
 }
