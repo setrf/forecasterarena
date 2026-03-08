@@ -55,3 +55,11 @@ export interface Decision {
   model_color: string;
   cohort_number?: number;
 }
+
+export interface ReleaseChangeEvent {
+  date: string;
+  model_id: string;
+  model_name: string;
+  release_name: string;
+  color: string;
+}

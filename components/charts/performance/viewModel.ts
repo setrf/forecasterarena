@@ -1,11 +1,13 @@
 import type {
   ModelConfig,
   PerformanceDataPoint,
+  ReleaseChangeEvent,
   TimeRange
 } from '@/components/charts/performance/types';
 import {
   calculatePerformanceYDomain,
   filterPerformanceData,
+  filterReleaseChanges,
   getPerformanceSummary,
   getSundayMarkers
 } from '@/components/charts/performance/utils';
@@ -17,6 +19,8 @@ export interface PerformanceChartViewModel {
   previousValues: Record<string, number>;
   yDomain: [number, number];
   sundayMarkers: string[];
+  releaseMarkerDates: string[];
+  visibleReleaseChanges: ReleaseChangeEvent[];
   displayModels: ModelConfig[];
   isolatedModelName: string | null;
 }
@@ -24,10 +28,13 @@ export interface PerformanceChartViewModel {
 export function buildPerformanceChartViewModel(args: {
   data: PerformanceDataPoint[];
   models: ModelConfig[];
+  releaseChanges: ReleaseChangeEvent[];
   timeRange: TimeRange;
   isolatedModel: string | null;
 }): PerformanceChartViewModel {
   const filteredData = filterPerformanceData(args.data, args.timeRange);
+  const visibleReleaseChanges = filterReleaseChanges(args.releaseChanges, args.timeRange)
+    .filter((event) => !args.isolatedModel || event.model_id === args.isolatedModel);
   const { leaderId, latestValues, previousValues } = getPerformanceSummary(filteredData, args.models);
 
   return {
@@ -37,6 +44,8 @@ export function buildPerformanceChartViewModel(args: {
     previousValues,
     yDomain: calculatePerformanceYDomain(filteredData, args.models),
     sundayMarkers: getSundayMarkers(filteredData),
+    releaseMarkerDates: Array.from(new Set(visibleReleaseChanges.map((event) => event.date))).sort(),
+    visibleReleaseChanges,
     displayModels: getDisplayModels(args.models, args.isolatedModel),
     isolatedModelName: getIsolatedModelName(args.models, args.isolatedModel)
   };

@@ -103,6 +103,11 @@ export function PremiumTooltip({
                   }`}>
                     {model?.name || entry.name}
                   </span>
+                  {model?.currentReleaseName && model.currentReleaseName !== model.name && (
+                    <span className="rounded-full border border-[var(--border-medium)] bg-[var(--bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--text-muted)]">
+                      {model.currentReleaseName}
+                    </span>
+                  )}
                   {rankChange !== 0 && (
                     <span className={`text-[10px] font-mono ${
                       rankChange > 0 ? 'text-positive' : 'text-negative'

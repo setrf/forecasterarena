@@ -6,7 +6,8 @@ import type {
   AgentStats,
   Cohort,
   CohortStats,
-  Decision
+  Decision,
+  ReleaseChangeEvent
 } from '@/features/cohorts/detail/types';
 
 export function useCohortDetailData(cohortId: string) {
@@ -14,6 +15,7 @@ export function useCohortDetailData(cohortId: string) {
   const [agents, setAgents] = useState<AgentStats[]>([]);
   const [stats, setStats] = useState<CohortStats | null>(null);
   const [equityCurves, setEquityCurves] = useState<Record<string, Array<{ date: string; value: number }>>>({});
+  const [releaseChanges, setReleaseChanges] = useState<ReleaseChangeEvent[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +33,7 @@ export function useCohortDetailData(cohortId: string) {
         setAgents(result.data.agents);
         setStats(result.data.stats);
         setEquityCurves(result.data.equityCurves);
+        setReleaseChanges(result.data.releaseChanges);
         setDecisions(result.data.decisions);
       } catch {
         setError('Failed to load cohort');
@@ -47,6 +50,7 @@ export function useCohortDetailData(cohortId: string) {
     agents,
     stats,
     equityCurves,
+    releaseChanges,
     decisions,
     loading,
     error

@@ -1,5 +1,6 @@
 import { hasLiveCompetitionData } from '@/lib/competition-state';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
+import type { ReleaseChangeEvent } from '@/components/charts/performance/types';
 import {
   createEmptyLeaderboard,
   type CatalogModel,
@@ -23,6 +24,7 @@ interface HomeMarketsPayload {
 interface HomePerformancePayload {
   data?: Array<{ date: string; [key: string]: number | string }>;
   models?: Array<CatalogModel & { name?: string }>;
+  release_changes?: ReleaseChangeEvent[];
 }
 
 export async function fetchHomeSummary(): Promise<{
@@ -68,6 +70,7 @@ export async function fetchHomePerformanceData(
 ): Promise<{
   data: Array<{ date: string; [key: string]: number | string }>;
   models: CatalogModel[];
+  releaseChanges: ReleaseChangeEvent[];
 }> {
   const response = await fetch(`/api/performance-data?range=${timeRange}`, {
     cache: 'no-store'
@@ -83,6 +86,7 @@ export async function fetchHomePerformanceData(
     models: (json.models || []).map((model) => ({
       ...model,
       displayName: model.displayName ?? model.name ?? model.shortDisplayName ?? model.id
-    }))
+    })),
+    releaseChanges: json.release_changes || []
   };
 }

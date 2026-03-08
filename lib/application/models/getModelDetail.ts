@@ -10,6 +10,7 @@ import {
   buildEquityCurve,
   calculateAverageBrierScore
 } from '@/lib/application/models/helpers';
+import { getReleaseChangeEvents } from '@/lib/application/performance';
 import {
   getAgentsWithCohorts,
   getModelEquitySnapshots,
@@ -66,6 +67,7 @@ export function getModelDetail(
       cohort_performance: cohortPerformance,
       recent_decisions: getRecentModelDecisions(db, family.id),
       equity_curve: buildEquityCurve(getModelEquitySnapshots(db, family.id)),
+      release_changes: getReleaseChangeEvents({ familyId: family.id }),
       updated_at: new Date().toISOString()
     }
   };

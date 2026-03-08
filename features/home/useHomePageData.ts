@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { ReleaseChangeEvent } from '@/components/charts/performance/types';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
 import { fetchHomePerformanceData, fetchHomeSummary } from '@/features/home/api';
 import { type CatalogModel, type LeaderboardEntry } from '@/features/home/types';
@@ -13,6 +14,7 @@ export function useHomePageData() {
   const [marketCount, setMarketCount] = useState<number | null>(null);
   const [chartData, setChartData] = useState<Array<{ date: string; [key: string]: number | string }>>([]);
   const [chartModels, setChartModels] = useState<CatalogModel[]>([]);
+  const [chartReleaseChanges, setChartReleaseChanges] = useState<ReleaseChangeEvent[]>([]);
   const [chartError, setChartError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
@@ -39,6 +41,7 @@ export function useHomePageData() {
         const performance = await fetchHomePerformanceData(timeRange);
         setChartData(performance.data);
         setChartModels(performance.models);
+        setChartReleaseChanges(performance.releaseChanges);
         setChartError(null);
       } catch {
         setChartError('Performance data is temporarily unavailable.');
@@ -56,6 +59,7 @@ export function useHomePageData() {
     marketCount,
     chartData,
     chartModels,
+    chartReleaseChanges,
     chartError,
     timeRange,
     setTimeRange

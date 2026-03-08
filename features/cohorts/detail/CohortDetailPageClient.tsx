@@ -18,7 +18,7 @@ export default function CohortDetailPageClient() {
   const router = useRouter();
   const cohortId = params.id;
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
-  const { cohort, agents, stats, equityCurves, decisions, loading, error } = useCohortDetailData(cohortId);
+  const { cohort, agents, stats, equityCurves, releaseChanges, decisions, loading, error } = useCohortDetailData(cohortId);
 
   const chartData = useMemo(() => createCohortChartData(equityCurves), [equityCurves]);
   const sortedAgents = useMemo(() => sortAgentsByValue(agents), [agents]);
@@ -43,6 +43,7 @@ export default function CohortDetailPageClient() {
       <CohortPerformanceSection
         chartData={chartData}
         chartModels={chartModels}
+        releaseChanges={releaseChanges}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
       />

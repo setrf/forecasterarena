@@ -22,6 +22,14 @@ export interface ModelDecision {
   model_release_name?: string | null;
 }
 
+export interface ReleaseChangeEvent {
+  date: string;
+  model_id: string;
+  model_name: string;
+  release_name: string;
+  color: string;
+}
+
 export interface EquityPoint {
   snapshot_timestamp: string;
   total_value: number;
@@ -50,6 +58,7 @@ export interface ModelDetailData {
   cohort_performance: CohortPerformance[];
   recent_decisions: ModelDecision[];
   equity_curve: EquityPoint[];
+  release_changes: ReleaseChangeEvent[];
 }
 
 export interface CatalogModel {

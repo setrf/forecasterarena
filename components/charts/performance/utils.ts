@@ -1,6 +1,11 @@
 import { parseUTCTimestamp } from '@/lib/utils';
 import { BASELINE } from '@/components/charts/performance/constants';
-import type { ModelConfig, PerformanceDataPoint, TimeRange } from '@/components/charts/performance/types';
+import type {
+  ModelConfig,
+  PerformanceDataPoint,
+  ReleaseChangeEvent,
+  TimeRange
+} from '@/components/charts/performance/types';
 
 export function filterPerformanceData(
   data: PerformanceDataPoint[],
@@ -139,4 +144,41 @@ export function getSundayMarkers(filteredData: PerformanceDataPoint[]): string[]
   });
 
   return markers;
+}
+
+export function filterReleaseChanges(
+  releaseChanges: ReleaseChangeEvent[],
+  timeRange: TimeRange
+): ReleaseChangeEvent[] {
+  if (timeRange === 'ALL' || releaseChanges.length === 0) {
+    return releaseChanges;
+  }
+
+  const now = new Date();
+  const cutoffDate = new Date();
+
+  switch (timeRange) {
+    case '10M':
+      cutoffDate.setMinutes(now.getMinutes() - 10);
+      break;
+    case '1H':
+      cutoffDate.setHours(now.getHours() - 1);
+      break;
+    case '1D':
+      cutoffDate.setDate(now.getDate() - 1);
+      break;
+    case '1W':
+      cutoffDate.setDate(now.getDate() - 7);
+      break;
+    case '1M':
+      cutoffDate.setMonth(now.getMonth() - 1);
+      break;
+    case '3M':
+      cutoffDate.setMonth(now.getMonth() - 3);
+      break;
+    default:
+      break;
+  }
+
+  return releaseChanges.filter((event) => parseUTCTimestamp(event.date) >= cutoffDate);
 }

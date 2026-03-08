@@ -1,12 +1,14 @@
 'use client';
 
 import PerformanceChart from '@/components/charts/PerformanceChart';
+import type { ReleaseChangeEvent } from '@/components/charts/performance/types';
 import TimeRangeSelector, { TimeRange } from '@/components/charts/TimeRangeSelector';
 import type { CatalogModel } from '@/features/home/types';
 
 interface PerformanceSectionProps {
   chartData: Array<{ date: string; [key: string]: number | string }>;
   models: CatalogModel[];
+  releaseChanges: ReleaseChangeEvent[];
   timeRange: TimeRange;
   onTimeRangeChange: (timeRange: TimeRange) => void;
   error: string | null;
@@ -15,6 +17,7 @@ interface PerformanceSectionProps {
 export function PerformanceSection({
   chartData,
   models,
+  releaseChanges,
   timeRange,
   onTimeRangeChange,
   error,
@@ -22,7 +25,8 @@ export function PerformanceSection({
   const modelConfigs = models.map((model) => ({
     id: model.slug ?? model.id,
     name: model.displayName,
-    color: model.color
+    color: model.color,
+    currentReleaseName: model.currentReleaseName ?? null
   }));
 
   return (
@@ -45,6 +49,7 @@ export function PerformanceSection({
         <PerformanceChart
           data={chartData}
           models={modelConfigs}
+          releaseChanges={releaseChanges}
           height={380}
           showLegend={true}
           timeRange={timeRange}

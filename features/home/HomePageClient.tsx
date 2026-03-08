@@ -17,6 +17,7 @@ export default function HomePageClient() {
     marketCount,
     chartData,
     chartModels,
+    chartReleaseChanges,
     chartError,
     timeRange,
     setTimeRange
@@ -41,6 +42,7 @@ export default function HomePageClient() {
       <PerformanceSection
         chartData={chartData}
         models={chartModels.length > 0 ? chartModels : models}
+        releaseChanges={chartReleaseChanges}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
         error={chartError}

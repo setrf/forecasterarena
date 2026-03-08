@@ -28,7 +28,8 @@ export function getCohortChartModels(agents: AgentStats[]) {
   return agents.map((agent) => ({
     id: agent.family_slug,
     name: agent.model_display_name,
-    color: agent.model_color ?? '#94A3B8'
+    color: agent.model_color ?? '#94A3B8',
+    currentReleaseName: agent.model_release_name ?? null
   }));
 }
 

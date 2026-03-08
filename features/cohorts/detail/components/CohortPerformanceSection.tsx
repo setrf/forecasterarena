@@ -1,9 +1,11 @@
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { type TimeRange } from '@/components/charts/TimeRangeSelector';
+import type { ReleaseChangeEvent } from '@/features/cohorts/detail/types';
 
 interface CohortPerformanceSectionProps {
   chartData: Array<{ date: string; [seriesKey: string]: string | number }>;
-  chartModels: Array<{ id: string; name: string; color: string }>;
+  chartModels: Array<{ id: string; name: string; color: string; currentReleaseName?: string | null }>;
+  releaseChanges: ReleaseChangeEvent[];
   timeRange: TimeRange;
   onTimeRangeChange: (timeRange: TimeRange) => void;
 }
@@ -11,6 +13,7 @@ interface CohortPerformanceSectionProps {
 export function CohortPerformanceSection({
   chartData,
   chartModels,
+  releaseChanges,
   timeRange,
   onTimeRangeChange
 }: CohortPerformanceSectionProps) {
@@ -23,6 +26,7 @@ export function CohortPerformanceSection({
       <PerformanceChart
         data={chartData}
         models={chartModels}
+        releaseChanges={releaseChanges}
         height={520}
         showLegend={true}
         timeRange={timeRange}

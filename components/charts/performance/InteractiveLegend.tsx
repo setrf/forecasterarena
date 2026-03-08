@@ -73,18 +73,24 @@ export function InteractiveLegend({
               )}
             </div>
 
-            <span className={`
-              text-xs font-medium transition-colors
-              ${isLeader
-                ? 'text-[var(--accent-gold)]'
-                : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'}
-            `}>
-              {model.name}
-            </span>
+              <span className={`
+                text-xs font-medium transition-colors
+                ${isLeader
+                  ? 'text-[var(--accent-gold)]'
+                  : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'}
+              `}>
+                {model.name}
+              </span>
 
-            <span className={`
-              text-[10px] font-mono
-              ${pnl >= 0 ? 'text-positive' : 'text-negative'}
+              {model.currentReleaseName && model.currentReleaseName !== model.name && (
+                <span className="rounded-full border border-[var(--border-medium)] bg-[var(--bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--text-muted)]">
+                  {model.currentReleaseName}
+                </span>
+              )}
+
+              <span className={`
+                text-[10px] font-mono
+                ${pnl >= 0 ? 'text-positive' : 'text-negative'}
             `}>
               {showPercent
                 ? `${pnl >= 0 ? '+' : ''}${((pnl / BASELINE) * 100).toFixed(1)}%`

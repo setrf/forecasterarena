@@ -17,6 +17,7 @@ import {
 import { InteractiveLegend } from '@/components/charts/performance/InteractiveLegend';
 import { PremiumTooltip } from '@/components/charts/performance/PremiumTooltip';
 import { PerformanceReferenceLines } from '@/components/charts/performance/PerformanceReferenceLines';
+import { ReleaseShiftStrip } from '@/components/charts/performance/ReleaseShiftStrip';
 import type { ModelConfig, PerformanceDataPoint } from '@/components/charts/performance/types';
 
 interface PerformanceChartViewProps {
@@ -36,6 +37,14 @@ interface PerformanceChartViewProps {
   showLegend: boolean;
   showPercent: boolean;
   sundayMarkers: string[];
+  releaseMarkerDates: string[];
+  visibleReleaseChanges: Array<{
+    date: string;
+    model_id: string;
+    model_name: string;
+    release_name: string;
+    color: string;
+  }>;
   toggleShowPercent: () => void;
   yDomain: [number, number];
 }
@@ -57,6 +66,8 @@ export function PerformanceChartView({
   showLegend,
   showPercent,
   sundayMarkers,
+  releaseMarkerDates,
+  visibleReleaseChanges,
   toggleShowPercent,
   yDomain
 }: PerformanceChartViewProps) {
@@ -73,6 +84,8 @@ export function PerformanceChartView({
         toggleShowPercent={toggleShowPercent}
       />
 
+      <ReleaseShiftStrip releaseChanges={visibleReleaseChanges} />
+
       <ResponsiveContainer width="100%" height={height}>
         <ComposedChart data={data} margin={{ top: 30, right: 30, left: 10, bottom: 5 }}>
           {showGrid && (
@@ -87,6 +100,7 @@ export function PerformanceChartView({
           <PerformanceReferenceLines
             showPercent={showPercent}
             sundayMarkers={sundayMarkers}
+            releaseMarkerDates={releaseMarkerDates}
           />
 
           <XAxis

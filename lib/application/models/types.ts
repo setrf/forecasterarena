@@ -50,6 +50,13 @@ export interface ModelDetailPayload {
     snapshot_timestamp: string;
     total_value: number;
   }>;
+  release_changes: Array<{
+    date: string;
+    model_id: string;
+    model_name: string;
+    release_name: string;
+    color: string;
+  }>;
   updated_at: string;
 }
 

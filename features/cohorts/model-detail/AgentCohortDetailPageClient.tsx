@@ -32,7 +32,8 @@ export default function AgentCohortDetailPageClient() {
   const chartModels = data?.model ? [{
     id: chartKey,
     name: data.model.display_name,
-    color: data.model.color
+    color: data.model.color,
+    currentReleaseName: data.model.release_name ?? null
   }] : [];
 
   if (loading) {
@@ -60,6 +61,7 @@ export default function AgentCohortDetailPageClient() {
       <AgentPerformanceSection
         chartData={chartData}
         chartModels={chartModels}
+        releaseChanges={data.release_changes}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
       />

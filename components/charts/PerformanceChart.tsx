@@ -10,6 +10,7 @@ export type { TimeRange } from '@/components/charts/performance/types';
 export default function PerformanceChart({
   data,
   models,
+  releaseChanges = [],
   height = 520,
   showLegend = true,
   showGrid = true,
@@ -26,9 +27,10 @@ export default function PerformanceChart({
   const viewModel = useMemo(() => buildPerformanceChartViewModel({
     data,
     models,
+    releaseChanges,
     timeRange: timeRange as TimeRange,
     isolatedModel
-  }), [data, isolatedModel, models, timeRange]);
+  }), [data, isolatedModel, models, releaseChanges, timeRange]);
 
   return (
     <PerformanceChartView
@@ -48,6 +50,8 @@ export default function PerformanceChart({
       showLegend={showLegend}
       showPercent={showPercent}
       sundayMarkers={viewModel.sundayMarkers}
+      releaseMarkerDates={viewModel.releaseMarkerDates}
+      visibleReleaseChanges={viewModel.visibleReleaseChanges}
       toggleShowPercent={() => setShowPercent((current) => !current)}
       yDomain={viewModel.yDomain}
     />

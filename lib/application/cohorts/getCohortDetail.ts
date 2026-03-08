@@ -9,6 +9,7 @@ import {
   getSnapshotsByAgent
 } from '@/lib/db/queries';
 import { calculateWeekNumber } from '@/lib/utils';
+import { getReleaseChangeEvents } from '@/lib/application/performance';
 import {
   getAgentOpenPositionCount,
   getAgentTradeCount,
@@ -91,6 +92,7 @@ export function getCohortDetail(
           : null
       },
       equity_curves: equityCurves,
+      release_changes: getReleaseChangeEvents({ cohortId }),
       recent_decisions: getRecentCohortDecisions(db, cohortId),
       updated_at: new Date().toISOString()
     }

@@ -21,6 +21,7 @@ import {
   getCohortPnlStats,
   getCohortWeek
 } from '@/lib/application/cohorts/shared';
+import { getReleaseChangeEvents } from '@/lib/application/performance';
 import type {
   AgentCohortDetailPayload,
   AgentCohortNotFoundResult,
@@ -119,6 +120,7 @@ export function getAgentCohortDetail(
         date: snapshot.snapshot_timestamp,
         value: snapshot.total_value
       })),
+      release_changes: getReleaseChangeEvents({ cohortId, familyId: family.id }),
       decisions: getAgentDecisionsWithMarkets(db, agent.id),
       positions: getPositionsWithMarkets(agent.id),
       closed_positions: getClosedPositionsWithMarkets(agent.id),

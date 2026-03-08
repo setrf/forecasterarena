@@ -1,9 +1,11 @@
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import TimeRangeSelector, { type TimeRange } from '@/components/charts/TimeRangeSelector';
+import type { ReleaseChangeEvent } from '@/features/cohorts/model-detail/types';
 
 interface AgentPerformanceSectionProps {
   chartData: Array<{ date: string; [key: string]: string | number }>;
-  chartModels: Array<{ id: string; name: string; color: string }>;
+  chartModels: Array<{ id: string; name: string; color: string; currentReleaseName?: string | null }>;
+  releaseChanges: ReleaseChangeEvent[];
   timeRange: TimeRange;
   onTimeRangeChange: (timeRange: TimeRange) => void;
 }
@@ -11,6 +13,7 @@ interface AgentPerformanceSectionProps {
 export function AgentPerformanceSection({
   chartData,
   chartModels,
+  releaseChanges,
   timeRange,
   onTimeRangeChange
 }: AgentPerformanceSectionProps) {
@@ -23,6 +26,7 @@ export function AgentPerformanceSection({
       <PerformanceChart
         data={chartData}
         models={chartModels}
+        releaseChanges={releaseChanges}
         height={520}
         showLegend={false}
         timeRange={timeRange}

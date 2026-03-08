@@ -2,7 +2,8 @@ import type {
   AgentStats,
   Cohort,
   CohortStats,
-  Decision
+  Decision,
+  ReleaseChangeEvent
 } from '@/features/cohorts/detail/types';
 
 interface CohortDetailPayload {
@@ -10,6 +11,7 @@ interface CohortDetailPayload {
   agents: AgentStats[];
   stats: CohortStats | null;
   equity_curves: Record<string, Array<{ date: string; value: number }>>;
+  release_changes: ReleaseChangeEvent[];
   recent_decisions: Decision[];
 }
 
@@ -21,6 +23,7 @@ export type CohortDetailLoadResult =
         agents: AgentStats[];
         stats: CohortStats | null;
         equityCurves: Record<string, Array<{ date: string; value: number }>>;
+        releaseChanges: ReleaseChangeEvent[];
         decisions: Decision[];
       };
     }
@@ -46,9 +49,10 @@ export async function fetchCohortDetailData(
     data: {
       cohort: payload.cohort,
       agents: payload.agents,
-      stats: payload.stats,
-      equityCurves: payload.equity_curves,
-      decisions: payload.recent_decisions
-    }
+        stats: payload.stats,
+        equityCurves: payload.equity_curves,
+        releaseChanges: payload.release_changes,
+        decisions: payload.recent_decisions
+      }
   };
 }

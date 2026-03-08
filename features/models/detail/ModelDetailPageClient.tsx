@@ -44,7 +44,8 @@ export default function ModelDetailPageClient() {
   const chartModels = model ? [{
     id: chartModelId,
     name: model.displayName,
-    color: model.color
+    color: model.color,
+    currentReleaseName: model.currentReleaseName ?? null
   }] : [];
 
   return (
@@ -61,6 +62,7 @@ export default function ModelDetailPageClient() {
       <ModelPerformanceSection
         chartData={chartData}
         chartModels={chartModels}
+        releaseChanges={data?.release_changes ?? []}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
       />

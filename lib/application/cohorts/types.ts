@@ -35,6 +35,13 @@ export interface CohortDetailPayload {
     avg_brier_score: number | null;
   };
   equity_curves: Record<string, Array<{ date: string; value: number }>>;
+  release_changes: Array<{
+    date: string;
+    model_id: string;
+    model_name: string;
+    release_name: string;
+    color: string;
+  }>;
   recent_decisions: Array<Record<string, unknown>>;
   updated_at: string;
 }
@@ -89,6 +96,13 @@ export interface AgentCohortDetailPayload {
     cohort_worst_pnl_percent: number;
   };
   equity_curve: Array<{ date: string; value: number }>;
+  release_changes: Array<{
+    date: string;
+    model_id: string;
+    model_name: string;
+    release_name: string;
+    color: string;
+  }>;
   decisions: Array<Record<string, unknown>>;
   positions: ReturnType<typeof getPositionsWithMarkets>;
   closed_positions: ReturnType<typeof getClosedPositionsWithMarkets>;

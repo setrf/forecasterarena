@@ -55,6 +55,14 @@ export interface EquityPoint {
   value: number;
 }
 
+export interface ReleaseChangeEvent {
+  date: string;
+  model_id: string;
+  model_name: string;
+  release_name: string;
+  color: string;
+}
+
 export interface Market {
   trade_type?: string;
   side: string;
@@ -128,6 +136,7 @@ export interface AgentCohortData {
   agent: Agent;
   stats: Stats;
   equity_curve: EquityPoint[];
+  release_changes: ReleaseChangeEvent[];
   decisions: Decision[];
   positions: Position[];
   closed_positions: ClosedPosition[];

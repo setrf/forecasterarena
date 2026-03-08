@@ -4,11 +4,13 @@ import { BASELINE } from '@/components/charts/performance/constants';
 interface PerformanceReferenceLinesProps {
   showPercent: boolean;
   sundayMarkers: string[];
+  releaseMarkerDates: string[];
 }
 
 export function PerformanceReferenceLines({
   showPercent,
-  sundayMarkers
+  sundayMarkers,
+  releaseMarkerDates
 }: PerformanceReferenceLinesProps) {
   return (
     <>
@@ -43,6 +45,17 @@ export function PerformanceReferenceLines({
             opacity: 0.6,
             offset: 15
           } : undefined}
+        />
+      ))}
+
+      {releaseMarkerDates.map((dateStr) => (
+        <ReferenceLine
+          key={`release-${dateStr}`}
+          x={dateStr}
+          stroke="var(--accent-blue)"
+          strokeDasharray="6 6"
+          strokeWidth={1}
+          opacity={0.22}
         />
       ))}
     </>
