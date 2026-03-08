@@ -12,15 +12,24 @@ export function getDb(): Database.Database {
 
   console.log('[DB] Connecting to database:', DB_PATH);
 
-  db = new Database(DB_PATH);
-  db.pragma('foreign_keys = ON');
-  db.pragma('journal_mode = WAL');
+  const database = new Database(DB_PATH);
+  database.pragma('foreign_keys = ON');
+  database.pragma('journal_mode = WAL');
 
-  initializeSchema(db);
-
-  console.log('[DB] Database connection established');
-
-  return db;
+  try {
+    initializeSchema(database);
+    db = database;
+    console.log('[DB] Database connection established');
+    return db;
+  } catch (error) {
+    console.error('[DB] Initialization failed:', error);
+    try {
+      database.close();
+    } catch {
+      // Ignore close failures while unwinding initialization errors.
+    }
+    throw error;
+  }
 }
 
 export function closeDb(): void {

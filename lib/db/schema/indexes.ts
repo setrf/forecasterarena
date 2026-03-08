@@ -28,8 +28,6 @@ CREATE INDEX IF NOT EXISTS idx_trades_executed ON trades(executed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_decisions_agent ON decisions(agent_id);
 CREATE INDEX IF NOT EXISTS idx_decisions_cohort ON decisions(cohort_id);
 CREATE INDEX IF NOT EXISTS idx_decisions_timestamp ON decisions(decision_timestamp DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_decisions_agent_cohort_week_unique
-  ON decisions(agent_id, cohort_id, decision_week);
 
 -- Portfolio Snapshots
 CREATE INDEX IF NOT EXISTS idx_snapshots_agent ON portfolio_snapshots(agent_id);
