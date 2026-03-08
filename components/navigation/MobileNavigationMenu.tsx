@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ABOUT_NAV_LINK, PUBLIC_NAV_LINKS } from '@/components/navigation/config';
+import { PUBLIC_NAV_LINKS } from '@/components/navigation/config';
 import { isNavActive } from '@/components/navigation/utils';
 
 interface MobileNavigationMenuProps {
@@ -36,17 +36,6 @@ export function MobileNavigationMenu({
             {link.label}
           </Link>
         ))}
-        <Link
-          href={ABOUT_NAV_LINK.href}
-          onClick={onNavigate}
-          className={`px-4 py-3 rounded-lg transition-colors ${
-            isNavActive(pathname, ABOUT_NAV_LINK.href)
-              ? 'bg-[var(--accent-gold-dim)] text-[var(--accent-gold)]'
-              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          {ABOUT_NAV_LINK.label}
-        </Link>
       </nav>
     </div>
   );
