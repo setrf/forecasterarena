@@ -44,7 +44,7 @@ export function ReleaseShiftStrip({ releaseChanges }: ReleaseShiftStripProps) {
                 >
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: event.color }} />
                   <span className="text-xs font-medium text-[var(--text-secondary)]">
-                    {event.model_name}
+                    {event.previous_release_name}
                   </span>
                   <span className="text-[11px] text-[var(--text-muted)]">to</span>
                   <span className="text-xs font-medium text-[var(--text-primary)]">

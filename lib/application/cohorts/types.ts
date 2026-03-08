@@ -39,6 +39,7 @@ export interface CohortDetailPayload {
     date: string;
     model_id: string;
     model_name: string;
+    previous_release_name: string;
     release_name: string;
     color: string;
   }>;
@@ -100,6 +101,7 @@ export interface AgentCohortDetailPayload {
     date: string;
     model_id: string;
     model_name: string;
+    previous_release_name: string;
     release_name: string;
     color: string;
   }>;

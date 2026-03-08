@@ -6,6 +6,7 @@ export interface ReleaseChangeEvent {
   date: string;
   model_id: string;
   model_name: string;
+  previous_release_name: string;
   release_name: string;
   color: string;
 }
@@ -99,12 +100,14 @@ export function getReleaseChangeEvents(args?: {
   }>;
 
   const latestByModel = new Map<string, string>();
+  const latestReleaseNameByModel = new Map<string, string>();
   const events: ReleaseChangeEvent[] = [];
 
   for (const row of rows) {
     const previousReleaseId = latestByModel.get(row.model_id);
     if (!previousReleaseId) {
       latestByModel.set(row.model_id, row.release_id);
+      latestReleaseNameByModel.set(row.model_id, row.release_name);
       continue;
     }
 
@@ -117,9 +120,11 @@ export function getReleaseChangeEvents(args?: {
       date: row.first_decision_at,
       model_id: row.model_id,
       model_name: row.model_name,
+      previous_release_name: latestReleaseNameByModel.get(row.model_id) ?? row.model_name,
       release_name: row.release_name,
       color: row.color
     });
+    latestReleaseNameByModel.set(row.model_id, row.release_name);
   }
 
   let currentQuery = `
@@ -161,9 +166,11 @@ export function getReleaseChangeEvents(args?: {
       date: row.config_created_at,
       model_id: row.model_id,
       model_name: row.model_name,
+      previous_release_name: latestReleaseNameByModel.get(row.model_id) ?? row.model_name,
       release_name: row.release_name,
       color: row.color
     });
+    latestReleaseNameByModel.set(row.model_id, row.release_name);
   }
 
   return events.sort((left, right) => left.date.localeCompare(right.date));
