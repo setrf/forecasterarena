@@ -25,8 +25,8 @@ export interface Model {
 
 export interface Agent {
   id: string;
-  model_id?: string;
-  family_slug?: string | null;
+  family_slug: string;
+  family_id?: string | null;
   legacy_model_id?: string | null;
   benchmark_config_model_id?: string | null;
   status: string;

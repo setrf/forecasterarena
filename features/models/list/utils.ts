@@ -4,11 +4,9 @@ export function createStatsMap(entries?: ModelStats[]): Map<string, ModelStats> 
   const stats = new Map<string, ModelStats>();
 
   for (const entry of entries ?? []) {
-    const canonicalId = entry.family_slug ?? entry.model_slug ?? entry.model_id;
+    const canonicalId = entry.family_slug;
     const normalizedEntry = {
-      model_id: entry.model_id,
-      family_slug: entry.family_slug ?? null,
-      model_slug: entry.model_slug,
+      family_slug: entry.family_slug,
       family_id: entry.family_id ?? null,
       legacy_model_id: entry.legacy_model_id ?? null,
       total_pnl: entry.total_pnl,
@@ -19,8 +17,12 @@ export function createStatsMap(entries?: ModelStats[]): Map<string, ModelStats> 
 
     stats.set(canonicalId, normalizedEntry);
 
-    if (entry.model_id !== canonicalId) {
-      stats.set(entry.model_id, normalizedEntry);
+    if (entry.family_id && entry.family_id !== canonicalId) {
+      stats.set(entry.family_id, normalizedEntry);
+    }
+
+    if (entry.legacy_model_id && entry.legacy_model_id !== canonicalId) {
+      stats.set(entry.legacy_model_id, normalizedEntry);
     }
   }
 

@@ -25,11 +25,11 @@ As of March 7, 2026, the production codebase currently implements:
 - Public, redacted health reporting
 - Admin-only bounded CSV+ZIP exports
 - Database-level uniqueness for:
-  - one model per cohort (`agents`)
+  - one frozen benchmark slot per cohort (`agents`)
   - one weekly cohort start timestamp (`cohorts.started_at`)
   - one decision per agent/cohort/week (`decisions`)
 
-The active model roster in code is:
+The active family lineup in code is:
 
 1. GPT-5.2
 2. Gemini 3 Pro
@@ -64,10 +64,10 @@ Operational implications:
 
 ---
 
-### D002: One Agent Per Model Per Cohort
+### D002: One Agent Per Benchmark Family Slot Per Cohort
 
 - Status: Active
-- Decision: Each active model has exactly one agent in each cohort.
+- Decision: Each active benchmark family slot has exactly one frozen agent assignment in each cohort.
 
 Rationale:
 
@@ -77,7 +77,7 @@ Rationale:
 
 Implementation constraints:
 
-- Enforced physically by `UNIQUE(cohort_id, model_id)` in `agents`.
+- Enforced physically by `UNIQUE(cohort_id, benchmark_config_model_id)` in `agents`.
 - Agent creation is safe to rerun because inserts use `INSERT OR IGNORE`.
 - The semantic identity of that cohort participant is frozen by `family_id`, `release_id`, and `benchmark_config_model_id`.
 
@@ -431,5 +431,5 @@ The following areas remain open for future design decisions:
 - Whether to move from sequential to queued/background decision execution
 - Whether to split public health and private diagnostics into separate endpoints
 - Whether to add first-class migrations rather than schema-on-start
-- Whether to support historical benchmark versions with model roster versioning
+- Whether to support historical benchmark versions with family-lineup versioning
 - Whether to provide signed export URLs instead of session-gated downloads

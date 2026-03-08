@@ -8,9 +8,7 @@ export interface Decision {
   model_name: string;
   model_color: string;
   model_provider: string;
-  model_id?: string;
-  family_slug?: string | null;
-  model_slug?: string | null;
+  family_slug: string;
   legacy_model_id?: string | null;
   model_family_id?: string | null;
   model_release_id?: string | null;

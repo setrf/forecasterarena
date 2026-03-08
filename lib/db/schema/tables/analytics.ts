@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS brier_scores (
 -- ============================================================================
 -- API COSTS
 -- ============================================================================
--- Track API usage and costs per model.
+-- Track API usage and costs with frozen benchmark lineage.
 -- For internal monitoring (admin dashboard only).
 
 CREATE TABLE IF NOT EXISTS api_costs (

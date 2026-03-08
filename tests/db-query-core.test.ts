@@ -3,6 +3,7 @@ import {
   createMarket,
   withDbQueryModules
 } from '@/tests/helpers/db-query-test-utils';
+import { createTestBenchmarkConfigForLegacyModels } from '@/tests/helpers/db-fixtures';
 
 describe('db query modules - core operations', () => {
   it('covers cohort lifecycle and completion status queries', async () => {
@@ -89,6 +90,77 @@ describe('db query modules - core operations', () => {
       expect(() => agents.calculateActualPortfolioValue('missing-agent')).toThrow('Agent missing-agent not found');
 
       warnSpy.mockRestore();
+    });
+  });
+
+  it('rejects agent creation against a cohort when a different benchmark config is passed later', async () => {
+    await withDbQueryModules(async ({ agents, cohorts, db, models }) => {
+      const legacyIds = models.getActiveModels().slice(0, 2).map((model) => model.id);
+      db.prepare(`
+        UPDATE models
+        SET is_active = CASE WHEN id IN (?, ?) THEN 1 ELSE 0 END
+      `).run(legacyIds[0], legacyIds[1]);
+
+      const initialConfig = await createTestBenchmarkConfigForLegacyModels([legacyIds[0]]);
+      const conflictingConfig = await createTestBenchmarkConfigForLegacyModels(legacyIds);
+      const cohort = cohorts.createCohort(initialConfig.id);
+
+      expect(() => agents.createAgentsForCohort(cohort.id, conflictingConfig.id)).toThrow(
+        `Cohort ${cohort.id} is pinned to benchmark config ${initialConfig.id}, not ${conflictingConfig.id}`
+      );
+    });
+  });
+
+  it('throws when agent creation is requested for a missing cohort', async () => {
+    await withDbQueryModules(({ agents }) => {
+      expect(() => agents.createAgentsForCohort('missing-cohort')).toThrow(
+        'Cohort missing-cohort not found'
+      );
+    });
+  });
+
+  it('throws when a legacy cohort row has no frozen config and no default benchmark config exists', async () => {
+    await withDbQueryModules(({ agents, db }) => {
+      db.pragma('foreign_keys = OFF');
+      db.exec('DROP TRIGGER IF EXISTS cohorts_require_benchmark_config_insert');
+      db.exec('DROP TRIGGER IF EXISTS cohorts_require_benchmark_config_update');
+      db.exec('ALTER TABLE cohorts RENAME TO cohorts_strict_backup');
+      db.exec(`
+        CREATE TABLE cohorts (
+          id TEXT PRIMARY KEY,
+          cohort_number INTEGER NOT NULL UNIQUE,
+          started_at TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'active',
+          completed_at TEXT,
+          methodology_version TEXT NOT NULL DEFAULT 'v1',
+          benchmark_config_id TEXT,
+          initial_balance REAL NOT NULL DEFAULT 10000.00,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (methodology_version) REFERENCES methodology_versions(version),
+          FOREIGN KEY (benchmark_config_id) REFERENCES benchmark_configs(id)
+        )
+      `);
+      db.pragma('foreign_keys = ON');
+      db.prepare('UPDATE benchmark_configs SET is_default_for_future_cohorts = 0').run();
+      db.prepare(`
+        INSERT INTO cohorts (
+          id,
+          cohort_number,
+          started_at,
+          methodology_version,
+          benchmark_config_id
+        ) VALUES (?, ?, ?, ?, ?)
+      `).run(
+        'legacy-null-config-cohort',
+        1,
+        '2030-01-07T00:00:00.000Z',
+        'v1',
+        null
+      );
+
+      expect(() => agents.createAgentsForCohort('legacy-null-config-cohort', null)).toThrow(
+        'No default benchmark config is configured for agent creation'
+      );
     });
   });
 

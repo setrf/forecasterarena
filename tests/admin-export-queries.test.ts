@@ -3,7 +3,7 @@ import { createSingleAgentFixture } from '@/tests/helpers/db-fixtures';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
 describe('admin export lineage queries', () => {
-  it('exports frozen cohort lineup metadata alongside legacy model rows', async () => {
+  it('exports frozen cohort lineup metadata without the mutable models table', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {

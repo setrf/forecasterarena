@@ -93,7 +93,7 @@ Recommended schedule:
 ### Application
 
 - [ ] homepage loads
-- [ ] models page loads and renders all 7 models
+- [ ] models page loads and renders all active benchmark families
 - [ ] markets page loads
 - [ ] cohorts page loads
 - [ ] admin login page loads

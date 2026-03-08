@@ -49,7 +49,7 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
   let query = `
     SELECT
       ps.snapshot_timestamp,
-      COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as model_id,
+      COALESCE(abi.family_slug, abi.family_id) as family_slug,
       abi.family_id,
       COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
       COALESCE(abi.color, '#94A3B8') as color,
@@ -69,7 +69,7 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
 
   const rows = db.prepare(query).all(...params) as Array<{
     snapshot_timestamp: string;
-    model_id: string;
+    family_slug: string;
     family_id: string | null;
     display_name: string;
     color: string;
@@ -88,20 +88,20 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
     const dateData = dataByDate.get(row.snapshot_timestamp)!;
     const counts = countsByDate.get(row.snapshot_timestamp)!;
 
-    if (dateData[row.model_id] === undefined) {
-      dateData[row.model_id] = row.total_value;
-      counts[row.model_id] = 1;
+    if (dateData[row.family_slug] === undefined) {
+      dateData[row.family_slug] = row.total_value;
+      counts[row.family_slug] = 1;
     } else {
-      dateData[row.model_id] = (dateData[row.model_id] as number) + row.total_value;
-      counts[row.model_id] = (counts[row.model_id] || 1) + 1;
+      dateData[row.family_slug] = (dateData[row.family_slug] as number) + row.total_value;
+      counts[row.family_slug] = (counts[row.family_slug] || 1) + 1;
     }
   }
 
   dataByDate.forEach((dateData, timestamp) => {
     const counts = countsByDate.get(timestamp)!;
-    Object.keys(counts).forEach((modelId) => {
-      if (counts[modelId] > 1) {
-        dateData[modelId] = (dateData[modelId] as number) / counts[modelId];
+    Object.keys(counts).forEach((familySlug) => {
+      if (counts[familySlug] > 1) {
+        dateData[familySlug] = (dateData[familySlug] as number) / counts[familySlug];
       }
     });
   });

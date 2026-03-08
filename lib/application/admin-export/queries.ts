@@ -12,10 +12,6 @@ export function buildQueries(includePrompts: boolean): ExportQueries {
       columns: ['id', 'cohort_id', 'model_id', 'family_id', 'release_id', 'benchmark_config_model_id', 'cash_balance', 'total_invested', 'status', 'created_at'],
       sql: 'SELECT id, cohort_id, model_id, family_id, release_id, benchmark_config_model_id, cash_balance, total_invested, status, created_at FROM agents WHERE cohort_id = ?'
     },
-    models: {
-      columns: ['id', 'openrouter_id', 'display_name', 'provider', 'color', 'is_active', 'added_at'],
-      sql: 'SELECT id, openrouter_id, display_name, provider, color, is_active, added_at FROM models WHERE id IN (SELECT DISTINCT model_id FROM agents WHERE cohort_id = ?)'
-    },
     model_families: {
       columns: ['id', 'slug', 'legacy_model_id', 'provider', 'family_name', 'public_display_name', 'short_display_name', 'color', 'status', 'sort_order', 'created_at', 'retired_at'],
       sql: `SELECT DISTINCT mf.id, mf.slug, mf.legacy_model_id, mf.provider, mf.family_name, mf.public_display_name, mf.short_display_name, mf.color, mf.status, mf.sort_order, mf.created_at, mf.retired_at
@@ -146,7 +142,6 @@ export function getRowsForTable(
   switch (table) {
     case 'cohorts':
     case 'agents':
-    case 'models':
     case 'model_families':
     case 'model_releases':
     case 'benchmark_configs':

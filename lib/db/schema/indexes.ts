@@ -72,9 +72,6 @@ CREATE INDEX IF NOT EXISTS idx_model_releases_openrouter ON model_releases(openr
 CREATE INDEX IF NOT EXISTS idx_benchmark_configs_default ON benchmark_configs(is_default_for_future_cohorts, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_benchmark_config_models_config_slot ON benchmark_config_models(benchmark_config_id, slot_order);
 CREATE INDEX IF NOT EXISTS idx_benchmark_config_models_release ON benchmark_config_models(release_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_cohort_config_model_unique
-  ON agents(cohort_id, benchmark_config_model_id)
-  WHERE benchmark_config_model_id IS NOT NULL;
 
 -- Additional composite indexes for optimized queries
 CREATE INDEX IF NOT EXISTS idx_trades_market_executed ON trades(market_id, executed_at DESC);

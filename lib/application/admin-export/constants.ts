@@ -5,7 +5,6 @@ export const MAX_ROWS = 50_000;
 export const ALL_EXPORT_TABLES = [
   'cohorts',
   'agents',
-  'models',
   'model_families',
   'model_releases',
   'benchmark_configs',

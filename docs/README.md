@@ -19,7 +19,7 @@ These files are intended to match the codebase as it exists today:
 - [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
   - top-level layering rules, import boundaries, and browser QA expectations
 - [`README.md`](../README.md)
-  - top-level project overview, runtime guarantees, current model roster,
+  - top-level project overview, runtime guarantees, current family lineup,
     environment setup, and route summary
 - [`API_REFERENCE.md`](./API_REFERENCE.md)
   - detailed contract-level route documentation

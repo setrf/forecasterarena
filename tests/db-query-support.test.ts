@@ -527,8 +527,7 @@ describe('db query modules - support and reporting', () => {
 
       expect(leaderboardEntries).toHaveLength(2);
       expect(leaderboardEntries[0]).toMatchObject({
-        model_id: familyOne.slug,
-        model_slug: familyOne.slug,
+        family_slug: familyOne.slug,
         family_id: familyOne.id,
         legacy_model_id: allowedIds[0],
         total_pnl: 300,
@@ -539,8 +538,7 @@ describe('db query modules - support and reporting', () => {
         win_rate: 1
       });
       expect(leaderboardEntries[1]).toMatchObject({
-        model_id: familyTwo.slug,
-        model_slug: familyTwo.slug,
+        family_slug: familyTwo.slug,
         family_id: familyTwo.id,
         legacy_model_id: allowedIds[1],
         total_pnl: -100,
@@ -585,8 +583,7 @@ describe('db query modules - support and reporting', () => {
 
       expect(leaderboardEntries).toHaveLength(2);
       expect(leaderboardEntries[0]).toMatchObject({
-        model_id: familyOne.slug,
-        model_slug: familyOne.slug,
+        family_slug: familyOne.slug,
         family_id: familyOne.id,
         legacy_model_id: allowedIds[0],
         total_pnl: 20,
@@ -595,8 +592,7 @@ describe('db query modules - support and reporting', () => {
         num_resolved_bets: 0
       });
       expect(leaderboardEntries[1]).toMatchObject({
-        model_id: familyTwo.slug,
-        model_slug: familyTwo.slug,
+        family_slug: familyTwo.slug,
         family_id: familyTwo.id,
         legacy_model_id: allowedIds[1],
         total_pnl: -20,

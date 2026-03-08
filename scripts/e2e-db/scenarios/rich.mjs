@@ -1,4 +1,5 @@
 import {
+  SEEDED_BENCHMARK_CONFIG_ID,
   SEEDED_COHORT_ID,
   SEEDED_EXPORT_FROM,
   SEEDED_EXPORT_TO,
@@ -7,6 +8,7 @@ import {
   SNAPSHOT_END,
   SNAPSHOT_START
 } from '../models.mjs';
+import { seedScenarioMetadata } from './shared.mjs';
 
 const modelPerformance = [
   { id: 'gpt-5.1', valueA: 10000, valueB: 10002.5, cash: 9995, invested: 5 },
@@ -19,16 +21,19 @@ const modelPerformance = [
 ];
 
 export function seedRichScenario(db) {
-  seedBaseMetadata(db);
+  seedScenarioMetadata(db, 'E2E seeded methodology fixture');
 
   db.prepare(`
-    INSERT INTO cohorts (id, cohort_number, started_at, status, methodology_version, initial_balance)
-    VALUES (?, 1, ?, 'active', 'v1', 10000.00)
-  `).run(SEEDED_COHORT_ID, SNAPSHOT_START);
+    INSERT INTO cohorts (id, cohort_number, started_at, status, methodology_version, benchmark_config_id, initial_balance)
+    VALUES (?, 1, ?, 'active', 'v1', ?, 10000.00)
+  `).run(SEEDED_COHORT_ID, SNAPSHOT_START, SEEDED_BENCHMARK_CONFIG_ID);
 
   const insertAgent = db.prepare(`
-    INSERT INTO agents (id, cohort_id, model_id, cash_balance, total_invested, status)
-    VALUES (?, ?, ?, ?, ?, 'active')
+    INSERT INTO agents (
+      id, cohort_id, model_id, family_id, release_id, benchmark_config_model_id,
+      cash_balance, total_invested, status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
   `);
 
   const insertSnapshot = db.prepare(`
@@ -40,7 +45,17 @@ export function seedRichScenario(db) {
 
   for (const model of modelPerformance) {
     const agentId = `agent-${model.id}`;
-    insertAgent.run(agentId, SEEDED_COHORT_ID, model.id, model.cash, model.invested);
+    const seededModel = SEEDED_MODELS.find((candidate) => candidate.id === model.id);
+    insertAgent.run(
+      agentId,
+      SEEDED_COHORT_ID,
+      model.id,
+      seededModel.familyId,
+      seededModel.releaseId,
+      `${SEEDED_BENCHMARK_CONFIG_ID}--${seededModel.familyId}`,
+      model.cash,
+      model.invested
+    );
     insertSnapshot.run(
       `snapshot-a-${model.id}`,
       agentId,
@@ -162,22 +177,6 @@ export function seedRichScenario(db) {
     'error',
     SNAPSHOT_END
   );
-}
-
-function seedBaseMetadata(db) {
-  db.prepare(`
-    INSERT INTO methodology_versions (version, title, description, effective_from_cohort)
-    VALUES ('v1', 'Forecaster Arena Methodology v1', 'E2E seeded methodology fixture', 1)
-  `).run();
-
-  const insertModel = db.prepare(`
-    INSERT INTO models (id, openrouter_id, display_name, provider, color)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-
-  for (const model of SEEDED_MODELS) {
-    insertModel.run(model.id, model.openrouterId, model.displayName, model.provider, model.color);
-  }
 }
 
 export const richScenarioMeta = {

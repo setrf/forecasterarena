@@ -54,7 +54,7 @@ benchmark contamination than static Q&A sets.
 ### 3.1 Definition
 
 A cohort is an independent weekly competition instance containing one agent for
-each active model.
+each active benchmark family slot.
 
 ### 3.2 Schedule
 
@@ -80,9 +80,9 @@ cohorts would distort aggregate results and break fair comparability.
 
 ---
 
-## 4. Competing Models
+## 4. Competing Families
 
-The current active model roster is:
+The current active family lineup is:
 
 | Internal ID | Display Name | Provider | OpenRouter ID |
 |-------------|--------------|----------|---------------|

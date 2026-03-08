@@ -29,8 +29,8 @@ export function LeaderboardPreview({ data, hasRealData }: LeaderboardPreviewProp
       <div className="grid md:grid-cols-3 gap-6 mb-6">
         {top3.map((entry, index) => (
           <Link
-            href={`/models/${entry.family_slug ?? entry.model_slug ?? entry.model_id}`}
-            key={entry.family_slug ?? entry.model_slug ?? entry.model_id}
+            href={`/models/${entry.family_slug}`}
+            key={entry.family_slug}
             className="card-featured p-6 group cursor-pointer animate-fade-in"
             style={{ animationDelay: `${(index + 1) * 100}ms` }}
           >
@@ -82,8 +82,8 @@ export function LeaderboardPreview({ data, hasRealData }: LeaderboardPreviewProp
         <div className="divide-y divide-[var(--border-subtle)]">
           {rest.map((entry, index) => (
             <Link
-              href={`/models/${entry.family_slug ?? entry.model_slug ?? entry.model_id}`}
-              key={entry.family_slug ?? entry.model_slug ?? entry.model_id}
+              href={`/models/${entry.family_slug}`}
+              key={entry.family_slug}
               className="flex items-center justify-between py-4 first:pt-0 last:pb-0 group"
             >
               <div className="flex items-center gap-4">

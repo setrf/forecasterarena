@@ -9,7 +9,7 @@ afterEach(() => {
 describe('public data routes', () => {
   it('adapts leaderboard application data into a no-store response', async () => {
     const payload = {
-      leaderboard: [{ model_id: 'model-1', total_pnl: 123 }],
+      leaderboard: [{ family_slug: 'family-1', total_pnl: 123 }],
       cohorts: [{ id: 'cohort-1', cohort_number: 1 }],
       updated_at: '2026-03-06T00:00:00.000Z'
     };

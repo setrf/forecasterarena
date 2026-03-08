@@ -38,11 +38,9 @@ export function getCohortDetail(
 
     return {
       id: agent.id,
-      model_id: agent.model.family_slug ?? agent.family_id ?? agent.model_id,
-      family_slug: agent.model.family_slug ?? agent.family_id ?? null,
-      model_slug: agent.model.family_slug,
-      legacy_model_id: agent.model.legacy_model_id,
+      family_slug: agent.model.family_slug ?? agent.family_id ?? agent.model_id,
       family_id: agent.family_id,
+      legacy_model_id: agent.model.legacy_model_id,
       release_id: agent.release_id,
       benchmark_config_model_id: agent.benchmark_config_model_id,
       model_display_name: agent.model.display_name,
@@ -67,7 +65,7 @@ export function getCohortDetail(
 
   const equityCurves = Object.fromEntries(
     rawAgents.map((agent) => [
-      agent.model.family_slug ?? agent.family_id ?? agent.model.legacy_model_id ?? agent.model_id,
+      agent.model.family_slug ?? agent.family_id ?? agent.model_id,
       getSnapshotsByAgent(agent.id).map((snapshot) => ({
         date: snapshot.snapshot_timestamp,
         value: snapshot.total_value

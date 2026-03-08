@@ -49,7 +49,7 @@ Browser smoke coverage lives in `/playwright`.
 After UI refactors, the minimum browser pass should verify:
 
 - public navigation on desktop and mobile
-- a seeded model detail route
+- a seeded family detail route
 - a seeded cohort detail route and decision expansion behavior
 - a seeded market detail route
 - admin login plus authenticated admin costs and logs pages

@@ -138,7 +138,27 @@ export function getAgentByCohortAndModel(
 
 export function createAgentsForCohort(cohortId: string, benchmarkConfigId?: string | null): Agent[] {
   const db = getDb();
-  const configId = benchmarkConfigId ?? getDefaultBenchmarkConfig()?.id;
+  const cohort = db.prepare(`
+    SELECT benchmark_config_id
+    FROM cohorts
+    WHERE id = ?
+  `).get(cohortId) as { benchmark_config_id: string | null } | undefined;
+
+  if (!cohort) {
+    throw new Error(`Cohort ${cohortId} not found`);
+  }
+
+  if (
+    benchmarkConfigId &&
+    cohort.benchmark_config_id &&
+    benchmarkConfigId !== cohort.benchmark_config_id
+  ) {
+    throw new Error(
+      `Cohort ${cohortId} is pinned to benchmark config ${cohort.benchmark_config_id}, not ${benchmarkConfigId}`
+    );
+  }
+
+  const configId = cohort.benchmark_config_id ?? benchmarkConfigId ?? getDefaultBenchmarkConfig()?.id;
   if (!configId) {
     throw new Error('No default benchmark config is configured for agent creation');
   }

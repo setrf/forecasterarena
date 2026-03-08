@@ -156,8 +156,6 @@ Response shape:
 {
   "leaderboard": [
     {
-      "model_id": "openai-gpt",
-      "model_slug": "openai-gpt",
       "family_slug": "openai-gpt",
       "family_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
@@ -191,7 +189,6 @@ Notes:
 
 - leaderboard rows only appear for models that actually have cohort history
 - `family_slug` is the clearest canonical route key for public model-family navigation
-- `model_id` and `model_slug` are retained as compatibility aliases for existing consumers
 - `legacy_model_id` is compatibility metadata only
 - `display_name` is the family-facing label used for comparison views
 - the exact release used by any historical cohort is derived from frozen agent lineage, not directly from the mutable `models` table
@@ -328,9 +325,8 @@ Response shape:
     {
       "id": "position-id",
       "agent_id": "agent-id",
-      "model_id": "openai-gpt",
       "family_slug": "openai-gpt",
-      "model_slug": "openai-gpt",
+      "family_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
       "model_display_name": "GPT-5.2",
       "model_color": "#10B981",
@@ -355,11 +351,10 @@ Notes:
 - `brier_scores` is only populated for resolved markets
 - the route attempts to reconstruct the opening `decision_id` even for legacy trades that omitted `position_id`
 - `family_slug` is the clearest canonical model-family key for links and grouping inside `positions`, `trades`, and `brier_scores`
-- `model_id` and `model_slug` remain compatibility aliases
 
 ### GET /api/models/[id]
 
-Returns aggregate performance for one model across cohorts.
+Returns aggregate performance for one benchmark family across cohorts.
 
 ```http
 GET /api/models/openai-gpt
@@ -432,9 +427,8 @@ Response shape:
   "agents": [
     {
       "id": "agent-id",
-      "model_id": "openai-gpt",
       "family_slug": "openai-gpt",
-      "model_slug": "openai-gpt",
+      "family_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
       "model_display_name": "GPT-5.2",
       "model_color": "#10B981",
@@ -470,11 +464,10 @@ Response shape:
 Notes:
 
 - `family_slug` is the clearest canonical model-family key for cohort leaderboard links and chart series
-- `model_id` and `model_slug` remain compatibility aliases for older consumers
 
 ### GET /api/cohorts/[id]/models/[familySlugOrLegacyId]
 
-Returns one model's detailed state within one cohort.
+Returns one benchmark family's detailed state within one cohort.
 
 ```http
 GET /api/cohorts/<cohort-id>/models/openai-gpt
@@ -504,8 +497,8 @@ Response shape:
   },
   "agent": {
     "id": "agent-id",
-    "model_id": "openai-gpt",
     "family_slug": "openai-gpt",
+    "family_id": "openai-gpt",
     "status": "active",
     "cash_balance": 9400,
     "total_invested": 600,
@@ -604,9 +597,8 @@ Response shape:
     "model_name": "GPT-5.2",
     "model_color": "#10B981",
     "model_provider": "OpenAI",
-    "model_id": "openai-gpt",
     "family_slug": "openai-gpt",
-    "model_slug": "openai-gpt",
+    "model_family_id": "openai-gpt",
     "legacy_model_id": "gpt-5.1",
     "model_release_name": "GPT-5.2"
   },
@@ -626,7 +618,7 @@ Notes:
 
 - the path segment accepts the canonical `family_slug` and still tolerates historical legacy ids as compatibility aliases
 - `model.id` and `model.family_slug` both identify the canonical benchmark family; `legacy_model_id` is compatibility metadata only
-- `agent.model_id` is retained for compatibility, while `agent.family_slug` is the clearest route/link key
+- `agent.family_slug` is the clearest route/link key for the cohort-bound benchmark family
 
 ---
 
@@ -795,11 +787,8 @@ Returns cost data aggregated by model family and overall summary.
 {
   "costs_by_model": [
     {
-      "public_model_id": "openai-gpt",
-      "public_model_slug": "openai-gpt",
       "family_id": "openai-gpt",
       "family_slug": "openai-gpt",
-      "model_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
       "model_name": "GPT-5.2",
       "color": "#10B981",
@@ -823,8 +812,6 @@ Returns cost data aggregated by model family and overall summary.
 Notes:
 
 - `family_slug` is the clearest canonical family-facing key for admin/UI linking
-- `public_model_id` and `public_model_slug` are retained continuity aliases for older consumers
-- `model_id` is a compatibility alias only
 - `family_id` is the stable lineage identifier used internally
 - `legacy_model_id` preserves the old roster key when one exists
 
@@ -1094,7 +1081,6 @@ Creates a SQLite backup.
 Notes:
 
 - `decision.family_slug` is the clearest canonical benchmark-family key
-- `decision.model_id` and `decision.model_slug` remain compatibility aliases
 - `decision.model_release_name` identifies the exact frozen release used when the decision was made
 
 ---

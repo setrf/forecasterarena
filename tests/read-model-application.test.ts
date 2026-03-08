@@ -350,26 +350,37 @@ describe('models application', () => {
 
 describe('cohort shared application queries', () => {
   it('keeps agent and cohort helper exports working through the preserved shared import path', async () => {
-    await withSingleAgentFixture(async ({ db, queries, cohort, agent, legacyModelId }) => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const queries = await import('@/lib/db/queries');
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+      const firstModel = db.prepare(`
+        SELECT id FROM models
+        ORDER BY id ASC
+        LIMIT 1
+      `).get() as { id: string };
       const otherModel = db.prepare(`
         SELECT id FROM models
         WHERE id != ?
         ORDER BY id ASC
         LIMIT 1
-      `).get(legacyModelId) as { id: string };
+      `).get(firstModel.id) as { id: string };
 
       db.prepare(`
         UPDATE models
-        SET is_active = 1
-        WHERE id = ?
-      `).run(otherModel.id);
+        SET is_active = CASE WHEN id IN (?, ?) THEN 1 ELSE 0 END
+      `).run(firstModel.id, otherModel.id);
 
-      const expandedConfig = await createTestBenchmarkConfigForLegacyModels([legacyModelId, otherModel.id]);
-      const otherAgent = queries.createAgentsForCohort(cohort.id, expandedConfig.id)
-        .find((candidate) => candidate.model_id === otherModel.id);
+      const benchmarkConfig = await createTestBenchmarkConfigForLegacyModels([firstModel.id, otherModel.id]);
+      const cohort = queries.createCohort(benchmarkConfig.id);
+      const createdAgents = queries.createAgentsForCohort(cohort.id, benchmarkConfig.id);
+      const agent = createdAgents.find((candidate) => candidate.model_id === firstModel.id);
+      const otherAgent = createdAgents.find((candidate) => candidate.model_id === otherModel.id);
 
-      if (!otherAgent) {
-        throw new Error('Expected second agent to be created');
+      if (!agent || !otherAgent) {
+        throw new Error('Expected both benchmark family agents to exist');
       }
 
       const activeMarket = queries.upsertMarket({
@@ -505,6 +516,8 @@ describe('cohort shared application queries', () => {
         decision_id: decision.id,
         market_id: resolvedMarket.id
       });
-    });
+    } finally {
+      await ctx.cleanup();
+    }
   });
 });

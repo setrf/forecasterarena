@@ -127,7 +127,7 @@ Why `started_at` uniqueness matters:
 
 ### 3.3 `models`
 
-Legacy compatibility table for the active model roster.
+Legacy compatibility table for historical public model IDs.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -139,7 +139,7 @@ Legacy compatibility table for the active model roster.
 | `is_active` | `INTEGER` | Default `1` |
 | `added_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
 
-Current seeded roster in code:
+Current seeded legacy compatibility IDs in code:
 
 | `id` | `display_name` |
 |------|----------------|
@@ -299,11 +299,12 @@ Foreign keys:
 
 Uniqueness:
 
-- `UNIQUE(cohort_id, model_id)`
+- `UNIQUE(cohort_id, benchmark_config_model_id)`
 
 Interpretation:
 
-- the physical uniqueness guard is still `(cohort_id, model_id)`
+- the physical uniqueness guard is the frozen benchmark slot key
+- `model_id` remains only as a legacy compatibility foreign key into `models`
 - the historical truth for execution and display is carried by `family_id`, `release_id`, and `benchmark_config_model_id`
 - the application centralizes joined historical reads through the `agent_benchmark_identity_v` view
 
@@ -602,7 +603,7 @@ ones are:
 
 ### Integrity / uniqueness indexes
 
-- `UNIQUE(cohort_id, model_id)` on `agents`
+- `UNIQUE(cohort_id, benchmark_config_model_id)` on `agents`
 - `UNIQUE(agent_id, market_id, side)` on `positions`
 - `UNIQUE(agent_id, snapshot_timestamp)` on `portfolio_snapshots`
 - unique index on `decisions(agent_id, cohort_id, decision_week)`

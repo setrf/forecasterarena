@@ -1,8 +1,5 @@
 export interface CostByModel {
-  public_model_id: string;
-  public_model_slug?: string | null;
-  family_slug?: string | null;
-  model_id: string;
+  family_slug: string;
   family_id: string | null;
   legacy_model_id?: string | null;
   model_name: string;

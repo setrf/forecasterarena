@@ -1,7 +1,5 @@
 export interface ModelStats {
-  model_id: string;
-  family_slug?: string | null;
-  model_slug?: string;
+  family_slug: string;
   family_id?: string | null;
   legacy_model_id?: string | null;
   total_pnl: number;

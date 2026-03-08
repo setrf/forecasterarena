@@ -22,8 +22,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
     agent_identity AS (
       SELECT
         a.id as agent_id,
-        COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as public_model_id,
-        COALESCE(abi.family_slug, abi.family_id, abi.legacy_model_id, a.model_id) as public_model_slug,
+        COALESCE(abi.family_slug, abi.family_id) as family_slug,
         abi.family_id as family_id,
         abi.legacy_model_id as legacy_model_id,
         COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
@@ -34,9 +33,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
     ),
     agent_stats AS (
       SELECT
-        ai.public_model_id as model_id,
-        ai.public_model_slug as model_slug,
-        ai.public_model_slug as family_slug,
+        ai.family_slug,
         ai.family_id,
         ai.legacy_model_id,
         ai.display_name,
@@ -55,8 +52,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       LEFT JOIN latest_snapshots ls ON a.id = ls.agent_id AND ls.rn = 1
       LEFT JOIN open_position_values op ON a.id = op.agent_id
       GROUP BY
-        ai.public_model_id,
-        ai.public_model_slug,
+        ai.family_slug,
         ai.family_id,
         ai.legacy_model_id,
         ai.display_name,
@@ -65,16 +61,16 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
     ),
     brier_stats AS (
       SELECT
-        ai.public_model_id as model_id,
+        ai.family_slug,
         AVG(bs.brier_score) as avg_brier_score
       FROM brier_scores bs
       JOIN agents a ON bs.agent_id = a.id
       JOIN agent_identity ai ON ai.agent_id = a.id
-      GROUP BY ai.public_model_id
+      GROUP BY ai.family_slug
     ),
     win_stats AS (
       SELECT
-        ai.public_model_id as model_id,
+        ai.family_slug,
         COUNT(CASE WHEN
           (t.side = 'YES' AND m.resolution_outcome = 'YES') OR
           (t.side = 'NO' AND m.resolution_outcome = 'NO') OR
@@ -87,11 +83,9 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       JOIN trades t ON bs.trade_id = t.id
       JOIN markets m ON bs.market_id = m.id
       WHERE m.status = 'resolved'
-      GROUP BY ai.public_model_id
+      GROUP BY ai.family_slug
     )
     SELECT
-      s.model_id,
-      s.model_slug,
       s.family_slug,
       s.family_id,
       s.legacy_model_id,
@@ -111,8 +105,8 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         ELSE NULL
       END as win_rate
     FROM agent_stats s
-    LEFT JOIN brier_stats b ON s.model_id = b.model_id
-    LEFT JOIN win_stats w ON s.model_id = w.model_id
+    LEFT JOIN brier_stats b ON s.family_slug = b.family_slug
+    LEFT JOIN win_stats w ON s.family_slug = w.family_slug
     WHERE COALESCE(s.num_cohorts, 0) > 0
     ORDER BY total_pnl DESC
   `).all(INITIAL_BALANCE, INITIAL_BALANCE) as LeaderboardEntry[];

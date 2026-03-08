@@ -12,8 +12,6 @@ describe('home page data helpers', () => {
       .mockResolvedValueOnce(mockResponse(true, {
         leaderboard: [
           {
-            model_id: 'openai-gpt',
-            model_slug: 'openai-gpt',
             family_slug: 'openai-gpt',
             family_id: 'openai-gpt',
             legacy_model_id: 'gpt-5.1',
@@ -38,7 +36,6 @@ describe('home page data helpers', () => {
       models: [],
       leaderboard: [
         expect.objectContaining({
-          model_id: 'openai-gpt',
           family_slug: 'openai-gpt',
           legacy_model_id: 'gpt-5.1',
           total_pnl: 100
@@ -104,9 +101,9 @@ describe('market detail page data helper', () => {
           first_seen_at: '2029-12-01T00:00:00.000Z',
           last_updated_at: '2030-01-01T00:00:00.000Z'
         },
-        positions: [{ id: 'p1', family_slug: 'openai-gpt', model_id: 'openai-gpt' }],
-        trades: [{ id: 't1', family_slug: 'openai-gpt', model_id: 'openai-gpt' }],
-        brier_scores: [{ id: 'b1', family_slug: 'openai-gpt', model_id: 'openai-gpt' }]
+        positions: [{ id: 'p1', family_slug: 'openai-gpt' }],
+        trades: [{ id: 't1', family_slug: 'openai-gpt' }],
+        brier_scores: [{ id: 'b1', family_slug: 'openai-gpt' }]
       }))
       .mockResolvedValueOnce(mockResponse(false, {}, 404))
       .mockResolvedValueOnce(mockResponse(false, {}, 500)));

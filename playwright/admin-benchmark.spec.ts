@@ -9,7 +9,7 @@ test('admin benchmark control registers a release and promotes a future lineup',
 
   await expect(page.getByRole('heading', { level: 1, name: 'Benchmark Control' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Current Default Lineup' })).toBeVisible();
-  await expect(page.locator('div').filter({ hasText: /^bootstrap-default-lineup$/ }).first()).toBeVisible();
+  await expect(page.getByText('e2e-default').first()).toBeVisible();
 
   await page.getByLabel('Family').selectOption('openai-gpt');
   await page.getByLabel('Release Name').fill('GPT-5.4');

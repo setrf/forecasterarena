@@ -22,7 +22,7 @@
 
 ## What This Repository Does
 
-Forecaster Arena is a paper-trading benchmark for evaluating frontier LLMs on real prediction markets from [Polymarket](https://polymarket.com). Every active model receives the same market universe, the same portfolio constraints, and the same deterministic prompting setup. Performance is tracked through:
+Forecaster Arena is a paper-trading benchmark for evaluating frontier LLMs on real prediction markets from [Polymarket](https://polymarket.com). Every active benchmark family receives the same market universe, the same portfolio constraints, and the same deterministic prompting setup. Performance is tracked through:
 
 - **Brier score** for calibration quality
 - **Portfolio value / P&L** for practical trading outcomes
@@ -32,7 +32,7 @@ The benchmark is intentionally built around future events so the models cannot r
 
 ---
 
-## Current Model Roster
+## Current Family Lineup
 
 The codebase now separates **legacy model IDs**, **stable benchmark families**, and **exact releases**.
 
@@ -103,7 +103,7 @@ Recent changes in the codebase materially changed the system guarantees. The doc
 
 - Cohorts are keyed by a normalized weekly `started_at`
 - repeated or concurrent start attempts resolve to the same cohort
-- agent creation is physically idempotent per the legacy key `(cohort_id, model_id)` and semantically frozen by `benchmark_config_model_id`
+- agent creation is physically and semantically idempotent per `(cohort_id, benchmark_config_model_id)`
 
 ### 2. Decisions are unique per agent / cohort / week
 
@@ -137,7 +137,7 @@ The frontend is intentionally data-aware now:
   - `Synced Preview`
   - `Awaiting First Cohort`
 - the markets count on the home page is fetched from `/api/markets`
-- the empty-data models page renders **all 7 models**, not 6
+- the empty-data models page renders **all active benchmark families**, not a truncated subset
 - mobile filter controls on `/markets` wrap instead of overflowing
 - accessibility issues around contrast, heading order, and the mobile GitHub icon link were fixed
 
@@ -243,7 +243,7 @@ npm run test:e2e:empty
 | Initial balance | `$10,000` |
 | Minimum bet | `$50` |
 | Maximum single bet | `25%` of current cash |
-| Top markets fed to models | `500` |
+| Top markets fed to each family | `500` |
 | OpenRouter temperature | `0` |
 | OpenRouter max tokens | `16,000` |
 | OpenRouter timeout | `40,000 ms` |

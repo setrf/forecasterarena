@@ -11,11 +11,9 @@ export interface Cohort {
 
 export interface AgentStats {
   id: string;
-  model_id: string;
-  family_slug?: string | null;
-  model_slug?: string;
-  legacy_model_id?: string | null;
+  family_slug: string;
   family_id?: string | null;
+  legacy_model_id?: string | null;
   release_id?: string | null;
   benchmark_config_model_id?: string | null;
   model_display_name: string;
@@ -49,9 +47,8 @@ export interface Decision {
   decision_timestamp: string;
   action: string;
   reasoning: string | null;
-  family_slug?: string | null;
-  model_id?: string;
-  model_slug?: string | null;
+  family_slug: string;
+  family_id?: string | null;
   legacy_model_id?: string | null;
   model_release_name?: string | null;
   model_display_name: string;

@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS cohorts (
 -- ============================================================================
 -- MODELS
 -- ============================================================================
--- The 7 competing LLM models (reference table).
--- Models are added but never deleted to preserve history.
+-- Legacy compatibility records for previously public model IDs.
+-- Historical truth lives in families, releases, configs, and frozen agents.
 
 CREATE TABLE IF NOT EXISTS models (
   id TEXT PRIMARY KEY,                           -- e.g., 'gpt-5.1'
@@ -55,8 +55,8 @@ CREATE TABLE IF NOT EXISTS models (
 -- ============================================================================
 -- AGENTS
 -- ============================================================================
--- An LLM instance within a specific cohort.
--- Each cohort has exactly 7 agents (one per model).
+-- A frozen benchmark slot assignment within a specific cohort.
+-- Each cohort has one agent per benchmark_config_model slot.
 
 CREATE TABLE IF NOT EXISTS agents (
   id TEXT PRIMARY KEY,                           -- UUID
@@ -74,6 +74,6 @@ CREATE TABLE IF NOT EXISTS agents (
   FOREIGN KEY (family_id) REFERENCES model_families(id),
   FOREIGN KEY (release_id) REFERENCES model_releases(id),
   FOREIGN KEY (benchmark_config_model_id) REFERENCES benchmark_config_models(id),
-  UNIQUE(cohort_id, model_id)                    -- One agent per model per cohort
+  UNIQUE(cohort_id, benchmark_config_model_id)   -- One agent per frozen config slot per cohort
 );
 `;

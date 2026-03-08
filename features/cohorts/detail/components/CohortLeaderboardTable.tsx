@@ -40,7 +40,7 @@ export function CohortLeaderboardTable({
           </thead>
           <tbody>
             {agents.map((agent, index) => {
-              const href = `/cohorts/${cohortId}/models/${agent.family_slug ?? agent.model_slug ?? agent.model_id}`;
+              const href = `/cohorts/${cohortId}/models/${agent.family_slug}`;
 
               return (
                 <tr

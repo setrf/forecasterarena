@@ -319,7 +319,7 @@ describe('model identity query modules', () => {
         is_default_for_future_cohorts: false
       });
 
-      benchmarkConfigs.createBenchmarkConfigModel({
+      const configModel = benchmarkConfigs.createBenchmarkConfigModel({
         benchmark_config_id: config.id,
         family_id: 'custom-family',
         release_id: release.id,
@@ -363,9 +363,9 @@ describe('model identity query modules', () => {
         config.id
       );
 
-      expect(() => agents.createAgentsForCohort('cohort-without-default', null)).toThrow(
-        /No default benchmark config is configured for agent creation/i
-      );
+      const fallbackAgents = agents.createAgentsForCohort('cohort-without-default', null);
+      expect(fallbackAgents).toHaveLength(1);
+      expect(fallbackAgents[0]?.benchmark_config_model_id).toBe(configModel.id);
     } finally {
       await ctx.cleanup();
     }

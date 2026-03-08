@@ -18,11 +18,18 @@ describe('schema seeds and idempotency behavior', () => {
         name: string;
         notnull: number;
       }>;
+      const agentTableSql = db.prepare(`
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'agents'
+      `).get() as { sql: string };
 
       expect(cohortColumns.find((column) => column.name === 'benchmark_config_id')?.notnull).toBe(1);
       expect(agentColumns.find((column) => column.name === 'family_id')?.notnull).toBe(1);
       expect(agentColumns.find((column) => column.name === 'release_id')?.notnull).toBe(1);
       expect(agentColumns.find((column) => column.name === 'benchmark_config_model_id')?.notnull).toBe(1);
+      expect(agentTableSql.sql).toContain('UNIQUE(cohort_id, benchmark_config_model_id)');
+      expect(agentTableSql.sql).not.toContain('UNIQUE(cohort_id, model_id)');
 
       const cohort = queries.createCohort();
       const [agent] = queries.createAgentsForCohort(cohort.id);

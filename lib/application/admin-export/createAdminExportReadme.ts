@@ -22,7 +22,6 @@ export function createAdminExportReadme(input: CreateAdminExportReadmeInput): st
     `Methodology version: ${process.env.METHODOLOGY_VERSION || 'v1'}`,
     '',
     'This export is capped to keep the server healthy (max 7 days, 50k rows per table).',
-    'Canonical benchmark identity lives in agent_benchmark_identity.csv plus the model_families/model_releases/benchmark_configs/benchmark_config_models tables.',
-    'models.csv is compatibility metadata only and should not be treated as the historical source of truth.'
+    'Canonical benchmark identity lives in agent_benchmark_identity.csv plus the model_families/model_releases/benchmark_configs/benchmark_config_models tables.'
   ].join('\n');
 }
