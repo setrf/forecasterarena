@@ -9,6 +9,7 @@ interface PageIntroProps {
   aside?: ReactNode;
   className?: string;
   containerClassName?: string;
+  contentClassName?: string;
 }
 
 export function PageIntro({
@@ -20,11 +21,12 @@ export function PageIntro({
   aside,
   className,
   containerClassName,
+  contentClassName,
 }: PageIntroProps) {
   return (
     <section className={['page-intro', className].filter(Boolean).join(' ')}>
       <div className={['page-intro__grid', containerClassName].filter(Boolean).join(' ')}>
-        <div className="page-intro__content">
+        <div className={['page-intro__content', contentClassName].filter(Boolean).join(' ')}>
           {eyebrow && <p className="page-intro__eyebrow">{eyebrow}</p>}
           <h1 className="page-intro__title">{title}</h1>
           {description && <p className="page-intro__description">{description}</p>}

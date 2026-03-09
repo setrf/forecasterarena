@@ -24,20 +24,22 @@ export default function HomePageClient() {
 
   return (
     <>
-      <PerformanceSection
-        chartData={chartData}
-        models={chartModels.length > 0 ? chartModels : models}
-        releaseChanges={chartReleaseChanges}
-        timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
-        error={chartError}
-      />
-      <HeroSection
-        leader={leaderboard[0] || null}
-        models={models}
-        hasRealData={hasRealData}
-        marketCount={marketCount}
-      />
+      <div className="home-overview">
+        <PerformanceSection
+          chartData={chartData}
+          models={chartModels.length > 0 ? chartModels : models}
+          releaseChanges={chartReleaseChanges}
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+          error={chartError}
+        />
+        <HeroSection
+          leader={leaderboard[0] || null}
+          models={models}
+          hasRealData={hasRealData}
+          marketCount={marketCount}
+        />
+      </div>
       {leaderboardError && (
         <section className="container-wide mx-auto px-6 pt-6">
           <div className="rounded-xl border border-[rgba(251,113,133,0.3)] bg-[rgba(251,113,133,0.08)] px-4 py-3" role="status" aria-live="polite">

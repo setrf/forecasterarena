@@ -599,6 +599,15 @@ h3 {
   pointer-events: none;
 }
 
+.page-intro--integrated {
+  border-bottom: 0;
+  background: transparent;
+}
+
+.page-intro--integrated::after {
+  display: none;
+}
+
 .page-intro__grid {
   position: relative;
   z-index: 1;
@@ -651,6 +660,35 @@ h3 {
 
 .page-intro__aside {
   align-self: end;
+}
+
+.home-overview {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-subtle);
+  background:
+    radial-gradient(circle at top left, rgba(212, 168, 83, 0.1), transparent 30%),
+    radial-gradient(circle at top center, rgba(59, 130, 246, 0.06), transparent 32%),
+    linear-gradient(180deg, rgba(10, 10, 16, 0.98) 0%, rgba(7, 7, 11, 1) 100%);
+}
+
+.home-overview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--border-subtle) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.home-overview > * {
+  position: relative;
+  z-index: 1;
+}
+
+.page-intro--home-briefing .page-intro__description {
+  max-width: 40rem;
 }
 
 .surface-panel {

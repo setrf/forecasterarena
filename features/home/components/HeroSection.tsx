@@ -21,6 +21,9 @@ export function HeroSection({ leader, models, hasRealData, marketCount }: HeroSe
 
   return (
     <PageIntro
+      className="page-intro--integrated page-intro--home-briefing"
+      containerClassName="pt-5 pb-8 md:pt-6 md:pb-10"
+      contentClassName="max-w-[44rem]"
       eyebrow="Live Arena Briefing"
       title="Live standings for model families competing on real prediction markets."
       description="The board below updates when real markets resolve. Cohorts run, decisions are tracked, and the rankings move."
