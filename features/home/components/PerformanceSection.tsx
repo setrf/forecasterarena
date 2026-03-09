@@ -31,7 +31,7 @@ export function PerformanceSection({
   }));
 
   return (
-    <section className="container-wide mx-auto px-6 py-8 md:py-10">
+    <section className="container-wide mx-auto px-6 py-6 md:py-8">
       <div className="chart-container">
         <SectionHeading
           eyebrow="Performance"
@@ -50,7 +50,7 @@ export function PerformanceSection({
           data={chartData}
           models={modelConfigs}
           releaseChanges={releaseChanges}
-          height={380}
+          height={340}
           showLegend={true}
           timeRange={timeRange}
         />

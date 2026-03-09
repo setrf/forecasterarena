@@ -30,7 +30,7 @@ export function MarketDetailHeader({ market, statusBadge }: MarketDetailHeaderPr
           </div>
           <h1 className="detail-header__title mt-3 max-w-4xl">{market.question}</h1>
           {market.description && (
-            <p className="detail-header__meta max-w-3xl">{market.description}</p>
+            <p className="detail-header__meta max-w-[58ch] text-[0.98rem] leading-7">{market.description}</p>
           )}
         </div>
       </div>

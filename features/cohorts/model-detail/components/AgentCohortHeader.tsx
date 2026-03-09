@@ -25,16 +25,12 @@ export function AgentCohortHeader({ data }: AgentCohortHeaderProps) {
             <span className={`badge ${data.agent.status === 'active' ? 'badge-active' : 'badge-pending'}`}>
               {data.agent.status}
             </span>
+            <span className="badge">Week {data.cohort.current_week}</span>
           </div>
           <p className="detail-header__meta">
             {data.model.provider} • in Cohort #{data.cohort.cohort_number}
           </p>
         </div>
-      </div>
-
-      <div className="metric-tile">
-        <p className="metric-tile__label">Week</p>
-        <p className="metric-tile__value text-xl">{data.cohort.current_week}</p>
       </div>
     </div>
   );
