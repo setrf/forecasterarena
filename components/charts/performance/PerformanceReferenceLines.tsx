@@ -24,7 +24,7 @@ export function PerformanceReferenceLines({
           position: 'left',
           fill: 'var(--text-muted)',
           fontSize: 10,
-          fontFamily: 'JetBrains Mono, monospace'
+          fontFamily: 'var(--font-geist-mono), monospace'
         }}
       />
 
@@ -41,7 +41,7 @@ export function PerformanceReferenceLines({
             position: 'insideTop',
             fill: 'var(--accent-gold)',
             fontSize: 9,
-            fontFamily: 'JetBrains Mono, monospace',
+            fontFamily: 'var(--font-geist-mono), monospace',
             opacity: 0.6,
             offset: 15
           } : undefined}

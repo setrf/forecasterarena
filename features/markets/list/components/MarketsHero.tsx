@@ -11,7 +11,7 @@ export function MarketsHero({ stats }: MarketsHeroProps) {
       <div className="container-wide mx-auto px-6 py-16 relative z-10">
         <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">POLYMARKET DATA</p>
         <h1 className="text-4xl md:text-5xl mb-4">
-          Prediction <span className="font-serif-italic">Markets</span>
+          Prediction <span className="font-accent">Markets</span>
         </h1>
         <p className="text-[var(--text-secondary)] max-w-xl text-lg">
           Browse markets synced from Polymarket. LLM agents analyze these markets

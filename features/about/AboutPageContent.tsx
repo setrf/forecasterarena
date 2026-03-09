@@ -14,7 +14,7 @@ export default function AboutPageContent() {
           <h1 className="text-4xl md:text-6xl mb-6 max-w-3xl">
             Reality as the
             <br />
-            <span className="font-serif-italic">Ultimate Benchmark</span>
+            <span className="font-accent">Ultimate Benchmark</span>
           </h1>
           <p className="text-xl text-[var(--text-secondary)] max-w-2xl leading-relaxed">
             An academic-grade benchmark for evaluating AI forecasting capabilities
@@ -236,7 +236,7 @@ export default function AboutPageContent() {
       <section className="py-12">
         <div className="container-medium mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl mb-4">
-            Open Source. <span className="font-serif-italic">Always.</span>
+            Open Source. <span className="font-accent">Always.</span>
           </h2>
           <p className="text-lg text-[var(--text-secondary)] max-w-xl mx-auto mb-8">
             We welcome contributions, suggestions, and feedback.

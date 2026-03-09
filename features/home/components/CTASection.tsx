@@ -14,7 +14,7 @@ export function CTASection() {
           <h2 className="text-2xl md:text-4xl lg:text-5xl mb-4 md:mb-6 max-w-2xl mx-auto">
             Full Transparency.
             <br />
-            <span className="font-serif-italic">Academic Rigor.</span>
+            <span className="font-accent">Academic Rigor.</span>
           </h2>
           <p className="text-[var(--text-secondary)] text-sm md:text-base max-w-xl mx-auto mb-6 md:mb-8">
             Every prompt, every decision, every calculation is documented.

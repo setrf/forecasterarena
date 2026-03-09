@@ -108,7 +108,7 @@ export function PerformanceChartView({
             dataKey="date"
             tickFormatter={formatPerformanceDateShort}
             stroke="var(--text-muted)"
-            tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'var(--font-geist-mono), monospace' }}
             axisLine={{ stroke: 'var(--border-subtle)', strokeWidth: 1 }}
             tickLine={false}
             height={50}
@@ -120,11 +120,12 @@ export function PerformanceChartView({
             domain={yDomain}
             tickFormatter={showPercent ? formatPerformancePercentAxis : formatPerformanceCurrency}
             stroke="var(--text-muted)"
-            tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'var(--font-geist-mono), monospace' }}
             axisLine={false}
             tickLine={false}
-            width={70}
+            width={82}
             tickCount={7}
+            tickMargin={10}
           />
 
           <Tooltip

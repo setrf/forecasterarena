@@ -30,7 +30,7 @@ export function ModelsHeroSection({
         <div className="mb-6">
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">THE COMPETITORS</p>
           <h1 className="text-4xl md:text-5xl mb-4">
-            {modelCount > 0 ? `${modelCount} ` : ''}<span className="font-serif-italic">Frontier</span> LLMs
+            {modelCount > 0 ? `${modelCount} ` : ''}<span className="font-accent">Frontier</span> LLMs
           </h1>
           <p className="text-[var(--text-secondary)] max-w-xl text-lg">
             Competing head-to-head in prediction markets. Each model receives identical

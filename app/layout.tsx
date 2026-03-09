@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import Script from "next/script";
 import "./globals.css";
 import { GITHUB_URL } from "@/lib/constants";
@@ -100,7 +102,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <head>
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
+      </head>
       <body>
         {/* Google Analytics */}
         <Script

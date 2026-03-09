@@ -115,7 +115,7 @@ export function DecisionFeedContent({
             )}
 
             {!hasReasoning && (
-              <p className="text-sm text-[var(--text-muted)] italic">No reasoning provided</p>
+              <p className="text-sm text-[var(--text-muted)]">No reasoning provided</p>
             )}
           </div>
         );

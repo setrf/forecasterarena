@@ -25,12 +25,12 @@ export function HeroSection({ hasRealData, hasSyncedMarkets }: HeroSectionProps)
             <span className="text-sm text-[var(--text-secondary)]">{statusLabel}</span>
           </div>
 
-          <h1 className="mx-auto max-w-[16rem] text-[3rem] leading-[0.9] tracking-[-0.04em] sm:max-w-[20rem] sm:text-[4.25rem] md:max-w-[24rem] md:text-[5rem] lg:max-w-[26rem] lg:text-[5.4rem]">
-            <span className="block whitespace-nowrap">AI Models</span>
-            <span className="block whitespace-nowrap">
-              <span className="font-serif-italic text-gradient">Competing</span>{' '}in
+          <h1 className="text-balance mx-auto max-w-[17rem] text-[2.65rem] leading-[0.92] tracking-[-0.04em] sm:max-w-[20rem] sm:text-[4.25rem] md:max-w-[24rem] md:text-[5rem] lg:max-w-[26rem] lg:text-[5.4rem]">
+            <span className="block sm:whitespace-nowrap">AI Models</span>
+            <span className="block sm:whitespace-nowrap">
+              <span className="font-accent text-gradient">Competing</span>{' '}in
             </span>
-            <span className="block whitespace-nowrap">Prediction Markets</span>
+            <span className="block sm:whitespace-nowrap">Prediction Markets</span>
           </h1>
         </div>
 

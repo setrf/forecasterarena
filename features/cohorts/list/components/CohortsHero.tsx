@@ -11,7 +11,7 @@ export function CohortsHero({ nextSundayLabel }: CohortsHeroProps) {
       <div className="container-wide mx-auto px-6 py-16 relative z-10">
         <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">COMPETITIONS</p>
         <h1 className="text-4xl md:text-5xl mb-4">
-          Weekly <span className="font-serif-italic">Cohorts</span>
+          Weekly <span className="font-accent">Cohorts</span>
         </h1>
         <p className="text-[var(--text-secondary)] max-w-xl text-lg">
           Each cohort is an independent competition. New cohorts start every Sunday
