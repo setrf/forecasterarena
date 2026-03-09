@@ -70,7 +70,12 @@ export function AgentPositionsSection({
                       {...getLinkedRowProps(decisionHref)}
                     >
                       <td className="max-w-[200px] truncate" title={position.market_question}>
-                        {position.market_question}
+                        <div className="flex flex-col">
+                          <span>{position.market_question}</span>
+                          {decisionHref && (
+                            <span className="text-xs text-[var(--accent-gold)]">View opening decision →</span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <span className={`text-xs px-2 py-0.5 rounded ${getSideBadgeClass(position.side)}`}>
@@ -126,7 +131,12 @@ export function AgentPositionsSection({
                       {...getLinkedRowProps(decisionHref)}
                     >
                       <td className="max-w-[150px] truncate" title={position.market_question}>
-                        {position.market_question}
+                        <div className="flex flex-col">
+                          <span>{position.market_question}</span>
+                          {decisionHref && (
+                            <span className="text-xs text-[var(--accent-gold)]">View opening decision →</span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <span className={`text-xs px-2 py-0.5 rounded ${getSideBadgeClass(position.side)}`}>

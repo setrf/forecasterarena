@@ -43,10 +43,10 @@ export default function ChangelogPageContent() {
       </div>
 
       <div className="max-w-3xl">
-        <div className="relative border-l-2 border-[var(--border-medium)] pl-8 space-y-12">
+        <div className="relative space-y-12 pl-0 sm:border-l-2 sm:border-[var(--border-medium)] sm:pl-8">
           {CHANGELOG.map((entry, index) => (
             <div key={entry.version} className="relative">
-              <div className="absolute -left-[41px] w-5 h-5 bg-[var(--accent-blue)] rounded-full border-4 border-[var(--bg-primary)]" />
+              <div className="mb-4 hidden h-5 w-5 rounded-full border-4 border-[var(--bg-primary)] bg-[var(--accent-blue)] sm:absolute sm:-left-[41px] sm:block sm:mb-0" />
 
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="px-3 py-1 bg-[var(--accent-blue)] text-white text-sm font-bold rounded-full">

@@ -54,6 +54,7 @@ describe('navigation helpers', () => {
       '/cohorts',
       '/markets',
       '/methodology',
+      '/changelog',
       '/about'
     ]);
     expect(isNavActive('/', '/')).toBe(true);

@@ -11,9 +11,14 @@ export function ModelDetailNotFound({ message }: ModelDetailNotFoundProps) {
       <p className="text-[var(--text-secondary)] mb-6">
         The model you&apos;re looking for doesn&apos;t exist.
       </p>
-      <Link href="/models" className="btn btn-primary">
-        View All Models
-      </Link>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Link href="/models" className="btn btn-primary">
+          View All Models
+        </Link>
+        <Link href="/methodology" className="btn btn-secondary">
+          Read Methodology
+        </Link>
+      </div>
     </div>
   );
 }

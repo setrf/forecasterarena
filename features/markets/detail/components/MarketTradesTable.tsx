@@ -64,7 +64,12 @@ export function MarketTradesTable({
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: trade.model_color }}
                       />
-                      {trade.model_display_name}
+                      <div className="flex flex-col">
+                        <span>{trade.model_display_name}</span>
+                        {trade.decision_id && (
+                          <span className="text-xs text-[var(--accent-gold)]">View decision →</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td>

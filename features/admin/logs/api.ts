@@ -15,7 +15,7 @@ export async function fetchAdminLogsData(
 
   const response = await fetch(`/api/admin/logs?${params}`);
   if (!response.ok) {
-    throw new Error('Failed to load admin logs');
+    throw new Error(response.status === 401 ? 'unauthorized' : 'Failed to load admin logs');
   }
 
   const payload = await response.json() as AdminLogsPayload;

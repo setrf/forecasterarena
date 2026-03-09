@@ -65,10 +65,10 @@ export function ModelCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="col-span-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3 sm:col-span-1">
           <p className="text-xs text-[var(--text-muted)] mb-1">P/L</p>
-          <p className={`font-semibold ${!hasRealData ? 'text-[var(--text-muted)]' : pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
+          <p className={`text-lg font-semibold ${!hasRealData ? 'text-[var(--text-muted)]' : pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
             {loading ? '...' : hasRealData ? formatSignedUsd(pnl) : 'N/A'}
           </p>
         </div>

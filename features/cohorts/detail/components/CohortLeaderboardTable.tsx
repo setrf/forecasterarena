@@ -66,6 +66,7 @@ export function CohortLeaderboardTable({
                             {agent.model_release_name}
                           </span>
                         )}
+                        <span className="text-xs text-[var(--accent-gold)]">Open cohort view →</span>
                       </div>
                       {agent.status === 'bankrupt' && (
                         <span className="text-xs text-[var(--accent-rose)]">BANKRUPT</span>

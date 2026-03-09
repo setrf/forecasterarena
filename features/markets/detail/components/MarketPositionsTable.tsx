@@ -60,7 +60,12 @@ export function MarketPositionsTable({
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: position.model_color }}
                       />
-                      {position.model_display_name}
+                      <div className="flex flex-col">
+                        <span>{position.model_display_name}</span>
+                        {position.decision_id && (
+                          <span className="text-xs text-[var(--accent-gold)]">View decision →</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="py-3 px-4">

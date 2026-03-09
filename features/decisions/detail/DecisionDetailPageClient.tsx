@@ -41,11 +41,12 @@ export default function DecisionDetailPageClient() {
 
   const primaryTrade: Trade | null = trades[0] ?? null;
   const primaryMarketQuestion = primaryTrade?.market_question || 'General Strategy / Hold';
+  const actionLabel = typeof decisionJson.action === 'string' ? decisionJson.action : (trades.length > 0 ? 'BET' : 'HOLD');
 
   return (
     <div className="container-wide mx-auto px-6 py-12">
       <Link
-        href={primaryTrade ? `/markets/${primaryTrade.market_id}` : '/markets'}
+        href={decision.market_id ? `/markets/${decision.market_id}` : '/markets'}
         className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,7 +67,7 @@ export default function DecisionDetailPageClient() {
             <h2 className="font-semibold text-lg">{decision.model_name}</h2>
             <p className="text-sm text-[var(--text-muted)]">{decision.model_provider}</p>
           </div>
-          <div className="ml-auto text-sm text-[var(--text-muted)]">
+          <div className="ml-auto text-right text-sm text-[var(--text-muted)]">
             {formatDisplayDateTime(decision.created_at)}
           </div>
         </div>
@@ -78,6 +79,33 @@ export default function DecisionDetailPageClient() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
+          <div className="glass-card p-6">
+            <h3 className="text-lg font-semibold mb-4">Decision Summary</h3>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="metric-tile">
+                <p className="metric-tile__label">Action</p>
+                <p className={`metric-tile__value ${actionLabel === 'BET' ? 'text-positive' : actionLabel === 'SELL' ? 'text-negative' : ''}`}>
+                  {actionLabel}
+                </p>
+              </div>
+              <div className="metric-tile">
+                <p className="metric-tile__label">Trades</p>
+                <p className="metric-tile__value">{trades.length}</p>
+              </div>
+              <div className="metric-tile">
+                <p className="metric-tile__label">Family</p>
+                <p className="metric-tile__value text-lg md:text-xl leading-tight">{decision.model_name}</p>
+                {decision.model_release_name && (
+                  <p className="metric-tile__meta">{decision.model_release_name}</p>
+                )}
+              </div>
+              <div className="metric-tile">
+                <p className="metric-tile__label">Logged</p>
+                <p className="metric-tile__value text-lg md:text-xl leading-tight">{formatDisplayDateTime(decision.created_at)}</p>
+              </div>
+            </div>
+          </div>
+
           <div className="glass-card p-6">
             <h3 className="text-xl font-semibold mb-4">Rationale</h3>
             <div className="prose prose-invert max-w-none text-[var(--text-secondary)] whitespace-pre-wrap">
@@ -91,8 +119,8 @@ export default function DecisionDetailPageClient() {
             <h3 className="text-lg font-semibold mb-4">Action Taken</h3>
 
             <div className="flex items-center justify-between mb-6">
-              <div className={`text-2xl font-bold ${decisionJson.action === 'BET' ? 'text-positive' : 'text-[var(--text-muted)]'}`}>
-                {String(decisionJson.action)}
+              <div className={`text-2xl font-bold ${actionLabel === 'BET' ? 'text-positive' : actionLabel === 'SELL' ? 'text-negative' : 'text-[var(--text-muted)]'}`}>
+                {actionLabel}
               </div>
             </div>
 
@@ -134,10 +162,15 @@ export default function DecisionDetailPageClient() {
           </div>
 
           <div className="glass-card p-6">
-            <h3 className="text-sm font-semibold mb-2 text-[var(--text-muted)]">Raw Output</h3>
-            <pre className="bg-[var(--bg-tertiary)] p-3 rounded text-xs overflow-x-auto text-[var(--text-secondary)]">
-              {JSON.stringify(decisionJson, null, 2)}
-            </pre>
+            <details>
+              <summary className="list-none cursor-pointer text-sm font-semibold text-[var(--text-muted)] flex items-center justify-between">
+                <span>Inspect Raw Output</span>
+                <span className="text-xs text-[var(--text-secondary)]">Expand JSON</span>
+              </summary>
+              <pre className="mt-4 bg-[var(--bg-tertiary)] p-3 rounded text-xs overflow-x-auto text-[var(--text-secondary)]">
+                {JSON.stringify(decisionJson, null, 2)}
+              </pre>
+            </details>
           </div>
         </div>
       </div>

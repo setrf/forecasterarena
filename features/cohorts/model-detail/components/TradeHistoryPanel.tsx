@@ -63,7 +63,14 @@ export function TradeHistoryPanel({
                     onKeyDown={(event) => handleKeyDown(event, decisionHref)}
                     {...getLinkedRowProps(decisionHref)}
                   >
-                    <td className="text-sm">{formatAgentCohortDate(trade.timestamp)}</td>
+                    <td className="text-sm">
+                      <div className="flex flex-col">
+                        <span>{formatAgentCohortDate(trade.timestamp)}</span>
+                        {decisionHref && (
+                          <span className="text-xs text-[var(--accent-gold)]">View decision →</span>
+                        )}
+                      </div>
+                    </td>
                     <td>
                       <span className={`text-xs px-2 py-0.5 rounded ${getTradeBadgeClass(trade.trade_type)}`}>
                         {trade.trade_type}

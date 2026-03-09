@@ -1,6 +1,7 @@
 'use client';
 
-import { PageIntro } from '@/components/ui/PageIntro';
+import { AdminEmptyState } from '@/features/admin/components/AdminEmptyState';
+import { AdminPageShell } from '@/features/admin/components/AdminPageShell';
 import { formatRelativeTime } from '@/lib/utils';
 import { useAdminLogsController } from '@/features/admin/logs/useAdminLogsController';
 import { formatEventData, getSeverityStyle } from '@/features/admin/logs/utils';
@@ -9,6 +10,7 @@ export default function AdminLogsPageClient() {
   const {
     logs,
     loading,
+    error,
     severity,
     autoRefresh,
     expandedId,
@@ -19,34 +21,62 @@ export default function AdminLogsPageClient() {
     fetchLogs,
     toggleExpanded
   } = useAdminLogsController();
+  const locked = Boolean(error && error.toLowerCase().includes('authentication required'));
+
+  if (locked) {
+    return (
+      <AdminPageShell
+        title="System Logs"
+        description="Monitor operational events, warnings, and error trails."
+      >
+        <AdminEmptyState
+          title="Admin authentication required"
+          description="Log in through the admin dashboard before opening the live log stream. Once authenticated, this page will refresh into the latest warnings, errors, and job traces."
+          actionLabel="Open Admin Dashboard"
+          actionHref="/admin"
+        />
+      </AdminPageShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminPageShell
+        title="System Logs"
+        description="Monitor operational events, warnings, and error trails."
+      >
+        <AdminEmptyState
+          title="Unable to load logs"
+          description={error}
+          actionLabel="Return to Admin"
+          actionHref="/admin"
+        />
+      </AdminPageShell>
+    );
+  }
 
   return (
-    <div>
-      <div className="mb-8">
-        <PageIntro
-          eyebrow="Admin"
-          title="System Logs"
-          description="Monitor operational events, warnings, and error trails."
-          actions={(
-            <>
-              <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                <input
-                  type="checkbox"
-                  checked={autoRefresh}
-                  onChange={(event) => setAutoRefresh(event.target.checked)}
-                  className="rounded border-[var(--border-medium)]"
-                />
-                Auto-refresh
-              </label>
-              <button onClick={fetchLogs} className="btn btn-secondary text-sm">
-                Refresh
-              </button>
-            </>
-          )}
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 mb-6">
+    <AdminPageShell
+      title="System Logs"
+      description="Monitor operational events, warnings, and error trails."
+      actions={(
+        <>
+          <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(event) => setAutoRefresh(event.target.checked)}
+              className="rounded border-[var(--border-medium)]"
+            />
+            Auto-refresh
+          </label>
+          <button onClick={fetchLogs} className="btn btn-secondary text-sm">
+            Refresh
+          </button>
+        </>
+      )}
+    >
+      <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-3">
         <div className="stat-card">
           <div className="stat-value">{logs.length}</div>
           <div className="stat-label">Total Logs</div>
@@ -81,9 +111,10 @@ export default function AdminLogsPageClient() {
             Loading logs...
           </div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-[var(--text-muted)]">
-            No logs found
-          </div>
+          <AdminEmptyState
+            title="No logs found"
+            description="When jobs run or warnings fire, they’ll appear here. You can leave auto-refresh on during debugging to watch new events arrive."
+          />
         ) : (
           logs.map((log) => {
             const style = getSeverityStyle(log.severity);
@@ -105,7 +136,7 @@ export default function AdminLogsPageClient() {
                 tabIndex={0}
                 aria-expanded={isExpanded}
               >
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex items-center gap-3">
                     <svg
                       className={`w-4 h-4 text-[var(--text-muted)] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
@@ -126,6 +157,14 @@ export default function AdminLogsPageClient() {
                   </span>
                 </div>
 
+                {eventData && (
+                  <div className="ml-7 mb-1">
+                    <span className="inline-flex items-center rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]">
+                      {isExpanded ? 'Hide details' : 'View details'}
+                    </span>
+                  </div>
+                )}
+
                 {eventData && isExpanded && (
                   <div className="mt-3 ml-7">
                     <pre className="text-sm text-[var(--text-secondary)] bg-[var(--bg-tertiary)] p-3 rounded-lg overflow-x-auto">
@@ -136,7 +175,7 @@ export default function AdminLogsPageClient() {
 
                 {!isExpanded && eventData && (
                   <p className="text-sm text-[var(--text-muted)] ml-7 truncate">
-                    Click to view details...
+                    Expand to inspect structured event data.
                   </p>
                 )}
               </div>
@@ -144,6 +183,6 @@ export default function AdminLogsPageClient() {
           })
         )}
       </div>
-    </div>
+    </AdminPageShell>
   );
 }

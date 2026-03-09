@@ -5,10 +5,9 @@ import { AdminBenchmarkConfigsTable } from '@/features/admin/benchmark/component
 import { AdminBenchmarkCurrentLineup } from '@/features/admin/benchmark/components/AdminBenchmarkCurrentLineup';
 import { AdminBenchmarkReleaseForm } from '@/features/admin/benchmark/components/AdminBenchmarkReleaseForm';
 import { AdminBenchmarkRolloverPreview } from '@/features/admin/benchmark/components/AdminBenchmarkRolloverPreview';
+import { AdminPageShell } from '@/features/admin/components/AdminPageShell';
 import { useAdminBenchmarkController } from '@/features/admin/benchmark/useAdminBenchmarkController';
-import { PageIntro } from '@/components/ui/PageIntro';
 import { AdminLoginCard } from '@/features/admin/dashboard/components/AdminLoginCard';
-import { AdminNavigationLinks } from '@/features/admin/dashboard/components/AdminNavigationLinks';
 import { AdminResultBanner } from '@/features/admin/dashboard/components/AdminResultBanner';
 
 export default function AdminBenchmarkPageClient() {
@@ -45,53 +44,60 @@ export default function AdminBenchmarkPageClient() {
 
   if (!hasResolvedAuth) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
-        <div className="glass-card p-8 w-full max-w-md mx-auto text-center border border-[var(--border-medium)]">
-          <h1 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">Benchmark Control</h1>
-          <p className="text-[var(--text-secondary)]">Checking admin session...</p>
+      <AdminPageShell
+        title="Benchmark Control"
+        description="Manage stable model families, exact releases, and future cohort lineups."
+      >
+        <div className="glass-card mx-auto max-w-md p-8 text-center border border-[var(--border-medium)]">
+          <h2 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">Checking admin session...</h2>
+          <p className="text-[var(--text-secondary)]">Verifying your admin session before loading benchmark controls.</p>
         </div>
-      </div>
+      </AdminPageShell>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <AdminLoginCard
-        password={password}
-        error={error}
-        loading={loading}
-        onPasswordChange={setPassword}
-        onSubmit={handleLogin}
-      />
+      <AdminPageShell
+        title="Benchmark Control"
+        description="Manage stable model families, exact releases, and future cohort lineups."
+      >
+        <AdminLoginCard
+          password={password}
+          error={error}
+          loading={loading}
+          embedded
+          onPasswordChange={setPassword}
+          onSubmit={handleLogin}
+        />
+      </AdminPageShell>
     );
   }
 
   if (!overview || !configState) {
     return (
-      <div className="container-wide mx-auto px-6 py-12">
-        <div className="glass-card p-8 text-center border border-[var(--border-medium)]">
-          <h1 className="text-2xl font-bold mb-3">Benchmark Control</h1>
-          <p className="text-[var(--text-secondary)]">Loading benchmark lineage data...</p>
+      <AdminPageShell
+        title="Benchmark Control"
+        description="Manage stable model families, exact releases, and future cohort lineups."
+      >
+        <div className="glass-card mx-auto max-w-md p-8 text-center border border-[var(--border-medium)]">
+          <h2 className="text-2xl font-bold mb-3">Loading benchmark lineage data...</h2>
+          <p className="text-[var(--text-secondary)]">Reading releases, configs, and current lineup details.</p>
         </div>
-      </div>
+      </AdminPageShell>
     );
   }
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
-      <div className="-mx-6 mb-8">
-        <PageIntro
-          eyebrow="Admin"
-          title="Benchmark Control"
-          description="Manage stable model families, exact releases, and future cohort lineups."
-          actions={(
-            <button onClick={handleLogout} className="btn btn-secondary">
-              Logout
-            </button>
-          )}
-        />
-      </div>
-
+    <AdminPageShell
+      title="Benchmark Control"
+      description="Manage stable model families, exact releases, and future cohort lineups."
+      actions={(
+        <button onClick={handleLogout} className="btn btn-secondary">
+          Logout
+        </button>
+      )}
+    >
       <AdminResultBanner result={result} />
       <AdminBenchmarkCurrentLineup overview={overview} />
       {rolloverPreview && (
@@ -131,8 +137,6 @@ export default function AdminBenchmarkPageClient() {
           onPreviewRollover={handlePreviewRollover}
         />
       </div>
-
-      <AdminNavigationLinks />
-    </div>
+    </AdminPageShell>
   );
 }

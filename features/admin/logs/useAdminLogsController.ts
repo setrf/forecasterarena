@@ -7,15 +7,21 @@ import type { LogEntry, SeverityFilter } from '@/features/admin/logs/types';
 export function useAdminLogsController() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [severity, setSeverity] = useState<SeverityFilter>('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchLogs = useCallback(async () => {
+    setLoading(true);
     try {
       setLogs(await fetchAdminLogsData(severity));
+      setError(null);
     } catch (error) {
       console.error('Error fetching logs:', error);
+      setError(error instanceof Error && error.message === 'unauthorized'
+        ? 'Admin authentication required to view logs.'
+        : 'Unable to load system logs right now.');
     } finally {
       setLoading(false);
     }
@@ -47,6 +53,7 @@ export function useAdminLogsController() {
   return {
     logs,
     loading,
+    error,
     severity,
     autoRefresh,
     expandedId,

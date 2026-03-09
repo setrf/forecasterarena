@@ -8,9 +8,17 @@ export function CohortDetailNotFound({ title }: CohortDetailNotFoundProps) {
   return (
     <div className="container-wide mx-auto px-6 py-20 text-center">
       <h1 className="text-2xl font-bold mb-4">{title}</h1>
-      <Link href="/cohorts" className="btn btn-primary">
-        Back to Cohorts
-      </Link>
+      <p className="text-[var(--text-secondary)] mb-6">
+        The cohort may no longer be active, or the link may be pointing to a missing record.
+      </p>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Link href="/cohorts" className="btn btn-primary">
+          Back to Cohorts
+        </Link>
+        <Link href="/models" className="btn btn-secondary">
+          View Model Families
+        </Link>
+      </div>
     </div>
   );
 }

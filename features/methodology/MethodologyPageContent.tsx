@@ -74,7 +74,7 @@ export default function MethodologyPageContent({ models }: MethodologyPageConten
           <section>
             <h2 className="text-2xl font-semibold mb-6">2. System Design</h2>
             <h3 className="text-lg font-medium mb-3">2.1 Cohort System</h3>
-            <div className="glass-card p-4 mb-6">
+            <div className="glass-card p-4 mb-6 overflow-x-auto">
               <table className="w-full text-sm">
                 <tbody>
                   <tr className="border-b border-[var(--border-subtle)]">
@@ -140,32 +140,47 @@ export default function MethodologyPageContent({ models }: MethodologyPageConten
             </div>
             <h3 className="text-lg font-medium mb-3">3.3 Constraints</h3>
             <div className="glass-card p-4">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border-subtle)]">
-                    <th className="py-2 text-left text-[var(--text-muted)]">Constraint</th>
-                    <th className="py-2 text-left text-[var(--text-muted)]">Value</th>
-                    <th className="py-2 text-left text-[var(--text-muted)]">Rationale</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-[var(--border-subtle)]">
-                    <td className="py-2">Minimum bet</td>
-                    <td className="py-2 font-mono">${MIN_BET}</td>
-                    <td className="py-2 text-[var(--text-secondary)]">Prevents noise from trivial bets</td>
-                  </tr>
-                  <tr className="border-b border-[var(--border-subtle)]">
-                    <td className="py-2">Maximum bet</td>
-                    <td className="py-2 font-mono">{MAX_BET_PERCENT * 100}% of balance</td>
-                    <td className="py-2 text-[var(--text-secondary)]">Encourages portfolio thinking</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2">Positions per market</td>
-                    <td className="py-2 font-mono">1 per side</td>
-                    <td className="py-2 text-[var(--text-secondary)]">Simplifies tracking</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="space-y-3 md:hidden">
+                {[
+                  ['Minimum bet', `$${MIN_BET}`, 'Prevents noise from trivial bets'],
+                  ['Maximum bet', `${MAX_BET_PERCENT * 100}% of balance`, 'Encourages portfolio thinking'],
+                  ['Positions per market', '1 per side', 'Simplifies tracking']
+                ].map(([constraint, value, rationale]) => (
+                  <div key={constraint} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] p-4">
+                    <div className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">{constraint}</div>
+                    <div className="mt-2 font-mono text-sm">{value}</div>
+                    <div className="mt-2 text-sm text-[var(--text-secondary)]">{rationale}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border-subtle)]">
+                      <th className="py-2 text-left text-[var(--text-muted)]">Constraint</th>
+                      <th className="py-2 text-left text-[var(--text-muted)]">Value</th>
+                      <th className="py-2 text-left text-[var(--text-muted)]">Rationale</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-[var(--border-subtle)]">
+                      <td className="py-2">Minimum bet</td>
+                      <td className="py-2 font-mono">${MIN_BET}</td>
+                      <td className="py-2 text-[var(--text-secondary)]">Prevents noise from trivial bets</td>
+                    </tr>
+                    <tr className="border-b border-[var(--border-subtle)]">
+                      <td className="py-2">Maximum bet</td>
+                      <td className="py-2 font-mono">{MAX_BET_PERCENT * 100}% of balance</td>
+                      <td className="py-2 text-[var(--text-secondary)]">Encourages portfolio thinking</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2">Positions per market</td>
+                      <td className="py-2 font-mono">1 per side</td>
+                      <td className="py-2 text-[var(--text-secondary)]">Simplifies tracking</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
 
@@ -221,8 +236,8 @@ export default function MethodologyPageContent({ models }: MethodologyPageConten
             <a href={GITHUB_URL} className="btn btn-secondary text-sm">
               View on GitHub
             </a>
-            <a href="/docs/METHODOLOGY_v1.md" className="btn btn-secondary text-sm">
-              Download PDF
+            <a href={`${GITHUB_URL}/blob/main/docs/METHODOLOGY_v1.md`} target="_blank" rel="noreferrer" className="btn btn-secondary text-sm">
+              View Methodology Source
             </a>
           </div>
         </footer>

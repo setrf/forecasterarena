@@ -1,13 +1,12 @@
 'use client';
 
+import { AdminPageShell } from '@/features/admin/components/AdminPageShell';
 import { AdminExportSection } from '@/features/admin/dashboard/components/AdminExportSection';
 import { AdminLoginCard } from '@/features/admin/dashboard/components/AdminLoginCard';
-import { AdminNavigationLinks } from '@/features/admin/dashboard/components/AdminNavigationLinks';
 import { AdminQuickActions } from '@/features/admin/dashboard/components/AdminQuickActions';
 import { AdminResultBanner } from '@/features/admin/dashboard/components/AdminResultBanner';
 import { AdminStatsGrid } from '@/features/admin/dashboard/components/AdminStatsGrid';
 import { useAdminDashboardController } from '@/features/admin/dashboard/useAdminDashboardController';
-import { PageIntro } from '@/components/ui/PageIntro';
 
 export default function AdminDashboardPageClient() {
   const {
@@ -32,42 +31,46 @@ export default function AdminDashboardPageClient() {
 
   if (!hasResolvedAuth) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
-        <div className="glass-card p-8 w-full max-w-md mx-auto text-center border border-[var(--border-medium)]">
-          <h1 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">Admin Dashboard</h1>
-          <p className="text-[var(--text-secondary)]">Checking admin session...</p>
+      <AdminPageShell
+        title="Admin Dashboard"
+        description="System status, operational controls, and export tooling."
+      >
+        <div className="glass-card mx-auto max-w-md p-8 text-center border border-[var(--border-medium)]">
+          <h2 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">Checking admin session...</h2>
+          <p className="text-[var(--text-secondary)]">Verifying your existing admin cookie before loading controls.</p>
         </div>
-      </div>
+      </AdminPageShell>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <AdminLoginCard
-        password={password}
-        error={error}
-        loading={loading}
-        onPasswordChange={setPassword}
-        onSubmit={handleLogin}
-      />
+      <AdminPageShell
+        title="Admin Dashboard"
+        description="System status, operational controls, and export tooling."
+      >
+        <AdminLoginCard
+          password={password}
+          error={error}
+          loading={loading}
+          embedded
+          onPasswordChange={setPassword}
+          onSubmit={handleLogin}
+        />
+      </AdminPageShell>
     );
   }
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
-      <div className="-mx-6 mb-10">
-        <PageIntro
-          eyebrow="Admin"
-          title="Admin Dashboard"
-          description="System status, operational controls, and export tooling."
-          actions={(
-            <button onClick={handleLogout} className="btn btn-secondary">
-              Logout
-            </button>
-          )}
-        />
-      </div>
-
+    <AdminPageShell
+      title="Admin Dashboard"
+      description="System status, operational controls, and export tooling."
+      actions={(
+        <button onClick={handleLogout} className="btn btn-secondary">
+          Logout
+        </button>
+      )}
+    >
       <AdminResultBanner result={actionResult} />
       <AdminQuickActions
         actionLoading={actionLoading}
@@ -81,7 +84,6 @@ export default function AdminDashboardPageClient() {
         onStateChange={(updater) => setExportState((current) => updater(current))}
         onSubmit={handleExport}
       />
-      <AdminNavigationLinks />
-    </div>
+    </AdminPageShell>
   );
 }

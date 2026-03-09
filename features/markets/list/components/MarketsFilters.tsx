@@ -45,8 +45,8 @@ export function MarketsFilters({
             />
           </div>
 
-          <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:w-auto lg:flex-wrap">
-            <label className="col-span-2 flex min-h-[46px] items-center justify-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-2.5 text-sm transition-colors hover:border-[var(--accent-gold)] sm:col-span-1 lg:justify-start">
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:w-auto lg:flex-wrap">
+            <label className="flex min-h-[46px] items-center justify-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-2.5 text-sm transition-colors hover:border-[var(--accent-gold)] sm:justify-start">
               <input
                 type="checkbox"
                 checked={cohortBets}

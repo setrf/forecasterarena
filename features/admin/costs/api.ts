@@ -11,7 +11,7 @@ export async function fetchAdminCostsData(): Promise<{
 }> {
   const response = await fetch('/api/admin/costs');
   if (!response.ok) {
-    throw new Error('Failed to load admin costs');
+    throw new Error(response.status === 401 ? 'unauthorized' : 'Failed to load admin costs');
   }
 
   const payload = await response.json() as AdminCostsPayload;

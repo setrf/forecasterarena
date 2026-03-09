@@ -15,6 +15,31 @@ export function AdminExportSection({
   onStateChange,
   onSubmit
 }: AdminExportSectionProps) {
+  function toLocalInputValue(isoValue: string) {
+    if (!isoValue) return '';
+    const date = new Date(isoValue);
+    if (Number.isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset();
+    return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
+  }
+
+  function toIsoValue(localValue: string) {
+    if (!localValue) return '';
+    const date = new Date(localValue);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString();
+  }
+
+  function applyPreset(hours: number) {
+    const to = new Date();
+    const from = new Date(to.getTime() - hours * 60 * 60 * 1000);
+    onStateChange((state) => ({
+      ...state,
+      from: from.toISOString(),
+      to: to.toISOString()
+    }));
+  }
+
   return (
     <div className="glass-card p-6 mb-10 border border-[var(--border-medium)]">
       <div className="flex items-center justify-between mb-4">
@@ -56,32 +81,46 @@ export function AdminExportSection({
             className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none"
             placeholder="e.g. 1765150233693-eqaag1un5 (cohort UUID)"
           />
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            Use the cohort UUID from the cohorts page or admin dashboard.
+            {' '}
+            <a href="/cohorts" target="_blank" rel="noreferrer" className="text-[var(--accent-gold)] hover:text-[var(--accent-gold-muted)]">
+              Open cohorts list
+            </a>
+            {' '}
+            to copy an ID.
+          </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="admin-export-from" className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">From (ISO)</label>
+            <label htmlFor="admin-export-from" className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">From</label>
             <input
               id="admin-export-from"
-              type="text"
+              type="datetime-local"
               required
-              value={exportState.from}
-              onChange={(event) => onStateChange((state) => ({ ...state, from: event.target.value }))}
+              value={toLocalInputValue(exportState.from)}
+              onChange={(event) => onStateChange((state) => ({ ...state, from: toIsoValue(event.target.value) }))}
               className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none"
-              placeholder="2025-12-01T00:00:00Z"
             />
           </div>
           <div>
-            <label htmlFor="admin-export-to" className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">To (ISO)</label>
+            <label htmlFor="admin-export-to" className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">To</label>
             <input
               id="admin-export-to"
-              type="text"
+              type="datetime-local"
               required
-              value={exportState.to}
-              onChange={(event) => onStateChange((state) => ({ ...state, to: event.target.value }))}
+              value={toLocalInputValue(exportState.to)}
+              onChange={(event) => onStateChange((state) => ({ ...state, to: toIsoValue(event.target.value) }))}
               className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none"
-              placeholder="2025-12-03T00:00:00Z"
             />
           </div>
+        </div>
+        <div className="md:col-span-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Quick range</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => applyPreset(24)}>Last 24h</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => applyPreset(72)}>Last 72h</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => applyPreset(168)}>Last 7d</button>
+          <span className="text-xs text-[var(--text-muted)]">Times are entered in your local timezone and sent as UTC.</span>
         </div>
         <div className="flex items-center gap-3">
           <input

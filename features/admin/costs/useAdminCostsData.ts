@@ -8,6 +8,7 @@ export function useAdminCostsData() {
   const [costsByModel, setCostsByModel] = useState<CostByModel[]>([]);
   const [summary, setSummary] = useState<CostSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadCosts() {
@@ -15,8 +16,12 @@ export function useAdminCostsData() {
         const result = await fetchAdminCostsData();
         setCostsByModel(result.costsByModel);
         setSummary(result.summary);
+        setError(null);
       } catch (error) {
         console.error('Error fetching costs:', error);
+        setError(error instanceof Error && error.message === 'unauthorized'
+          ? 'Admin authentication required to view cost data.'
+          : 'Unable to load admin cost data right now.');
       } finally {
         setLoading(false);
       }
@@ -34,6 +39,7 @@ export function useAdminCostsData() {
     costsByModel,
     summary,
     loading,
+    error,
     chartData
   };
 }

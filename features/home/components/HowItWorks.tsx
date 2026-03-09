@@ -45,7 +45,7 @@ export function HowItWorks({ integrated = false }: HowItWorksProps) {
           className="max-w-3xl"
         />
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--border-subtle)] rounded-xl md:rounded-2xl overflow-hidden">
+        <div className="grid grid-cols-1 gap-px bg-[var(--border-subtle)] rounded-xl md:rounded-2xl overflow-hidden sm:grid-cols-2 xl:grid-cols-4">
           {steps.map((step, index) => (
             <div
               key={step.num}
@@ -64,7 +64,7 @@ export function HowItWorks({ integrated = false }: HowItWorksProps) {
                 {step.num}
               </span>
               <h3 className="font-semibold text-base md:text-lg mb-2 md:mb-3">{step.title}</h3>
-              <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed">{step.description}</p>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{step.description}</p>
             </div>
           ))}
         </div>

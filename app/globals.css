@@ -473,6 +473,17 @@ h3 {
   background: var(--bg-elevated);
 }
 
+@media (max-width: 767px) {
+  .data-table th {
+    padding: 10px 12px;
+    font-size: 0.625rem;
+  }
+
+  .data-table td {
+    padding: 12px;
+  }
+}
+
 /* ========================================
    PROGRESS BAR - Market prices
    ======================================== */

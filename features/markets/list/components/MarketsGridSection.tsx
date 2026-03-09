@@ -48,7 +48,15 @@ export function MarketsGridSection({
             </svg>
           </div>
           <p className="text-xl font-medium mb-2">No markets found</p>
-          <p className="text-[var(--text-muted)]">Try adjusting your filters or sync markets first</p>
+          <p className="text-[var(--text-muted)] mb-6">Try adjusting your filters, clearing the search, or browsing all active markets.</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button onClick={onRetry} className="btn btn-secondary">
+              Refresh data
+            </button>
+            <a href="/methodology" className="btn btn-ghost">
+              How markets are selected
+            </a>
+          </div>
         </div>
       ) : (
         <>
