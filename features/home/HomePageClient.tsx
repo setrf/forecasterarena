@@ -37,6 +37,7 @@ export default function HomePageClient() {
           </div>
         </section>
       )}
+      <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />
       <PerformanceSection
         chartData={chartData}
         models={chartModels.length > 0 ? chartModels : models}
@@ -45,7 +46,6 @@ export default function HomePageClient() {
         onTimeRangeChange={setTimeRange}
         error={chartError}
       />
-      <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />
       <HowItWorks />
       <CTASection />
     </>

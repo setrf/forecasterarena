@@ -12,7 +12,7 @@ export function LeaderboardPreview({ data, hasRealData }: LeaderboardPreviewProp
   const rest = data.slice(3);
 
   return (
-    <section className="container-wide mx-auto px-6 py-12 md:py-16">
+    <section className="container-wide mx-auto px-6 py-8 md:py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
         <div>
           <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">LEADERBOARD</p>
