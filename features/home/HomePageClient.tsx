@@ -24,6 +24,14 @@ export default function HomePageClient() {
 
   return (
     <>
+      <PerformanceSection
+        chartData={chartData}
+        models={chartModels.length > 0 ? chartModels : models}
+        releaseChanges={chartReleaseChanges}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+        error={chartError}
+      />
       <HeroSection
         leader={leaderboard[0] || null}
         models={models}
@@ -37,14 +45,6 @@ export default function HomePageClient() {
           </div>
         </section>
       )}
-      <PerformanceSection
-        chartData={chartData}
-        models={chartModels.length > 0 ? chartModels : models}
-        releaseChanges={chartReleaseChanges}
-        timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
-        error={chartError}
-      />
       <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />
       <HowItWorks />
       <CTASection />
