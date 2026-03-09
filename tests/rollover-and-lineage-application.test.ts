@@ -142,6 +142,7 @@ describe('benchmark rollover and frozen lineage application', () => {
         actual_outcome: 1,
         brier_score: 0.16
       });
+      queries.resolveMarket(market.id, 'YES');
 
       const releaseResult = admin.createAdminModelReleaseRecord({
         family_id: family.id,

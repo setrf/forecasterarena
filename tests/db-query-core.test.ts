@@ -191,6 +191,7 @@ describe('db query modules - core operations', () => {
       db.pragma('foreign_keys = OFF');
       db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_insert');
       db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_update');
+      db.exec('DROP VIEW IF EXISTS decision_benchmark_identity_v');
       db.exec('DROP VIEW IF EXISTS agent_benchmark_identity_v');
       db.exec('ALTER TABLE agents RENAME TO agents_strict_backup');
       db.exec(`

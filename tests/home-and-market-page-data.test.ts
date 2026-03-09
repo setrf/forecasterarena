@@ -73,7 +73,8 @@ describe('home page data helpers', () => {
       models: [
         expect.objectContaining({ id: 'kimi-k2', displayName: 'Kimi' }),
         expect.objectContaining({ id: 'openai-gpt', legacy_model_id: 'gpt-5.1', displayName: 'GPT' })
-      ]
+      ],
+      releaseChanges: []
     });
   });
 });

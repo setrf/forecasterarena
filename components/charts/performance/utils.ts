@@ -147,11 +147,13 @@ export function getSundayMarkers(filteredData: PerformanceDataPoint[]): string[]
 }
 
 export function filterReleaseChanges(
-  releaseChanges: ReleaseChangeEvent[],
+  releaseChanges: ReleaseChangeEvent[] | undefined,
   timeRange: TimeRange
 ): ReleaseChangeEvent[] {
-  if (timeRange === 'ALL' || releaseChanges.length === 0) {
-    return releaseChanges;
+  const changes = releaseChanges ?? [];
+
+  if (timeRange === 'ALL' || changes.length === 0) {
+    return changes;
   }
 
   const now = new Date();
@@ -180,5 +182,5 @@ export function filterReleaseChanges(
       break;
   }
 
-  return releaseChanges.filter((event) => parseUTCTimestamp(event.date) >= cutoffDate);
+  return changes.filter((event) => parseUTCTimestamp(event.date) >= cutoffDate);
 }

@@ -30,6 +30,7 @@ describe('performance chart view model', () => {
           { date: '2026-03-07T00:00:00.000Z', alpha: 10500, beta: 10400 }
         ],
         models,
+        releaseChanges: [],
         timeRange: '1M',
         isolatedModel: 'alpha'
       });

@@ -157,6 +157,7 @@ describe('model identity query modules', () => {
       db.exec('DROP TRIGGER IF EXISTS cohorts_require_benchmark_config_update');
       db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_insert');
       db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_update');
+      db.exec('DROP VIEW IF EXISTS decision_benchmark_identity_v');
       db.exec('DROP VIEW IF EXISTS agent_benchmark_identity_v');
       db.exec('ALTER TABLE cohorts RENAME TO cohorts_strict_backup');
       db.exec(`

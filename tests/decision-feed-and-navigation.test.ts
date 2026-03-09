@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fetchRecentDecisions } from '@/components/decision-feed/api';
 import { getDecisionActionStyle, hasDecisionReasoning } from '@/components/decision-feed/utils';
-import { ABOUT_NAV_LINK, PUBLIC_NAV_LINKS } from '@/components/navigation/config';
+import { PUBLIC_NAV_LINKS } from '@/components/navigation/config';
 import { isNavActive } from '@/components/navigation/utils';
 
 afterEach(() => {
@@ -53,9 +53,9 @@ describe('navigation helpers', () => {
       '/models',
       '/cohorts',
       '/markets',
-      '/methodology'
+      '/methodology',
+      '/about'
     ]);
-    expect(ABOUT_NAV_LINK).toEqual({ href: '/about', label: 'About' });
     expect(isNavActive('/', '/')).toBe(true);
     expect(isNavActive('/models/gpt-5', '/models')).toBe(true);
     expect(isNavActive('/about', '/models')).toBe(false);

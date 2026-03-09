@@ -245,6 +245,81 @@ describe('db query modules - support and reporting', () => {
     });
   });
 
+  it('prefers frozen decision lineage and falls back to the agent lineage snapshot for trades', async () => {
+    await withModules(async ({ agents, cohorts, db }) => {
+      const { getTradeLineageSnapshot } = await import('@/lib/db/queries/trade-lineage');
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+      const lineage = db.prepare(`
+        SELECT family_id, release_id, benchmark_config_model_id
+        FROM agents
+        WHERE id = ?
+      `).get(agent!.id) as {
+        family_id: string;
+        release_id: string;
+        benchmark_config_model_id: string;
+      };
+
+      db.prepare(`
+        INSERT INTO decisions (
+          id,
+          agent_id,
+          cohort_id,
+          decision_week,
+          decision_timestamp,
+          prompt_system,
+          prompt_user,
+          retry_count,
+          action,
+          family_id,
+          release_id,
+          benchmark_config_model_id
+        ) VALUES (?, ?, ?, 1, ?, 'system', 'user', 0, 'HOLD', ?, ?, ?)
+      `).run(
+        'decision-with-lineage',
+        agent!.id,
+        cohort.id,
+        '2025-01-01T00:00:00.000Z',
+        lineage.family_id,
+        lineage.release_id,
+        lineage.benchmark_config_model_id
+      );
+
+      db.prepare(`
+        INSERT INTO decisions (
+          id,
+          agent_id,
+          cohort_id,
+          decision_week,
+          decision_timestamp,
+          prompt_system,
+          prompt_user,
+          retry_count,
+          action
+        ) VALUES (?, ?, ?, 2, ?, 'system', 'user', 0, 'HOLD')
+      `).run(
+        'decision-without-lineage',
+        agent!.id,
+        cohort.id,
+        '2025-01-02T00:00:00.000Z'
+      );
+
+      expect(getTradeLineageSnapshot({
+        agentId: agent!.id,
+        decisionId: 'decision-with-lineage'
+      })).toEqual(lineage);
+
+      expect(getTradeLineageSnapshot({
+        agentId: agent!.id,
+        decisionId: 'decision-without-lineage'
+      })).toEqual(lineage);
+
+      expect(() => getTradeLineageSnapshot({
+        agentId: 'missing-agent'
+      })).toThrow('Agent missing-agent is missing frozen trade lineage');
+    });
+  });
+
   it('infers frozen lineage for decision-linked API cost rows', async () => {
     await withModules(async ({ agents, cohorts, costs, db }) => {
       const cohort = cohorts.createCohort();

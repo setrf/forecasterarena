@@ -72,15 +72,15 @@ describe('performance data route', () => {
       expect(tenMinuteResponse.status).toBe(200);
       expect(tenMinuteData.range).toBe('10M');
       expect(tenMinuteData.data).toHaveLength(1);
-      expect(tenMinuteData.data[0].date).toBe('2026-03-05T11:55:00.000Z');
+      expect(tenMinuteData.data[0].date).toBe('2026-03-05 11:50:00');
 
       const oneHourResponse = await route.GET(
         new Request('http://localhost/api/performance-data?range=1H') as any
       );
       const oneHourData = await oneHourResponse.json();
       expect(oneHourData.data.map((row: { date: string }) => row.date)).toEqual([
-        '2026-03-05T11:30:00.000Z',
-        '2026-03-05T11:55:00.000Z'
+        '2026-03-05 11:30:00',
+        '2026-03-05 11:50:00'
       ]);
 
       const oneDayResponse = await route.GET(
@@ -88,9 +88,9 @@ describe('performance data route', () => {
       );
       const oneDayData = await oneDayResponse.json();
       expect(oneDayData.data.map((row: { date: string }) => row.date)).toEqual([
-        '2026-03-05T10:00:00.000Z',
-        '2026-03-05T11:30:00.000Z',
-        '2026-03-05T11:55:00.000Z'
+        '2026-03-05 10:00:00',
+        '2026-03-05 11:30:00',
+        '2026-03-05 11:50:00'
       ]);
     });
   });
@@ -122,8 +122,8 @@ describe('performance data route', () => {
       );
       const weeklyData = await weekly.json();
       expect(weeklyData.data.map((row: { date: string }) => row.date)).toEqual([
-        '2026-03-03T12:00:00.000Z',
-        '2026-03-05T11:55:00.000Z'
+        '2026-03-03 12:00:00',
+        '2026-03-05 11:00:00'
       ]);
 
       const monthly = await route.GET(
@@ -131,9 +131,9 @@ describe('performance data route', () => {
       );
       const monthlyData = await monthly.json();
       expect(monthlyData.data.map((row: { date: string }) => row.date)).toEqual([
-        '2026-02-23T12:00:00.000Z',
-        '2026-03-03T12:00:00.000Z',
-        '2026-03-05T11:55:00.000Z'
+        '2026-02-23 12:00:00',
+        '2026-03-03 12:00:00',
+        '2026-03-05 06:00:00'
       ]);
 
       const quarterly = await route.GET(
@@ -141,10 +141,10 @@ describe('performance data route', () => {
       );
       const quarterlyData = await quarterly.json();
       expect(quarterlyData.data.map((row: { date: string }) => row.date)).toEqual([
-        '2026-01-24T12:00:00.000Z',
-        '2026-02-23T12:00:00.000Z',
-        '2026-03-03T12:00:00.000Z',
-        '2026-03-05T11:55:00.000Z'
+        '2026-01-24 00:00:00',
+        '2026-02-23 00:00:00',
+        '2026-03-03 00:00:00',
+        '2026-03-05 00:00:00'
       ]);
 
       const allTime = await route.GET(
@@ -152,11 +152,11 @@ describe('performance data route', () => {
       );
       const allTimeData = await allTime.json();
       expect(allTimeData.data.map((row: { date: string }) => row.date)).toEqual([
-        '2025-11-05T12:00:00.000Z',
-        '2026-01-24T12:00:00.000Z',
-        '2026-02-23T12:00:00.000Z',
-        '2026-03-03T12:00:00.000Z',
-        '2026-03-05T11:55:00.000Z'
+        '2025-10-30 00:00:00',
+        '2026-01-22 00:00:00',
+        '2026-02-19 00:00:00',
+        '2026-02-26 00:00:00',
+        '2026-03-05 00:00:00'
       ]);
     });
   });

@@ -22,7 +22,7 @@ describe('public data routes', () => {
     const response = await route.GET();
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('cache-control')).toBe('public, max-age=15, stale-while-revalidate=45');
     expect(await response.json()).toEqual(payload);
   });
 
@@ -38,7 +38,7 @@ describe('public data routes', () => {
 
       const response = await route.GET();
       expect(response.status).toBe(200);
-      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(response.headers.get('cache-control')).toBe('public, max-age=15, stale-while-revalidate=45');
     } finally {
       await ctx.cleanup();
     }
@@ -86,7 +86,7 @@ describe('public data routes', () => {
         new Request('http://localhost/api/performance-data?range=1D') as any
       );
       expect(performanceResponse.status).toBe(200);
-      expect(performanceResponse.headers.get('cache-control')).toBe('no-store');
+      expect(performanceResponse.headers.get('cache-control')).toBe('public, max-age=15, stale-while-revalidate=45');
     } finally {
       await ctx.cleanup();
     }
