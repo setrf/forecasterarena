@@ -13,68 +13,69 @@ export default function AboutPageContent() {
         containerClassName="container-medium px-6"
       />
 
-      <section className="relative py-12 overflow-hidden">
-        <div className="container-medium mx-auto px-6">
-          <div className="max-w-3xl">
-            <div className="accent-line mb-4" />
-            <h2 className="text-3xl md:text-4xl mb-6">
-              Traditional benchmarks fail when models memorize answers.
-              <br />
-              <span className="text-[var(--text-secondary)]">We test prediction, not recall.</span>
-            </h2>
-            <p className="text-lg text-[var(--text-secondary)] leading-relaxed">
-              Forecaster Arena uses real prediction markets from Polymarket.
-              Models make forecasts about future events, outcomes that cannot exist
-              in any training data because they haven&apos;t happened yet.
-            </p>
+      <div className="section-band section-band--soft">
+        <section className="relative py-12 overflow-hidden">
+          <div className="container-medium mx-auto px-6">
+            <div className="max-w-3xl">
+              <div className="accent-line mb-4" />
+              <h2 className="text-3xl md:text-4xl mb-6">
+                Traditional benchmarks fail when models memorize answers.
+                <br />
+                <span className="text-[var(--text-secondary)]">We test prediction, not recall.</span>
+              </h2>
+              <p className="text-lg text-[var(--text-secondary)] leading-relaxed">
+                Forecaster Arena uses real prediction markets from Polymarket.
+                Models make forecasts about future events, outcomes that cannot exist
+                in any training data because they haven&apos;t happened yet.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="py-12 bg-[var(--bg-secondary)] relative">
-        <div className="absolute inset-0 dot-grid opacity-20" />
-        <div className="container-wide mx-auto px-6 relative z-10">
-          <SectionHeading
-            eyebrow="Philosophy"
-            title="Core Principles"
-            description="The rules that keep the arena rigorous, fair, and transparent."
-          />
+        <section className="py-12 relative">
+          <div className="container-wide mx-auto px-6 relative z-10">
+            <SectionHeading
+              eyebrow="Philosophy"
+              title="Core Principles"
+              description="The rules that keep the arena rigorous, fair, and transparent."
+            />
 
-          <div className="grid md:grid-cols-3 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden">
-            {[
-              {
-                num: '01',
-                title: 'Rigorous Methodology',
-                desc: 'Every decision documented. Every prompt stored. Every calculation reproducible. Meeting standards for academic publication.',
-                accent: 'var(--accent-gold)'
-              },
-              {
-                num: '02',
-                title: 'Fair Comparison',
-                desc: 'Identical prompts, starting capital, and constraints for all models. Temperature = 0 for reproducibility. Level playing field.',
-                accent: 'var(--accent-blue)'
-              },
-              {
-                num: '03',
-                title: 'Complete Transparency',
-                desc: 'Open source codebase. Public methodology documentation. Anyone can verify results or build upon our work.',
-                accent: 'var(--accent-violet)'
-              }
-            ].map((item) => (
-              <div key={item.num} className="bg-[var(--bg-secondary)] p-8 md:p-10">
-                <span
-                  className="font-mono text-5xl font-bold opacity-20 block mb-6"
-                  style={{ color: item.accent }}
-                >
-                  {item.num}
-                </span>
-                <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                <p className="text-[var(--text-secondary)] leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
+            <div className="grid md:grid-cols-3 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden">
+              {[
+                {
+                  num: '01',
+                  title: 'Rigorous Methodology',
+                  desc: 'Every decision documented. Every prompt stored. Every calculation reproducible. Meeting standards for academic publication.',
+                  accent: 'var(--accent-gold)'
+                },
+                {
+                  num: '02',
+                  title: 'Fair Comparison',
+                  desc: 'Identical prompts, starting capital, and constraints for all models. Temperature = 0 for reproducibility. Level playing field.',
+                  accent: 'var(--accent-blue)'
+                },
+                {
+                  num: '03',
+                  title: 'Complete Transparency',
+                  desc: 'Open source codebase. Public methodology documentation. Anyone can verify results or build upon our work.',
+                  accent: 'var(--accent-violet)'
+                }
+              ].map((item) => (
+                <div key={item.num} className="bg-[var(--bg-secondary)] p-8 md:p-10">
+                  <span
+                    className="font-mono text-5xl font-bold opacity-20 block mb-6"
+                    style={{ color: item.accent }}
+                  >
+                    {item.num}
+                  </span>
+                  <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
+                  <p className="text-[var(--text-secondary)] leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <section className="py-12">
         <div className="container-wide mx-auto px-6">
@@ -165,66 +166,67 @@ export default function AboutPageContent() {
         </div>
       </section>
 
-      <section className="py-12">
-        <div className="container-medium mx-auto px-6">
-          <div className="card p-8 md:p-10 grid gap-6 md:grid-cols-[1.3fr,1fr] items-center">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] flex items-center justify-center text-lg font-semibold">
-                MG
+      <div className="section-band section-band--soft">
+        <section className="py-12">
+          <div className="container-medium mx-auto px-6">
+            <div className="card p-8 md:p-10 grid gap-6 md:grid-cols-[1.3fr,1fr] items-center">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] flex items-center justify-center text-lg font-semibold">
+                  MG
+                </div>
+                <div>
+                  <p className="text-[var(--accent-gold)] font-mono text-xs tracking-wider mb-1">CONTACT</p>
+                  <h3 className="text-2xl font-semibold leading-tight">Mert Gulsun</h3>
+                  <p className="text-[var(--text-secondary)]">UC Berkeley</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[var(--accent-gold)] font-mono text-xs tracking-wider mb-1">CONTACT</p>
-                <h3 className="text-2xl font-semibold leading-tight">Mert Gulsun</h3>
-                <p className="text-[var(--text-secondary)]">UC Berkeley</p>
+              <div className="flex flex-wrap gap-3">
+                <a className="btn btn-secondary" href="https://mertgulsun.com" target="_blank" rel="noreferrer">
+                  Portfolio
+                </a>
+                <a className="btn btn-primary" href="https://linkedin.com/in/mert-gulsun" target="_blank" rel="noreferrer">
+                  LinkedIn
+                </a>
+                <a className="btn btn-outline" href="https://github.com/setrf" target="_blank" rel="noreferrer">
+                  GitHub
+                </a>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="py-12 relative">
+          <div className="container-medium mx-auto px-6 relative z-10">
+            <SectionHeading
+              eyebrow="Stack"
+              title="Built With"
+              description="The application, data, and model infrastructure behind the benchmark."
+            />
+
             <div className="flex flex-wrap gap-3">
-              <a className="btn btn-secondary" href="https://mertgulsun.com" target="_blank" rel="noreferrer">
-                Portfolio
-              </a>
-              <a className="btn btn-primary" href="https://linkedin.com/in/mert-gulsun" target="_blank" rel="noreferrer">
-                LinkedIn
-              </a>
-              <a className="btn btn-outline" href="https://github.com/setrf" target="_blank" rel="noreferrer">
-                GitHub
-              </a>
+              {[
+                { name: 'Next.js 14', role: 'Framework' },
+                { name: 'TypeScript', role: 'Language' },
+                { name: 'SQLite', role: 'Database' },
+                { name: 'OpenRouter', role: 'LLM API' },
+                { name: 'Polymarket', role: 'Market Data' },
+                { name: 'Tailwind', role: 'Styling' },
+                { name: 'Recharts', role: 'Charts' },
+              ].map((tech) => (
+                <div
+                  key={tech.name}
+                  className="flex items-center gap-3 px-5 py-3 bg-[var(--bg-primary)] rounded-xl border border-[var(--border-subtle)] hover:border-[var(--border-medium)] transition-colors"
+                >
+                  <span className="font-medium">{tech.name}</span>
+                  <span className="text-xs text-[var(--text-muted)] px-2 py-0.5 bg-[var(--bg-tertiary)] rounded">
+                    {tech.role}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="py-12 bg-[var(--bg-secondary)] relative">
-        <div className="absolute inset-0 dot-grid opacity-20" />
-        <div className="container-medium mx-auto px-6 relative z-10">
-          <SectionHeading
-            eyebrow="Stack"
-            title="Built With"
-            description="The application, data, and model infrastructure behind the benchmark."
-          />
-
-          <div className="flex flex-wrap gap-3">
-            {[
-              { name: 'Next.js 14', role: 'Framework' },
-              { name: 'TypeScript', role: 'Language' },
-              { name: 'SQLite', role: 'Database' },
-              { name: 'OpenRouter', role: 'LLM API' },
-              { name: 'Polymarket', role: 'Market Data' },
-              { name: 'Tailwind', role: 'Styling' },
-              { name: 'Recharts', role: 'Charts' },
-            ].map((tech) => (
-              <div
-                key={tech.name}
-                className="flex items-center gap-3 px-5 py-3 bg-[var(--bg-primary)] rounded-xl border border-[var(--border-subtle)] hover:border-[var(--border-medium)] transition-colors"
-              >
-                <span className="font-medium">{tech.name}</span>
-                <span className="text-xs text-[var(--text-muted)] px-2 py-0.5 bg-[var(--bg-tertiary)] rounded">
-                  {tech.role}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <section className="py-12">
         <div className="container-medium mx-auto px-6 text-center">

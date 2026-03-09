@@ -1,6 +1,10 @@
 import { SectionHeading } from '@/components/ui/SectionHeading';
 
-export function HowItWorks() {
+interface HowItWorksProps {
+  integrated?: boolean;
+}
+
+export function HowItWorks({ integrated = false }: HowItWorksProps) {
   const steps = [
     {
       num: '01',
@@ -30,8 +34,8 @@ export function HowItWorks() {
 
   return (
     <section className="relative py-12 md:py-16 overflow-hidden">
-      <div className="absolute inset-0 bg-[var(--bg-secondary)]" />
-      <div className="absolute inset-0 dot-grid opacity-30" />
+      {!integrated && <div className="absolute inset-0 bg-[var(--bg-secondary)]" />}
+      {!integrated && <div className="absolute inset-0 dot-grid opacity-30" />}
 
       <div className="container-wide mx-auto px-6 relative z-10">
         <SectionHeading

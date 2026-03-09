@@ -47,8 +47,10 @@ export default function HomePageClient() {
           </div>
         </section>
       )}
-      <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />
-      <HowItWorks />
+      <div className="section-band">
+        <LeaderboardPreview data={leaderboard} hasRealData={hasRealData} />
+        <HowItWorks integrated />
+      </div>
       <CTASection />
     </>
   );
