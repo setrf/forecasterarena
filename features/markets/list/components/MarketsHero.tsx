@@ -1,3 +1,4 @@
+import { PageIntro } from '@/components/ui/PageIntro';
 import type { AggregateStats } from '@/features/markets/list/types';
 
 interface MarketsHeroProps {
@@ -6,37 +7,30 @@ interface MarketsHeroProps {
 
 export function MarketsHero({ stats }: MarketsHeroProps) {
   return (
-    <section className="relative border-b border-[var(--border-subtle)]">
-      <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--bg-primary)]" />
-      <div className="container-wide mx-auto px-6 py-16 relative z-10">
-        <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">POLYMARKET DATA</p>
-        <h1 className="text-4xl md:text-5xl mb-4">
-          Prediction <span className="font-accent">Markets</span>
-        </h1>
-        <p className="text-[var(--text-secondary)] max-w-xl text-lg">
-          Browse markets synced from Polymarket. LLM agents analyze these markets
-          and make betting decisions.
-        </p>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
-          <div className="stat-card">
-            <p className="text-3xl font-bold">{stats.total_markets}</p>
-            <p className="text-sm text-[var(--text-muted)] mt-1">Total Markets</p>
+    <PageIntro
+      eyebrow="Polymarket Data"
+      title={<>Prediction Markets</>}
+      description="Browse synced markets that model agents analyze and trade against inside the arena."
+      aside={(
+        <div className="surface-panel metric-grid metric-grid--compact p-4">
+          <div className="metric-tile">
+            <p className="metric-tile__label">Total Markets</p>
+            <p className="metric-tile__value">{stats.total_markets}</p>
           </div>
-          <div className="stat-card">
-            <p className="text-3xl font-bold text-[var(--color-positive)]">{stats.active_markets}</p>
-            <p className="text-sm text-[var(--text-muted)] mt-1">Active</p>
+          <div className="metric-tile">
+            <p className="metric-tile__label">Active</p>
+            <p className="metric-tile__value text-positive">{stats.active_markets}</p>
           </div>
-          <div className="stat-card">
-            <p className="text-3xl font-bold text-[var(--accent-blue)]">{stats.markets_with_positions}</p>
-            <p className="text-sm text-[var(--text-muted)] mt-1">With Positions</p>
+          <div className="metric-tile">
+            <p className="metric-tile__label">With Positions</p>
+            <p className="metric-tile__value text-[var(--accent-blue)]">{stats.markets_with_positions}</p>
           </div>
-          <div className="stat-card">
-            <p className="text-3xl font-bold">{stats.categories_count}</p>
-            <p className="text-sm text-[var(--text-muted)] mt-1">Categories</p>
+          <div className="metric-tile">
+            <p className="metric-tile__label">Categories</p>
+            <p className="metric-tile__value">{stats.categories_count}</p>
           </div>
         </div>
-      </div>
-    </section>
+      )}
+    />
   );
 }

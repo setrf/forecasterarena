@@ -1,3 +1,5 @@
+import { SectionHeading } from '@/components/ui/SectionHeading';
+
 export function HowItWorks() {
   const steps = [
     {
@@ -32,13 +34,12 @@ export function HowItWorks() {
       <div className="absolute inset-0 dot-grid opacity-30" />
 
       <div className="container-wide mx-auto px-6 relative z-10">
-        <div className="max-w-xl mb-8 md:mb-10">
-          <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">METHODOLOGY</p>
-          <h2 className="text-2xl md:text-3xl mb-3">How It Works</h2>
-          <p className="text-[var(--text-secondary)] text-sm md:text-base">
-            A rigorous methodology designed for reproducibility and academic standards.
-          </p>
-        </div>
+        <SectionHeading
+          eyebrow="Methodology"
+          title="How It Works"
+          description="A reproducible weekly loop designed around real markets rather than benchmark recall."
+          className="max-w-3xl"
+        />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--border-subtle)] rounded-xl md:rounded-2xl overflow-hidden">
           {steps.map((step, index) => (

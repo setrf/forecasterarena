@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageIntro } from '@/components/ui/PageIntro';
 
 interface ChangelogEntry {
   version: string;
@@ -33,13 +34,12 @@ const CHANGELOG: ChangelogEntry[] = [
 export default function ChangelogPageContent() {
   return (
     <div className="container-wide mx-auto px-6 py-12">
-      <div className="mb-12">
-        <h1 className="text-3xl font-bold mb-4">Changelog</h1>
-        <p className="text-[var(--text-secondary)] max-w-2xl">
-          Version history of the Forecaster Arena methodology. Each version documents
-          changes to scoring, prompts, or competition structure for full transparency
-          and reproducibility.
-        </p>
+      <div className="-mx-6 mb-12">
+        <PageIntro
+          eyebrow="Changelog"
+          title="Methodology and platform changes"
+          description="Version history of the arena methodology, scoring, prompts, and competition structure."
+        />
       </div>
 
       <div className="max-w-3xl">

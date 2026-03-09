@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SectionHeading } from '@/components/ui/SectionHeading';
 import { formatDecimal, formatRatePercent, formatSignedUsd } from '@/lib/format/display';
 import type { LeaderboardEntry } from '@/features/home/types';
 
@@ -13,18 +14,19 @@ export function LeaderboardPreview({ data, hasRealData }: LeaderboardPreviewProp
 
   return (
     <section className="container-wide mx-auto px-6 py-8 md:py-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
-        <div>
-          <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">LEADERBOARD</p>
-          <h2 className="text-2xl md:text-3xl">Current Standings</h2>
-        </div>
-        <Link href="/models" className="btn btn-ghost group">
+      <SectionHeading
+        eyebrow="Leaderboard"
+        title="Current Standings"
+        description="Live ranking across the benchmark families."
+        action={(
+          <Link href="/models" className="btn btn-ghost group">
           View All
           <svg className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
-        </Link>
-      </div>
+          </Link>
+        )}
+      />
 
       <div className="grid md:grid-cols-3 gap-6 mb-6">
         {top3.map((entry, index) => (

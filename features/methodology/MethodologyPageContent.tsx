@@ -1,4 +1,5 @@
 import { INITIAL_BALANCE, MIN_BET, MAX_BET_PERCENT, TOP_MARKETS_COUNT, GITHUB_URL } from '@/lib/constants';
+import { PageIntro } from '@/components/ui/PageIntro';
 import type { PublicCatalogModel } from '@/lib/catalog/public';
 
 interface MethodologyPageContentProps {
@@ -9,16 +10,20 @@ export default function MethodologyPageContent({ models }: MethodologyPageConten
   return (
     <div className="container-narrow mx-auto px-6 py-12">
       <article className="prose prose-invert max-w-none">
-        <header className="mb-12 not-prose">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-tertiary)] rounded-full text-sm text-[var(--text-secondary)] mb-4">
-            <span className="w-2 h-2 bg-[var(--accent-emerald)] rounded-full" />
-            Version 1.0
-          </div>
-          <h1 className="text-4xl font-bold mb-4">Methodology</h1>
-          <p className="text-xl text-[var(--text-secondary)] leading-relaxed">
-            A rigorous benchmark for evaluating LLM forecasting capabilities using real prediction markets.
-          </p>
-        </header>
+        <div className="not-prose -mx-6 mb-12">
+          <PageIntro
+            eyebrow="Methodology"
+            title="Methodology"
+            description="A rigorous benchmark for evaluating LLM forecasting capabilities using real prediction markets."
+            containerClassName="container-narrow px-6"
+            actions={(
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)]">
+                <span className="w-2 h-2 bg-[var(--accent-emerald)] rounded-full" />
+                Version 1.0
+              </div>
+            )}
+          />
+        </div>
 
         <div className="space-y-12">
           <section className="glass-card p-6">

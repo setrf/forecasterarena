@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { PageIntro } from '@/components/ui/PageIntro';
 import type { CostByModel } from '@/features/admin/costs/types';
 import { useAdminCostsData } from '@/features/admin/costs/useAdminCostsData';
 import { formatCost, formatTokens } from '@/features/admin/costs/utils';
@@ -20,10 +21,11 @@ export default function AdminCostsPageClient() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-2">API Costs</h1>
-        <p className="text-[var(--text-secondary)]">
-          Track OpenRouter API spending across all model families
-        </p>
+        <PageIntro
+          eyebrow="Admin"
+          title="API Costs"
+          description="Track OpenRouter API spending across all model families."
+        />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

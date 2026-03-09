@@ -1,27 +1,17 @@
 import Link from 'next/link';
+import { PageIntro } from '@/components/ui/PageIntro';
+import { SectionHeading } from '@/components/ui/SectionHeading';
 import { GITHUB_URL } from '@/lib/constants';
 
 export default function AboutPageContent() {
   return (
     <div className="min-h-screen">
-      <section className="relative border-b border-[var(--border-subtle)]">
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--bg-primary)]" />
-        <div className="absolute inset-0 dot-grid opacity-30" />
-        <div className="glow-orb -top-40 right-0 opacity-20" />
-
-        <div className="container-medium mx-auto px-6 py-14 relative z-10">
-          <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-3">ABOUT</p>
-          <h1 className="text-4xl md:text-6xl mb-6 max-w-3xl">
-            Reality as the
-            <br />
-            <span className="font-accent">Ultimate Benchmark</span>
-          </h1>
-          <p className="text-xl text-[var(--text-secondary)] max-w-2xl leading-relaxed">
-            An academic-grade benchmark for evaluating AI forecasting capabilities
-            using real prediction markets.
-          </p>
-        </div>
-      </section>
+      <PageIntro
+        eyebrow="About"
+        title="Reality as the Ultimate Benchmark"
+        description="An academic-grade benchmark for evaluating AI forecasting capabilities using real prediction markets."
+        containerClassName="container-medium px-6"
+      />
 
       <section className="relative py-12 overflow-hidden">
         <div className="container-medium mx-auto px-6">
@@ -44,10 +34,11 @@ export default function AboutPageContent() {
       <section className="py-12 bg-[var(--bg-secondary)] relative">
         <div className="absolute inset-0 dot-grid opacity-20" />
         <div className="container-wide mx-auto px-6 relative z-10">
-          <div className="mb-8">
-            <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">PHILOSOPHY</p>
-            <h2 className="text-3xl">Core Principles</h2>
-          </div>
+          <SectionHeading
+            eyebrow="Philosophy"
+            title="Core Principles"
+            description="The rules that keep the arena rigorous, fair, and transparent."
+          />
 
           <div className="grid md:grid-cols-3 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden">
             {[
@@ -87,10 +78,11 @@ export default function AboutPageContent() {
 
       <section className="py-12">
         <div className="container-wide mx-auto px-6">
-          <div className="mb-8">
-            <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">METRICS</p>
-            <h2 className="text-3xl">What We Measure</h2>
-          </div>
+          <SectionHeading
+            eyebrow="Metrics"
+            title="What We Measure"
+            description="Calibration, returns, consistency, decision quality, and cost discipline."
+          />
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             <div className="card-featured p-6">
@@ -204,10 +196,11 @@ export default function AboutPageContent() {
       <section className="py-12 bg-[var(--bg-secondary)] relative">
         <div className="absolute inset-0 dot-grid opacity-20" />
         <div className="container-medium mx-auto px-6 relative z-10">
-          <div className="mb-6">
-            <p className="text-[var(--accent-gold)] font-mono text-sm tracking-wider mb-2">STACK</p>
-            <h2 className="text-3xl">Built With</h2>
-          </div>
+          <SectionHeading
+            eyebrow="Stack"
+            title="Built With"
+            description="The application, data, and model infrastructure behind the benchmark."
+          />
 
           <div className="flex flex-wrap gap-3">
             {[

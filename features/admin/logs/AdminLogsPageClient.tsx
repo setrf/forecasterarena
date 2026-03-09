@@ -1,5 +1,6 @@
 'use client';
 
+import { PageIntro } from '@/components/ui/PageIntro';
 import { formatRelativeTime } from '@/lib/utils';
 import { useAdminLogsController } from '@/features/admin/logs/useAdminLogsController';
 import { formatEventData, getSeverityStyle } from '@/features/admin/logs/utils';
@@ -21,28 +22,28 @@ export default function AdminLogsPageClient() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">System Logs</h1>
-          <p className="text-[var(--text-secondary)]">
-            Monitor system events and debug issues
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(event) => setAutoRefresh(event.target.checked)}
-              className="rounded border-[var(--border-medium)]"
-            />
-            Auto-refresh
-          </label>
-          <button onClick={fetchLogs} className="btn btn-secondary text-sm">
-            Refresh
-          </button>
-        </div>
+      <div className="mb-8">
+        <PageIntro
+          eyebrow="Admin"
+          title="System Logs"
+          description="Monitor operational events, warnings, and error trails."
+          actions={(
+            <>
+              <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(event) => setAutoRefresh(event.target.checked)}
+                  className="rounded border-[var(--border-medium)]"
+                />
+                Auto-refresh
+              </label>
+              <button onClick={fetchLogs} className="btn btn-secondary text-sm">
+                Refresh
+              </button>
+            </>
+          )}
+        />
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">

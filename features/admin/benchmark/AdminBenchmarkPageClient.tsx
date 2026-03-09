@@ -6,6 +6,7 @@ import { AdminBenchmarkCurrentLineup } from '@/features/admin/benchmark/componen
 import { AdminBenchmarkReleaseForm } from '@/features/admin/benchmark/components/AdminBenchmarkReleaseForm';
 import { AdminBenchmarkRolloverPreview } from '@/features/admin/benchmark/components/AdminBenchmarkRolloverPreview';
 import { useAdminBenchmarkController } from '@/features/admin/benchmark/useAdminBenchmarkController';
+import { PageIntro } from '@/components/ui/PageIntro';
 import { AdminLoginCard } from '@/features/admin/dashboard/components/AdminLoginCard';
 import { AdminNavigationLinks } from '@/features/admin/dashboard/components/AdminNavigationLinks';
 import { AdminResultBanner } from '@/features/admin/dashboard/components/AdminResultBanner';
@@ -78,16 +79,17 @@ export default function AdminBenchmarkPageClient() {
 
   return (
     <div className="container-wide mx-auto px-6 py-12">
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Benchmark Control</h1>
-          <p className="text-[var(--text-secondary)]">
-            Manage stable model families, exact releases, and future cohort lineups.
-          </p>
-        </div>
-        <button onClick={handleLogout} className="btn btn-secondary">
-          Logout
-        </button>
+      <div className="-mx-6 mb-8">
+        <PageIntro
+          eyebrow="Admin"
+          title="Benchmark Control"
+          description="Manage stable model families, exact releases, and future cohort lineups."
+          actions={(
+            <button onClick={handleLogout} className="btn btn-secondary">
+              Logout
+            </button>
+          )}
+        />
       </div>
 
       <AdminResultBanner result={result} />

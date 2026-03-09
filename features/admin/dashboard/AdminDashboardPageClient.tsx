@@ -7,6 +7,7 @@ import { AdminQuickActions } from '@/features/admin/dashboard/components/AdminQu
 import { AdminResultBanner } from '@/features/admin/dashboard/components/AdminResultBanner';
 import { AdminStatsGrid } from '@/features/admin/dashboard/components/AdminStatsGrid';
 import { useAdminDashboardController } from '@/features/admin/dashboard/useAdminDashboardController';
+import { PageIntro } from '@/components/ui/PageIntro';
 
 export default function AdminDashboardPageClient() {
   const {
@@ -54,16 +55,17 @@ export default function AdminDashboardPageClient() {
 
   return (
     <div className="container-wide mx-auto px-6 py-12">
-      <div className="flex justify-between items-center mb-10">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-[var(--text-secondary)]">
-            System status and controls
-          </p>
-        </div>
-        <button onClick={handleLogout} className="btn btn-secondary">
-          Logout
-        </button>
+      <div className="-mx-6 mb-10">
+        <PageIntro
+          eyebrow="Admin"
+          title="Admin Dashboard"
+          description="System status, operational controls, and export tooling."
+          actions={(
+            <button onClick={handleLogout} className="btn btn-secondary">
+              Logout
+            </button>
+          )}
+        />
       </div>
 
       <AdminResultBanner result={actionResult} />
