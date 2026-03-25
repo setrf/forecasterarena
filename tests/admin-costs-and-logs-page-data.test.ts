@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fetchAdminCostsData } from '@/features/admin/costs/api';
 import { formatCost, formatTokens } from '@/features/admin/costs/utils';
 import { fetchAdminLogsData } from '@/features/admin/logs/api';
+import { createAdminLogsRequestSequencer } from '@/features/admin/logs/useAdminLogsController';
 import { formatEventData, getSeverityStyle } from '@/features/admin/logs/utils';
 
 afterEach(() => {
@@ -69,7 +70,10 @@ describe('admin logs page data helpers', () => {
     await expect(fetchAdminLogsData('warning')).resolves.toEqual([
       expect.objectContaining({ id: 'log-1', severity: 'warning' })
     ]);
-    expect(fetchMock).toHaveBeenCalledWith('/api/admin/logs?severity=warning&limit=100');
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/logs?severity=warning&limit=100', {
+      cache: 'no-store',
+      signal: undefined
+    });
     expect(formatEventData('{"value":1}')).toEqual({ value: 1 });
     expect(formatEventData('not-json')).toEqual({ raw: 'not-json' });
     expect(getSeverityStyle('warning')).toEqual({
@@ -82,6 +86,23 @@ describe('admin logs page data helpers', () => {
   it('throws on non-ok admin log responses', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(mockResponse(false, {}, 500)));
     await expect(fetchAdminLogsData('all')).rejects.toThrow('Failed to load admin logs');
+  });
+
+  it('cancels superseded log requests and only treats the latest request as current', () => {
+    const sequencer = createAdminLogsRequestSequencer();
+
+    const first = sequencer.beginRequest();
+    expect(sequencer.isCurrentRequest(first.requestId)).toBe(true);
+    expect(first.signal.aborted).toBe(false);
+
+    const second = sequencer.beginRequest();
+    expect(first.signal.aborted).toBe(true);
+    expect(sequencer.isCurrentRequest(first.requestId)).toBe(false);
+    expect(sequencer.isCurrentRequest(second.requestId)).toBe(true);
+
+    sequencer.abortCurrentRequest();
+    expect(second.signal.aborted).toBe(true);
+    expect(sequencer.isCurrentRequest(second.requestId)).toBe(false);
   });
 });
 

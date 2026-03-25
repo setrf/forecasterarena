@@ -6,25 +6,78 @@ import {
   logoutAdmin,
   runAdminAction
 } from '@/features/admin/dashboard/api';
+import { applyAdminStatsFetchResult } from '@/features/admin/dashboard/useAdminDashboardController';
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe('admin dashboard api helpers', () => {
-  it('fetches stats and falls back to null on non-ok responses', async () => {
+  it('distinguishes unauthorized stats requests from authenticated failures', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(mockResponse(true, { active_cohorts: 1, total_agents: 7, markets_tracked: 12, total_api_cost: 3.14 }))
-      .mockResolvedValueOnce(mockResponse(false, { error: 'nope' }));
+      .mockResolvedValueOnce(mockResponse(false, { error: 'unauthorized' }, 401))
+      .mockResolvedValueOnce(mockResponse(false, { error: 'nope' }, 500));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(fetchAdminStats()).resolves.toEqual({
+      kind: 'authenticated',
+      stats: {
+        active_cohorts: 1,
+        total_agents: 7,
+        markets_tracked: 12,
+        total_api_cost: 3.14
+      }
+    });
+    await expect(fetchAdminStats()).resolves.toEqual({
+      kind: 'unauthorized'
+    });
+    await expect(fetchAdminStats()).resolves.toEqual({
+      kind: 'authenticated',
+      stats: null
+    });
+  });
+
+  it('keeps authenticated dashboard state when a stats refresh fails after auth is established', () => {
+    const currentStats = {
       active_cohorts: 1,
       total_agents: 7,
       markets_tracked: 12,
       total_api_cost: 3.14
+    };
+
+    expect(applyAdminStatsFetchResult(currentStats, {
+      kind: 'unauthorized'
+    })).toEqual({
+      isAuthenticated: false,
+      stats: null
     });
-    await expect(fetchAdminStats()).resolves.toBeNull();
+
+    expect(applyAdminStatsFetchResult(currentStats, {
+      kind: 'authenticated',
+      stats: null
+    })).toEqual({
+      isAuthenticated: true,
+      stats: currentStats
+    });
+
+    expect(applyAdminStatsFetchResult(null, {
+      kind: 'authenticated',
+      stats: {
+        active_cohorts: 2,
+        total_agents: 14,
+        markets_tracked: 18,
+        total_api_cost: 6.28
+      }
+    })).toEqual({
+      isAuthenticated: true,
+      stats: {
+        active_cohorts: 2,
+        total_agents: 14,
+        markets_tracked: 18,
+        total_api_cost: 6.28
+      }
+    });
   });
 
   it('normalizes login success and error responses', async () => {
@@ -77,9 +130,10 @@ describe('admin dashboard api helpers', () => {
   });
 });
 
-function mockResponse(ok: boolean, json: unknown) {
+function mockResponse(ok: boolean, json: unknown, status: number = ok ? 200 : 500) {
   return {
     ok,
+    status,
     json: async () => json
   };
 }
