@@ -11,7 +11,7 @@ export function AdminBenchmarkCurrentLineup({ overview }: AdminBenchmarkCurrentL
     <div className="glass-card p-6 mb-8 border border-[var(--border-medium)]">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-xl font-semibold">Current Default Lineup</h2>
+          <h2 className="heading-block">Current Default Lineup</h2>
           <p className="text-sm text-[var(--text-muted)]">
             Future cohorts will freeze this benchmark config unless a different config is promoted.
           </p>

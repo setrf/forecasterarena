@@ -3,13 +3,36 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useDecisionDetailData } from '@/features/decisions/detail/useDecisionDetailData';
-import type { Trade } from '@/features/decisions/detail/types';
+import type { DecisionDetailData, Trade } from '@/features/decisions/detail/types';
 import { formatDisplayDateTime } from '@/lib/utils';
 
-export default function DecisionDetailPageClient() {
+function parseDecisionJson(rawDecision: DecisionDetailData['decision']): Record<string, unknown> {
+  if (typeof rawDecision.parsed_response !== 'string' || rawDecision.parsed_response.trim() === '') {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(rawDecision.parsed_response) as unknown;
+    return parsed !== null && typeof parsed === 'object'
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return { error: 'Failed to parse decision JSON' };
+  }
+}
+
+interface DecisionDetailPageClientProps {
+  initialData?: DecisionDetailData | null;
+  decisionId?: string;
+}
+
+export default function DecisionDetailPageClient({
+  initialData = null,
+  decisionId
+}: DecisionDetailPageClientProps = {}) {
   const params = useParams<{ id: string }>();
-  const id = params.id;
-  const { data, loading, error } = useDecisionDetailData(id);
+  const id = decisionId ?? params.id;
+  const { data, loading, error } = useDecisionDetailData(id, initialData);
   const decision = data?.decision ?? null;
   const trades = data?.trades ?? [];
 
@@ -24,7 +47,7 @@ export default function DecisionDetailPageClient() {
   if (error || !decision) {
     return (
       <div className="container-wide mx-auto px-6 py-20 text-center">
-        <h1 className="text-2xl font-bold mb-4">{error || 'Decision Not Found'}</h1>
+        <h1 className="heading-block mb-4">{error || 'Decision Not Found'}</h1>
         <Link href="/markets" className="btn btn-primary">
           Back to Markets
         </Link>
@@ -32,21 +55,17 @@ export default function DecisionDetailPageClient() {
     );
   }
 
-  let decisionJson: Record<string, unknown>;
-  try {
-    decisionJson = JSON.parse(decision.parsed_response) as Record<string, unknown>;
-  } catch {
-    decisionJson = { action: 'UNKNOWN', error: 'Failed to parse decision JSON' };
-  }
+  const decisionJson = parseDecisionJson(decision);
 
   const primaryTrade: Trade | null = trades[0] ?? null;
   const primaryMarketQuestion = primaryTrade?.market_question || 'General Strategy / Hold';
   const actionLabel = typeof decisionJson.action === 'string' ? decisionJson.action : (trades.length > 0 ? 'BET' : 'HOLD');
+  const backToMarketHref = primaryTrade?.market_id ? `/markets/${primaryTrade.market_id}` : '/markets';
 
   return (
     <div className="container-wide mx-auto px-6 py-12">
       <Link
-        href={decision.market_id ? `/markets/${decision.market_id}` : '/markets'}
+        href={backToMarketHref}
         className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,7 +83,7 @@ export default function DecisionDetailPageClient() {
             {decision.model_name.substring(0, 2)}
           </div>
           <div>
-            <h2 className="font-semibold text-lg">{decision.model_name}</h2>
+            <h2 className="heading-card">{decision.model_name}</h2>
             <p className="text-sm text-[var(--text-muted)]">{decision.model_provider}</p>
           </div>
           <div className="ml-auto text-right text-sm text-[var(--text-muted)]">
@@ -72,7 +91,7 @@ export default function DecisionDetailPageClient() {
           </div>
         </div>
 
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">
+        <h1 className="heading-detail mb-2">
           Decision on: <span className="text-[var(--text-primary)]">{primaryMarketQuestion}</span>
         </h1>
       </div>
@@ -80,7 +99,7 @@ export default function DecisionDetailPageClient() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <div className="glass-card p-6">
-            <h3 className="text-lg font-semibold mb-4">Decision Summary</h3>
+            <h3 className="heading-card mb-4">Decision Summary</h3>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <div className="metric-tile">
                 <p className="metric-tile__label">Action</p>
@@ -107,7 +126,7 @@ export default function DecisionDetailPageClient() {
           </div>
 
           <div className="glass-card p-6">
-            <h3 className="text-xl font-semibold mb-4">Rationale</h3>
+            <h3 className="heading-block mb-4">Rationale</h3>
             <div className="prose prose-invert max-w-none text-[var(--text-secondary)] whitespace-pre-wrap">
               {decision.reasoning}
             </div>
@@ -116,7 +135,7 @@ export default function DecisionDetailPageClient() {
 
         <div className="space-y-6">
           <div className="glass-card p-6">
-            <h3 className="text-lg font-semibold mb-4">Action Taken</h3>
+            <h3 className="heading-card mb-4">Action Taken</h3>
 
             <div className="flex items-center justify-between mb-6">
               <div className={`text-2xl font-bold ${actionLabel === 'BET' ? 'text-positive' : actionLabel === 'SELL' ? 'text-negative' : 'text-[var(--text-muted)]'}`}>
@@ -129,7 +148,7 @@ export default function DecisionDetailPageClient() {
                 {trades.map((trade, index) => (
                   <div key={trade.id} className={`space-y-3 ${index > 0 ? 'pt-4 border-t border-[var(--border-primary)]' : ''}`}>
                     {trades.length > 1 && (
-                      <div className="text-sm font-medium text-[var(--text-primary)] mb-2">
+                      <div className="text-sm font-medium text-[var(--text-primary)]">
                         {trade.market_question}
                       </div>
                     )}

@@ -7,6 +7,7 @@ import { agentsBenchmarkSlotIdentityMigration } from '@/lib/db/migrations/005_ag
 import { decisionLineageMigration } from '@/lib/db/migrations/006_decision_lineage';
 import { tradeBrierLineageMigration } from '@/lib/db/migrations/007_trade_brier_lineage';
 import { performanceChartCacheMigration } from '@/lib/db/migrations/008_performance_chart_cache';
+import { brierTradeUniquenessMigration } from '@/lib/db/migrations/009_brier_trade_uniqueness';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
 const MIGRATIONS: DbMigration[] = [
@@ -16,7 +17,8 @@ const MIGRATIONS: DbMigration[] = [
   agentsBenchmarkSlotIdentityMigration,
   decisionLineageMigration,
   tradeBrierLineageMigration,
-  performanceChartCacheMigration
+  performanceChartCacheMigration,
+  brierTradeUniquenessMigration
 ];
 
 export function runMigrations(db: Database.Database): void {

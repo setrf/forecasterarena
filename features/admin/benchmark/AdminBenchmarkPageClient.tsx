@@ -49,7 +49,7 @@ export default function AdminBenchmarkPageClient() {
         description="Manage stable model families, exact releases, and future cohort lineups."
       >
         <div className="glass-card mx-auto max-w-md p-8 text-center border border-[var(--border-medium)]">
-          <h2 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">Checking admin session...</h2>
+          <h2 className="heading-block mb-3 text-[var(--text-primary)]">Checking admin session...</h2>
           <p className="text-[var(--text-secondary)]">Verifying your admin session before loading benchmark controls.</p>
         </div>
       </AdminPageShell>
@@ -81,7 +81,7 @@ export default function AdminBenchmarkPageClient() {
         description="Manage stable model families, exact releases, and future cohort lineups."
       >
         <div className="glass-card mx-auto max-w-md p-8 text-center border border-[var(--border-medium)]">
-          <h2 className="text-2xl font-bold mb-3">Loading benchmark lineage data...</h2>
+          <h2 className="heading-block mb-3">Loading benchmark lineage data...</h2>
           <p className="text-[var(--text-secondary)]">Reading releases, configs, and current lineup details.</p>
         </div>
       </AdminPageShell>

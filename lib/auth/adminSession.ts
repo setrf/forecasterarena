@@ -5,20 +5,20 @@ import {
 import { constantTimeCompare } from '@/lib/utils/security';
 
 export function createAdminSessionToken(
-  adminPassword: string,
+  sessionSecret: string,
   now: number = Date.now()
 ): string {
   const sessionPayload = `admin:${now}`;
-  const signature = createHmac('sha256', adminPassword).update(sessionPayload).digest('hex');
+  const signature = createHmac('sha256', sessionSecret).update(sessionPayload).digest('hex');
   return Buffer.from(`${sessionPayload}:${signature}`).toString('base64');
 }
 
 export function verifyAdminSessionToken(
   token: string | null | undefined,
-  adminPassword: string,
+  sessionSecret: string,
   now: number = Date.now()
 ): boolean {
-  if (!token || !adminPassword) {
+  if (!token || !sessionSecret) {
     return false;
   }
 
@@ -37,7 +37,7 @@ export function verifyAdminSessionToken(
     if (now - tokenTime > ADMIN_SESSION_MAX_AGE_MS) return false;
 
     const payload = `${role}:${timestamp}`;
-    const expectedSignature = createHmac('sha256', adminPassword).update(payload).digest('hex');
+    const expectedSignature = createHmac('sha256', sessionSecret).update(payload).digest('hex');
     return constantTimeCompare(signature, expectedSignature);
   } catch {
     return false;

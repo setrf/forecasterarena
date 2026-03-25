@@ -43,14 +43,16 @@ describe('admin export lineage queries', () => {
       });
 
       const queries = buildQueries(false);
-      const cohortRows = getRowsForTable(queries, 'cohorts', fixture.cohort.id, '2026-01-01', '2026-12-31');
-      const agentRows = getRowsForTable(queries, 'agents', fixture.cohort.id, '2026-01-01', '2026-12-31');
-      const familyRows = getRowsForTable(queries, 'model_families', fixture.cohort.id, '2026-01-01', '2026-12-31');
-      const releaseRows = getRowsForTable(queries, 'model_releases', fixture.cohort.id, '2026-01-01', '2026-12-31');
-      const configRows = getRowsForTable(queries, 'benchmark_configs', fixture.cohort.id, '2026-01-01', '2026-12-31');
-      const configModelRows = getRowsForTable(queries, 'benchmark_config_models', fixture.cohort.id, '2026-01-01', '2026-12-31');
-      const identityRows = getRowsForTable(queries, 'agent_benchmark_identity', fixture.cohort.id, '2026-01-01', '2026-12-31');
-      const apiCostRows = getRowsForTable(queries, 'api_costs', fixture.cohort.id, '2026-01-01', '2026-12-31');
+      const exportWindowStart = '2000-01-01';
+      const exportWindowEnd = '2999-12-31';
+      const cohortRows = getRowsForTable(queries, 'cohorts', fixture.cohort.id, exportWindowStart, exportWindowEnd);
+      const agentRows = getRowsForTable(queries, 'agents', fixture.cohort.id, exportWindowStart, exportWindowEnd);
+      const familyRows = getRowsForTable(queries, 'model_families', fixture.cohort.id, exportWindowStart, exportWindowEnd);
+      const releaseRows = getRowsForTable(queries, 'model_releases', fixture.cohort.id, exportWindowStart, exportWindowEnd);
+      const configRows = getRowsForTable(queries, 'benchmark_configs', fixture.cohort.id, exportWindowStart, exportWindowEnd);
+      const configModelRows = getRowsForTable(queries, 'benchmark_config_models', fixture.cohort.id, exportWindowStart, exportWindowEnd);
+      const identityRows = getRowsForTable(queries, 'agent_benchmark_identity', fixture.cohort.id, exportWindowStart, exportWindowEnd);
+      const apiCostRows = getRowsForTable(queries, 'api_costs', fixture.cohort.id, exportWindowStart, exportWindowEnd);
 
       expect(cohortRows[0]).toMatchObject({
         id: fixture.cohort.id,

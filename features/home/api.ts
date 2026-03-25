@@ -33,19 +33,19 @@ export async function fetchHomeSummary(): Promise<{
   hasRealData: boolean;
   marketCount: number | null;
 }> {
-  const [leaderboardRes, marketsRes] = await Promise.all([
+  const [leaderboardResult, marketsResult] = await Promise.allSettled([
     fetch('/api/leaderboard', { cache: 'no-store' }),
     fetch('/api/markets?limit=1', { cache: 'no-store' })
   ]);
 
-  if (!leaderboardRes.ok) {
+  if (leaderboardResult.status !== 'fulfilled' || !leaderboardResult.value.ok) {
     throw new Error('Leaderboard data is temporarily unavailable.');
   }
 
   const [leaderboardData, marketsData] = await Promise.all([
-    leaderboardRes.json() as Promise<HomeLeaderboardPayload>,
-    marketsRes.ok
-      ? marketsRes.json() as Promise<HomeMarketsPayload>
+    leaderboardResult.value.json() as Promise<HomeLeaderboardPayload>,
+    marketsResult.status === 'fulfilled' && marketsResult.value.ok
+      ? marketsResult.value.json() as Promise<HomeMarketsPayload>
       : Promise.resolve<HomeMarketsPayload | null>(null)
   ]);
 
@@ -66,14 +66,16 @@ export async function fetchHomeSummary(): Promise<{
 }
 
 export async function fetchHomePerformanceData(
-  timeRange: TimeRange
+  timeRange: TimeRange,
+  signal?: AbortSignal
 ): Promise<{
   data: Array<{ date: string; [key: string]: number | string }>;
   models: CatalogModel[];
   releaseChanges: ReleaseChangeEvent[];
 }> {
   const response = await fetch(`/api/performance-data?range=${timeRange}`, {
-    cache: 'no-store'
+    cache: 'no-store',
+    signal
   });
 
   if (!response.ok) {

@@ -1,8 +1,8 @@
 export interface Decision {
   id: string;
-  market_id: string;
+  market_id?: string | null;
   agent_id: string;
-  parsed_response: string;
+  parsed_response: string | null;
   reasoning: string;
   created_at: string;
   model_name: string;

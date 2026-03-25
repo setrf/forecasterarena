@@ -34,7 +34,7 @@ export function MarketCard({ market, index }: MarketCardProps) {
         )}
       </div>
 
-      <h3 className="mb-5 min-h-[4.2rem] line-clamp-3 text-[1.05rem] font-medium leading-[1.3] group-hover:text-[var(--accent-gold)] transition-colors md:min-h-[2.75rem] md:line-clamp-2 md:text-lg md:leading-snug">
+      <h3 className="heading-card mb-5 min-h-[4.2rem] line-clamp-3 group-hover:text-[var(--accent-gold)] transition-colors md:min-h-[2.75rem] md:line-clamp-2">
         {market.question}
       </h3>
 

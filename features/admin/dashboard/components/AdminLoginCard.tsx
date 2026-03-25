@@ -18,7 +18,7 @@ export function AdminLoginCard({
   return (
     <div className={embedded ? 'mx-auto w-full max-w-md py-4' : 'min-h-[60vh] flex items-center justify-center px-4 py-12'}>
       <div className="glass-card p-8 w-full max-w-md mx-auto relative z-10 bg-[var(--bg-card)] border-2 border-[var(--border-medium)] shadow-xl">
-        <h1 className="text-2xl font-bold mb-6 text-center text-[var(--text-primary)]">Admin Login</h1>
+        <h1 className="heading-block mb-6 text-center text-[var(--text-primary)]">Admin Login</h1>
 
         <form onSubmit={onSubmit}>
           <div className="mb-4">

@@ -12,14 +12,23 @@ import { ModelRecentDecisionsPanel } from '@/features/models/detail/components/M
 import { ModelStatsGrid } from '@/features/models/detail/components/ModelStatsGrid';
 import { DecisionReasoningModal } from '@/features/models/detail/components/DecisionReasoningModal';
 import type { ModelDecision } from '@/features/models/detail/types';
+import type { ModelDetailData } from '@/features/models/detail/types';
 import { createModelChartData } from '@/features/models/detail/utils';
 
-export default function ModelDetailPageClient() {
+interface ModelDetailPageClientProps {
+  initialData?: ModelDetailData | null;
+  familySlugOrLegacyId?: string;
+}
+
+export default function ModelDetailPageClient({
+  initialData = null,
+  familySlugOrLegacyId: initialFamilySlugOrLegacyId
+}: ModelDetailPageClientProps = {}) {
   const params = useParams<{ id: string }>();
-  const familySlugOrLegacyId = params.id;
+  const familySlugOrLegacyId = initialFamilySlugOrLegacyId ?? params.id;
   const [selectedDecision, setSelectedDecision] = useState<ModelDecision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
-  const { data, loading } = useModelDetailData(familySlugOrLegacyId);
+  const { data, loading, error } = useModelDetailData(familySlugOrLegacyId, initialData);
   const model = data ? {
     id: data.model.id,
     family_id: data.model.family_id,
@@ -34,10 +43,6 @@ export default function ModelDetailPageClient() {
     currentReleaseName: data.model.current_release_name ?? undefined
   } : null;
 
-  if (!loading && !model) {
-    return <ModelDetailNotFound message="Model Not Found" />;
-  }
-
   const canonicalModelSlug = model?.slug ?? model?.id ?? familySlugOrLegacyId;
   const chartModelId = canonicalModelSlug;
   const chartData = useMemo(() => createModelChartData(chartModelId, data), [chartModelId, data]);
@@ -47,6 +52,10 @@ export default function ModelDetailPageClient() {
     color: model.color,
     currentReleaseName: model.currentReleaseName ?? null
   }] : [];
+
+  if (!loading && !model) {
+    return <ModelDetailNotFound message={error || 'Model Not Found'} />;
+  }
 
   return (
     <div className="container-wide mx-auto px-6 py-12">

@@ -1,9 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MarketsFilters } from '@/features/markets/list/components/MarketsFilters';
 import { MarketsGridSection } from '@/features/markets/list/components/MarketsGridSection';
 import { MarketsHero } from '@/features/markets/list/components/MarketsHero';
+import {
+  applyMarketsResponse,
+  buildMarketsSearchParams,
+  createMarketsRequestMeta
+} from '@/features/markets/list/requestState';
 import type {
   AggregateStats,
   MarketListItem,
@@ -32,53 +37,89 @@ export default function MarketsPageClient() {
   const [sort, setSort] = useState<SortOption>('volume');
   const [cohortBets, setCohortBets] = useState(false);
   const [offset, setOffset] = useState(0);
+  const requestIdRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchMarkets = useCallback(async (reset = false) => {
+    const request = createMarketsRequestMeta(requestIdRef.current, offset, reset);
+    requestIdRef.current = request.requestId;
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams();
-      params.set('status', status);
-      if (category) params.set('category', category);
-      if (search) params.set('search', search);
-      if (cohortBets) params.set('cohort_bets', 'true');
-      params.set('sort', sort);
-      params.set('limit', '50');
-      params.set('offset', reset ? '0' : String(offset));
+      const params = buildMarketsSearchParams({
+        status,
+        category,
+        search,
+        sort,
+        cohortBets
+      }, 50, request.requestedOffset);
 
-      const res = await fetch(`/api/markets?${params}`, { cache: 'no-store' });
+      const res = await fetch(`/api/markets?${params}`, {
+        cache: 'no-store',
+        signal: abortController.signal
+      });
       if (!res.ok) {
+        if (abortController.signal.aborted || requestIdRef.current !== request.requestId) {
+          return;
+        }
         setError('Failed to load markets. Please try again.');
+        if (reset) {
+          setMarkets([]);
+          setTotal(0);
+          setHasMore(false);
+        }
         return;
       }
 
-      const data = await res.json() as {
+      const data = await res.json() as Awaited<ReturnType<Response['json']>> & {
         markets: MarketListItem[];
         total: number;
         has_more: boolean;
         categories?: string[];
         stats?: AggregateStats;
       };
+      const nextState = applyMarketsResponse({
+        markets,
+        categories,
+        total,
+        hasMore,
+        stats,
+        offset
+      }, requestIdRef.current, request, data);
 
-      if (reset) {
-        setMarkets(data.markets);
-        setOffset(50);
-      } else {
-        setMarkets((prev) => [...prev, ...data.markets]);
-        setOffset((prev) => prev + 50);
+      if (!nextState || abortController.signal.aborted) {
+        return;
       }
 
-      setTotal(data.total);
-      setHasMore(data.has_more);
-      if (data.categories) setCategories(data.categories);
-      if (data.stats) setStats(data.stats);
+      setMarkets(nextState.markets);
+      setCategories(nextState.categories);
+      setTotal(nextState.total);
+      setHasMore(nextState.hasMore);
+      setStats(nextState.stats);
+      setOffset(nextState.offset);
     } catch {
+      if (abortController.signal.aborted || requestIdRef.current !== request.requestId) {
+        return;
+      }
+
       setError('Failed to load markets. Please try again.');
+      if (reset) {
+        setMarkets([]);
+        setTotal(0);
+        setHasMore(false);
+      }
     } finally {
+      if (abortController.signal.aborted || requestIdRef.current !== request.requestId) {
+        return;
+      }
       setLoading(false);
     }
-  }, [category, cohortBets, offset, search, sort, status]);
+  }, [category, categories, cohortBets, hasMore, markets, offset, search, sort, stats, status, total]);
 
   useEffect(() => {
     fetchMarkets(true);
@@ -93,6 +134,10 @@ export default function MarketsPageClient() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
+
+  useEffect(() => () => {
+    abortControllerRef.current?.abort();
+  }, []);
 
   return (
     <div className="min-h-screen">

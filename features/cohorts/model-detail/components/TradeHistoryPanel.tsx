@@ -32,7 +32,7 @@ export function TradeHistoryPanel({
 
   return (
     <div className="glass-card p-6 mb-8">
-      <h3 className="text-lg font-semibold mb-4">
+      <h3 className="heading-card mb-4">
         Trade History ({tradeCount})
       </h3>
 

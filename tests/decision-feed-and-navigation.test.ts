@@ -31,7 +31,10 @@ describe('decision feed helpers', () => {
     await expect(fetchRecentDecisions(5)).resolves.toEqual([
       expect.objectContaining({ id: 'decision-1', action: 'BET' })
     ]);
-    expect(fetchMock).toHaveBeenCalledWith('/api/decisions/recent?limit=5');
+    expect(fetchMock).toHaveBeenCalledWith('/api/decisions/recent?limit=5', {
+      cache: 'no-store',
+      signal: undefined
+    });
     expect(getDecisionActionStyle('BET')).toEqual({
       bg: 'bg-[var(--accent-emerald)]/20',
       text: 'text-[var(--accent-emerald)]'

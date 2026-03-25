@@ -5,10 +5,11 @@ import {
   ADMIN_SESSION_COOKIE_NAME,
   ADMIN_SESSION_MAX_AGE_MS
 } from '@/lib/auth/adminSessionShared';
-import { getRateLimitKey } from '@/lib/middleware/ip';
+import { getRateLimitKeyFromRequest } from '@/lib/middleware/ip';
 import { matchRateLimitPolicy } from '@/lib/middleware/policies';
 import { applyRateLimit } from '@/lib/middleware/rateLimit';
 
+const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || (IS_PRODUCTION ? '' : 'dev-admin-session-secret');
 const textEncoder = new TextEncoder();
 
 function decodeToken(token: string): string {
@@ -21,10 +22,10 @@ function decodeToken(token: string): string {
 
 async function verifyAdminSessionTokenForMiddleware(
   token: string | undefined,
-  adminPassword: string,
+  sessionSecret: string,
   now: number = Date.now()
 ): Promise<boolean> {
-  if (!token || !adminPassword) {
+  if (!token || !sessionSecret) {
     return false;
   }
 
@@ -47,7 +48,7 @@ async function verifyAdminSessionTokenForMiddleware(
 
     const key = await crypto.subtle.importKey(
       'raw',
-      textEncoder.encode(adminPassword),
+      textEncoder.encode(sessionSecret),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['sign']
@@ -76,17 +77,17 @@ export async function middleware(request: NextRequest) {
 
   if (
     policy.bucket === 'admin' &&
-    (!IS_PRODUCTION || ADMIN_PASSWORD) &&
+    (!IS_PRODUCTION || (ADMIN_PASSWORD && ADMIN_SESSION_SECRET)) &&
     await verifyAdminSessionTokenForMiddleware(
       request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value,
-      ADMIN_PASSWORD
+      ADMIN_SESSION_SECRET
     )
   ) {
     return NextResponse.next();
   }
 
   const status = applyRateLimit(
-    getRateLimitKey(request.headers, policy.bucket),
+    getRateLimitKeyFromRequest(request, policy.bucket),
     policy.limit,
     policy.windowMs
   );

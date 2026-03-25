@@ -20,7 +20,7 @@ function getExistingMarketsForRefresh(): ExistingMarketForRefresh[] {
         SELECT 1 FROM positions p
         WHERE p.market_id = m.id AND p.status = 'open'
       )
-      OR (m.status = 'active' AND m.close_date < datetime('now'))
+      OR (m.status = 'active' AND julianday(m.close_date) < julianday('now'))
     )
   `).all() as ExistingMarketForRefresh[];
 }
@@ -44,8 +44,9 @@ export async function refreshExistingMarketStatuses(errors: string[]): Promise<{
       }
 
       const simplified = simplifyMarket(freshData);
+      upsertMarket(simplified);
+
       if (simplified.status !== market.status) {
-        upsertMarket(simplified);
         statusUpdates++;
         console.log(`Status updated for ${market.polymarket_id}: ${market.status} -> ${simplified.status}`);
       }

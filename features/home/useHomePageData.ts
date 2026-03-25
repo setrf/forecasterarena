@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReleaseChangeEvent } from '@/components/charts/performance/types';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
 import { fetchHomePerformanceData, fetchHomeSummary } from '@/features/home/api';
@@ -17,6 +17,7 @@ export function useHomePageData() {
   const [chartReleaseChanges, setChartReleaseChanges] = useState<ReleaseChangeEvent[]>([]);
   const [chartError, setChartError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
+  const chartRequestIdRef = useRef(0);
 
   useEffect(() => {
     async function loadHomeSummary() {
@@ -36,19 +37,38 @@ export function useHomePageData() {
   }, []);
 
   useEffect(() => {
+    const requestId = chartRequestIdRef.current + 1;
+    chartRequestIdRef.current = requestId;
+    const abortController = new AbortController();
+
     async function loadChartData() {
       try {
-        const performance = await fetchHomePerformanceData(timeRange);
+        const performance = await fetchHomePerformanceData(timeRange, abortController.signal);
+        if (chartRequestIdRef.current !== requestId) {
+          return;
+        }
+
         setChartData(performance.data);
         setChartModels(performance.models);
         setChartReleaseChanges(performance.releaseChanges);
         setChartError(null);
-      } catch {
+      } catch (error) {
+        if (abortController.signal.aborted || chartRequestIdRef.current !== requestId) {
+          return;
+        }
+
         setChartError('Performance data is temporarily unavailable.');
+        setChartData([]);
+        setChartModels([]);
+        setChartReleaseChanges([]);
       }
     }
 
     void loadChartData();
+
+    return () => {
+      abortController.abort();
+    };
   }, [timeRange]);
 
   return {

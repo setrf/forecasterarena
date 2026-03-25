@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { fetchCohortsPageData } from '@/features/cohorts/list/api';
 import { CohortCardsSection } from '@/features/cohorts/list/components/CohortCardsSection';
 import { CohortHowItWorks } from '@/features/cohorts/list/components/CohortHowItWorks';
 import { CohortsHero } from '@/features/cohorts/list/components/CohortsHero';
@@ -11,27 +12,49 @@ export default function CohortsPageClient() {
   const [cohorts, setCohorts] = useState<CohortSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    const abortController = new AbortController();
+
     async function fetchCohorts() {
       try {
-        const response = await fetch('/api/leaderboard', { cache: 'no-store' });
-        if (!response.ok) {
-          setError('Failed to load cohorts.');
+        const result = await fetchCohortsPageData(abortController.signal);
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
           return;
         }
 
-        const json = await response.json();
-        setCohorts(json.cohorts || []);
+        if (result.status === 'error') {
+          setCohorts([]);
+          setError(result.error);
+          return;
+        }
+
+        setCohorts(result.data);
         setError(null);
       } catch {
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+          return;
+        }
+
+        setCohorts([]);
         setError('Failed to load cohorts.');
       } finally {
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+          return;
+        }
+
         setLoading(false);
       }
     }
 
-    fetchCohorts();
+    void fetchCohorts();
+
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   const activeCohorts = useMemo(

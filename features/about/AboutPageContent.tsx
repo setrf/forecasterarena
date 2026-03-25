@@ -18,7 +18,7 @@ export default function AboutPageContent() {
           <div className="container-medium mx-auto px-6">
             <div className="max-w-3xl">
               <div className="accent-line mb-4" />
-              <h2 className="text-3xl md:text-4xl mb-6">
+              <h2 className="heading-section mb-6">
                 Traditional benchmarks fail when models memorize answers.
                 <br />
                 <span className="text-[var(--text-secondary)]">We test prediction, not recall.</span>
@@ -68,7 +68,7 @@ export default function AboutPageContent() {
                   >
                     {item.num}
                   </span>
-                  <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
+                  <h3 className="heading-card mb-3">{item.title}</h3>
                   <p className="text-[var(--text-secondary)] leading-relaxed">{item.desc}</p>
                 </div>
               ))}
@@ -88,7 +88,7 @@ export default function AboutPageContent() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             <div className="card-featured p-6">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xl font-semibold">Brier Score</h3>
+                <h3 className="heading-card">Brier Score</h3>
                 <span className="font-mono text-xs text-[var(--accent-gold)] px-2 py-1 bg-[var(--accent-gold-dim)] rounded">Primary</span>
               </div>
               <p className="text-[var(--text-secondary)] mb-4">
@@ -107,31 +107,31 @@ export default function AboutPageContent() {
               </div>
             </div>
             <div className="card p-6">
-              <h3 className="text-lg font-semibold mb-3">Portfolio P/L</h3>
+              <h3 className="heading-card mb-3">Portfolio P/L</h3>
               <p className="text-[var(--text-secondary)]">
                 Practical value: can the model turn predictions into profitable decisions?
               </p>
             </div>
             <div className="card p-6">
-              <h3 className="text-lg font-semibold mb-3">Win Rate</h3>
+              <h3 className="heading-card mb-3">Win Rate</h3>
               <p className="text-[var(--text-secondary)]">
                 Directional accuracy when markets resolve. Simple but informative.
               </p>
             </div>
             <div className="card p-6">
-              <h3 className="text-lg font-semibold mb-3">Consistency</h3>
+              <h3 className="heading-card mb-3">Consistency</h3>
               <p className="text-[var(--text-secondary)]">
                 Performance across cohorts distinguishes skill from luck.
               </p>
             </div>
             <div className="card p-6">
-              <h3 className="text-lg font-semibold mb-3">Decision Quality</h3>
+              <h3 className="heading-card mb-3">Decision Quality</h3>
               <p className="text-[var(--text-secondary)]">
                 Reasoning analysis: are the models making sensible arguments?
               </p>
             </div>
             <div className="card p-6">
-              <h3 className="text-lg font-semibold mb-3">API Efficiency</h3>
+              <h3 className="heading-card mb-3">API Efficiency</h3>
               <p className="text-[var(--text-secondary)]">
                 Cost per decision. Some models achieve more with fewer tokens.
               </p>
@@ -150,7 +150,7 @@ export default function AboutPageContent() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-xl font-semibold mb-3">Important Disclaimer</h2>
+                <h2 className="heading-block mb-3">Important Disclaimer</h2>
                 <p className="text-[var(--text-secondary)] leading-relaxed mb-4">
                   Forecaster Arena is an <strong className="text-[var(--text-primary)]">educational and research project</strong>.
                   All trading is simulated (paper trading). No real money is ever at risk.
@@ -176,7 +176,7 @@ export default function AboutPageContent() {
                 </div>
                 <div>
                   <p className="text-[var(--accent-gold)] font-mono text-xs tracking-wider mb-1">CONTACT</p>
-                  <h3 className="text-2xl font-semibold leading-tight">Mert Gulsun</h3>
+                  <h3 className="heading-block leading-tight">Mert Gulsun</h3>
                   <p className="text-[var(--text-secondary)]">UC Berkeley</p>
                 </div>
               </div>
@@ -230,7 +230,7 @@ export default function AboutPageContent() {
 
       <section className="py-12">
         <div className="container-medium mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl mb-4">
+          <h2 className="heading-section mb-4">
             Open Source. <span className="font-accent">Always.</span>
           </h2>
           <p className="text-lg text-[var(--text-secondary)] max-w-xl mx-auto mb-8">

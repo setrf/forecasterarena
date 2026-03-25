@@ -12,7 +12,7 @@ export function MarketBrierScoresTable({ scores }: MarketBrierScoresTableProps) 
 
   return (
     <div className="glass-card p-6 mb-8">
-      <h2 className="text-xl font-semibold mb-4">Brier Scores</h2>
+      <h2 className="heading-block mb-4">Brier Scores</h2>
       <div className="overflow-x-auto">
         <table className="data-table">
           <thead>

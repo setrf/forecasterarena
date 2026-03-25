@@ -7,20 +7,32 @@ export function handleExecutionFailure(args: {
   agent: AgentWithModel;
   decisionId: string;
   action: 'BET' | 'SELL';
+  attemptedTrades: number;
+  tradesExecuted: number;
   errors: string[];
   result: AgentDecisionResult;
 }): AgentDecisionResult {
   args.result.success = false;
-  args.result.error = args.errors.join('; ') || `All ${args.action.toLowerCase()} executions failed`;
+  const failedTrades = Math.max(0, args.attemptedTrades - args.tradesExecuted);
+  args.result.error = args.errors.join('; ') || (
+    failedTrades === args.attemptedTrades
+      ? `All ${args.action.toLowerCase()} executions failed`
+      : `${failedTrades} ${args.action.toLowerCase()} execution(s) failed after ${args.tradesExecuted} succeeded`
+  );
 
   logSystemEvent('agent_decision_execution_failed', {
     agent_id: args.agent.id,
     decision_id: args.decisionId,
     action: args.action,
+    attempted_trades: args.attemptedTrades,
+    trades_executed: args.tradesExecuted,
     errors: args.errors
   }, 'error');
 
-  console.log(`${args.agent.model.display_name}: ${args.action} (0 trades, retryable failure)`);
+  console.log(
+    `${args.agent.model.display_name}: ${args.action} ` +
+    `(${args.tradesExecuted}/${args.attemptedTrades} trades executed, failure)`
+  );
   return args.result;
 }
 

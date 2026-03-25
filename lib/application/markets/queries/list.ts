@@ -2,6 +2,10 @@ import { getMarketsOrderBy } from '@/lib/application/markets/queries/orderBy';
 import type { Db, MarketsWhereClause, SqlParam } from '@/lib/application/markets/queries/types';
 import type { ListMarketsInput, MarketSortOption } from '@/lib/application/markets/types';
 
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&');
+}
+
 export function buildListMarketsWhereClause({
   status,
   category,
@@ -22,8 +26,8 @@ export function buildListMarketsWhereClause({
   }
 
   if (search) {
-    conditions.push('m.question LIKE ?');
-    params.push(`%${search}%`);
+    conditions.push("m.question LIKE ? ESCAPE '\\'");
+    params.push(`%${escapeLikePattern(search)}%`);
   }
 
   if (withCohortBets) {

@@ -27,7 +27,7 @@ export function AdminBenchmarkConfigBuilder({
   return (
     <div className="glass-card p-6 border border-[var(--border-medium)]">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold">Create Benchmark Config</h2>
+        <h2 className="heading-block">Create Benchmark Config</h2>
         <p className="text-sm text-[var(--text-muted)]">
           Assemble a future cohort lineup by pinning one release per active family.
         </p>

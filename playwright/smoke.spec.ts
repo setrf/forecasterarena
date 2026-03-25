@@ -35,7 +35,7 @@ test('mobile navigation drawer exposes the expected links', async ({ browser, ba
   });
   const page = await context.newPage();
 
-  await page.goto(baseURL || 'http://127.0.0.1:3000');
+  await page.goto(baseURL || 'http://127.0.0.1:3100');
   await page.getByRole('button', { name: 'Toggle menu' }).click();
 
   const mobileMenu = page.locator('header nav').last();

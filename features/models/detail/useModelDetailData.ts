@@ -1,42 +1,73 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchModelDetailData } from '@/features/models/detail/api';
 import type { ModelDetailData } from '@/features/models/detail/types';
 
-export function useModelDetailData(familySlugOrLegacyId: string) {
-  const [data, setData] = useState<ModelDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useModelDetailData(
+  familySlugOrLegacyId: string,
+  initialData: ModelDetailData | null = null
+) {
+  const [data, setData] = useState<ModelDetailData | null>(initialData);
+  const [loading, setLoading] = useState(initialData === null);
+  const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    let isCancelled = false;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    const abortController = new AbortController();
+
+    setData(initialData);
+    setError(null);
+    setLoading(initialData === null);
+
+    if (initialData !== null) {
+      return () => {
+        abortController.abort();
+      };
+    }
 
     async function loadModelDetail() {
       try {
-        const payload = await fetchModelDetailData(familySlugOrLegacyId);
-        if (!isCancelled && payload) {
-          setData(payload);
+        const result = await fetchModelDetailData(familySlugOrLegacyId, abortController.signal);
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+          return;
         }
-      } catch (error) {
-        if (!isCancelled) {
-          console.error('Error fetching model data:', error);
+
+        if (result.status === 'ok') {
+          setData(result.data);
+          return;
         }
+
+        setData(null);
+        setError(result.error);
+      } catch {
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+          return;
+        }
+
+        setData(null);
+        setError('Failed to load model');
       } finally {
-        if (!isCancelled) {
-          setLoading(false);
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+          return;
         }
+
+        setLoading(false);
       }
     }
 
     void loadModelDetail();
 
     return () => {
-      isCancelled = true;
+      abortController.abort();
     };
-  }, [familySlugOrLegacyId]);
+  }, [familySlugOrLegacyId, initialData]);
 
   return {
     data,
-    loading
+    loading,
+    error
   };
 }

@@ -23,7 +23,7 @@ export function AdminEmptyState({
           {icon}
         </div>
       )}
-      <h3 className="text-lg font-semibold">{title}</h3>
+      <h3 className="heading-card">{title}</h3>
       <p className="mt-2 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">
         {description}
       </p>

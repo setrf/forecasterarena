@@ -129,6 +129,7 @@ export function getClosedMarkets(): Market[] {
   return db.prepare(`
     SELECT * FROM markets
     WHERE status = 'closed'
+       OR (status = 'resolved' AND resolution_outcome IS NULL)
     ORDER BY close_date DESC
   `).all() as Market[];
 }

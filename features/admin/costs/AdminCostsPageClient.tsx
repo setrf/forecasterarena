@@ -85,7 +85,7 @@ export default function AdminCostsPageClient() {
       </div>
 
       <div className="glass-card p-6 mb-8">
-        <h3 className="text-lg font-semibold mb-4">Spend by Model Family</h3>
+        <h3 className="heading-card mb-4">Spend by Model Family</h3>
         {loading ? (
           <div className="h-64 flex items-center justify-center text-[var(--text-muted)]">
             Loading...
@@ -190,7 +190,7 @@ export default function AdminCostsPageClient() {
       </div>
 
       <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold mb-4">Cost Breakdown</h3>
+        <h3 className="heading-card mb-4">Cost Breakdown</h3>
         {loading ? (
           <div className="py-8 text-center text-[var(--text-muted)]">Loading...</div>
         ) : costsByModel.length === 0 ? (

@@ -57,7 +57,7 @@ export function AdminQuickActions({
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold">{item.title}</h3>
+              <h3 className="heading-card">{item.title}</h3>
               <p className="text-sm text-[var(--text-muted)]">
                 {actionLoading === item.action ? item.loadingLabel : item.idleLabel}
               </p>

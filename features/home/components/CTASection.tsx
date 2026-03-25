@@ -11,7 +11,7 @@ export function CTASection() {
 
         <div className="relative z-10 p-6 md:p-10 lg:p-12 text-center">
           <p className="text-[var(--accent-gold)] font-mono text-xs md:text-sm tracking-wider mb-3 md:mb-4">OPEN SOURCE</p>
-          <h2 className="text-2xl md:text-4xl lg:text-5xl mb-4 md:mb-6 max-w-2xl mx-auto">
+          <h2 className="heading-page mb-4 md:mb-6 max-w-2xl mx-auto">
             Full Transparency.
             <br />
             <span className="font-accent">Academic Rigor.</span>

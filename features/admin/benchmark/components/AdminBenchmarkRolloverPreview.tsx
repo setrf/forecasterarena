@@ -17,7 +17,7 @@ export function AdminBenchmarkRolloverPreview({
     <div className="glass-card p-6 border border-[var(--border-medium)] mb-8">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-xl font-semibold">Active Cohort Rollover Preview</h2>
+          <h2 className="heading-block">Active Cohort Rollover Preview</h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             This applies <span className="font-medium text-[var(--text-primary)]">{preview.version_name}</span> to all active cohorts immediately.
           </p>

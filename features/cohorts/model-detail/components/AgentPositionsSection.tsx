@@ -34,7 +34,7 @@ export function AgentPositionsSection({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold mb-4">
+        <h3 className="heading-card mb-4">
           Open Positions ({positionCount})
         </h3>
 
@@ -97,7 +97,7 @@ export function AgentPositionsSection({
       </div>
 
       <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold mb-4">
+        <h3 className="heading-card mb-4">
           Closed Positions ({closedPositions.length})
         </h3>
 

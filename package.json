@@ -2,6 +2,9 @@
   "name": "forecasterarena",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,7 +14,7 @@
     "check:queries": "node scripts/check-query-structure.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --maxWorkers=1 --testTimeout=15000",
     "test:e2e": "env -u FORCE_COLOR NODE_DISABLE_COLORS=1 playwright test",
     "test:e2e:empty": "env -u FORCE_COLOR NODE_DISABLE_COLORS=1 E2E_SEED_SCENARIO=empty playwright test playwright/empty-state.spec.ts",
     "typecheck": "tsc --noEmit",

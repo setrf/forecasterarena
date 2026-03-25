@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { hasLiveCompetitionData } from '@/lib/competition-state';
+import { useEffect, useRef, useState } from 'react';
 import { ModelsGrid } from '@/features/models/list/components/ModelsGrid';
 import { ModelsHeroSection } from '@/features/models/list/components/ModelsHeroSection';
 import { ModelsMethodologySection } from '@/features/models/list/components/ModelsMethodologySection';
-import type { CatalogModel, LeaderboardResponse, ModelStats } from '@/features/models/list/types';
+import { fetchModelsPageData } from '@/features/models/list/api';
+import type { CatalogModel, ModelStats } from '@/features/models/list/types';
 import { createStatsMap, sortModelsByPnl } from '@/features/models/list/utils';
 
 export default function ModelsPageClient() {
@@ -14,47 +14,54 @@ export default function ModelsPageClient() {
   const [loading, setLoading] = useState(true);
   const [hasRealData, setHasRealData] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    let isCancelled = false;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    const abortController = new AbortController();
 
     async function fetchStats() {
       try {
-        const res = await fetch('/api/leaderboard', { cache: 'no-store' });
-        if (!res.ok) {
-          if (!isCancelled) {
-            setError('Failed to load model rankings.');
-          }
+        const result = await fetchModelsPageData(abortController.signal);
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
           return;
         }
 
-        const data = await res.json() as LeaderboardResponse;
-        if (isCancelled) {
+        if (result.status === 'error') {
+          setModels([]);
+          setStats(new Map());
+          setHasRealData(false);
+          setError(result.error);
           return;
         }
 
-        setModels(data.models ?? []);
-        setStats(createStatsMap(data.leaderboard));
-        setHasRealData(hasLiveCompetitionData({
-          leaderboard: data.leaderboard,
-          cohorts: data.cohorts
-        }));
+        setModels(result.data.models);
+        setStats(createStatsMap(result.data.leaderboard));
+        setHasRealData(result.data.hasRealData);
         setError(null);
       } catch {
-        if (!isCancelled) {
-          setError('Failed to load model rankings.');
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+          return;
         }
+
+        setModels([]);
+        setStats(new Map());
+        setHasRealData(false);
+        setError('Failed to load model rankings.');
       } finally {
-        if (!isCancelled) {
-          setLoading(false);
+        if (abortController.signal.aborted || requestIdRef.current !== requestId) {
+          return;
         }
+
+        setLoading(false);
       }
     }
 
-    fetchStats();
+    void fetchStats();
 
     return () => {
-      isCancelled = true;
+      abortController.abort();
     };
   }, []);
 

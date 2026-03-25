@@ -12,9 +12,10 @@ export type AgentCohortDetailLoadResult =
 
 export async function fetchAgentCohortDetailData(
   cohortId: string,
-  familySlugOrLegacyId: string
+  familySlugOrLegacyId: string,
+  signal?: AbortSignal
 ): Promise<AgentCohortDetailLoadResult> {
-  const response = await fetch(`/api/cohorts/${cohortId}/models/${familySlugOrLegacyId}`);
+  const response = await fetch(`/api/cohorts/${cohortId}/models/${familySlugOrLegacyId}`, { signal });
   if (!response.ok) {
     if (response.status === 404) {
       const payload = await response.json() as { error?: string };

@@ -110,4 +110,25 @@ describe('engine/cohort', () => {
       await ctx.cleanup();
     }
   });
+
+  it('uses an immediate transaction when starting a cohort', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+    const withImmediateTransaction = vi.fn((fn: () => unknown) => fn());
+
+    vi.doMock('@/lib/db/transactions', () => ({
+      withTransaction: vi.fn((fn: () => unknown) => fn()),
+      withImmediateTransaction
+    }));
+
+    try {
+      const startModule = await import('@/lib/engine/cohort/start');
+      const result = startModule.startNewCohort();
+
+      expect(result.success).toBe(true);
+      expect(withImmediateTransaction).toHaveBeenCalled();
+    } finally {
+      vi.doUnmock('@/lib/db/transactions');
+      await ctx.cleanup();
+    }
+  });
 });

@@ -56,7 +56,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_cohorts_started_unique ON cohorts(started_
 -- Brier Scores
 CREATE INDEX IF NOT EXISTS idx_brier_agent ON brier_scores(agent_id);
 CREATE INDEX IF NOT EXISTS idx_brier_market ON brier_scores(market_id);
-CREATE INDEX IF NOT EXISTS idx_brier_trade ON brier_scores(trade_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_brier_trade ON brier_scores(trade_id);
 CREATE INDEX IF NOT EXISTS idx_brier_family ON brier_scores(family_id);
 CREATE INDEX IF NOT EXISTS idx_brier_release ON brier_scores(release_id);
 CREATE INDEX IF NOT EXISTS idx_brier_config_model ON brier_scores(benchmark_config_model_id);

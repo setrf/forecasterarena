@@ -66,12 +66,14 @@ export async function processAgentDecision(
     if (
       (decisionOutput.parsed.action === 'BET' || decisionOutput.parsed.action === 'SELL') &&
       tradeSummary.attemptedTrades > 0 &&
-      tradeSummary.tradesExecuted === 0
+      tradeSummary.tradesExecuted < tradeSummary.attemptedTrades
     ) {
       return handleExecutionFailure({
         agent,
         decisionId: decision.id,
         action: decisionOutput.parsed.action,
+        attemptedTrades: tradeSummary.attemptedTrades,
+        tradesExecuted: tradeSummary.tradesExecuted,
         errors: tradeSummary.executionErrors,
         result
       });

@@ -11,7 +11,7 @@ export function AgentOverviewPanels({ cohortId, data }: AgentOverviewPanelsProps
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
       <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold mb-4">Cohort #{data.cohort.cohort_number} Context</h3>
+        <h3 className="heading-card mb-4">Cohort #{data.cohort.cohort_number} Context</h3>
         <div className="space-y-3">
           <div>
             <p className="text-sm text-[var(--text-muted)]">Status</p>
@@ -55,7 +55,7 @@ export function AgentOverviewPanels({ cohortId, data }: AgentOverviewPanelsProps
       </div>
 
       <div className="lg:col-span-2 glass-card p-6">
-        <h3 className="text-lg font-semibold mb-4">Performance vs Cohort</h3>
+        <h3 className="heading-card mb-4">Performance vs Cohort</h3>
         <div className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -85,7 +85,7 @@ export function AgentOverviewPanels({ cohortId, data }: AgentOverviewPanelsProps
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-[var(--border-primary)]">
+          <div className="grid grid-cols-2 gap-4 border-t border-[var(--border-primary)] pt-4">
             <div>
               <p className="text-sm text-[var(--text-muted)]">Cohort Best</p>
               <p className="font-mono text-positive">{formatSignedPercent(data.stats.cohort_best_pnl_percent)}</p>

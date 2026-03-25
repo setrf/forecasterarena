@@ -28,9 +28,10 @@ export type MarketDetailLoadResult =
     };
 
 export async function fetchMarketDetailData(
-  marketId: string
+  marketId: string,
+  signal?: AbortSignal
 ): Promise<MarketDetailLoadResult> {
-  const response = await fetch(`/api/markets/${marketId}`);
+  const response = await fetch(`/api/markets/${marketId}`, { signal });
   if (!response.ok) {
     return {
       status: 'error',

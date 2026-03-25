@@ -84,6 +84,106 @@ describe('markets application', () => {
     });
   });
 
+  it('treats wildcard characters in market search as literals', async () => {
+    await withSingleAgentFixture(async ({ queries }) => {
+      const literalPercentMarket = queries.upsertMarket({
+        polymarket_id: 'market-search-percent-literal',
+        question: 'Will inflation exceed 5% this quarter?',
+        category: 'Economics',
+        close_date: '2030-04-01T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.58,
+        volume: 1400
+      });
+
+      queries.upsertMarket({
+        polymarket_id: 'market-search-percent-control',
+        question: 'Will inflation cool this quarter?',
+        category: 'Economics',
+        close_date: '2030-04-02T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.42,
+        volume: 900
+      });
+
+      const { listMarkets } = await import('@/lib/application/markets');
+      const result = listMarkets({
+        status: 'active',
+        category: null,
+        search: '%',
+        sort: 'volume',
+        withCohortBets: false,
+        limit: 10,
+        offset: 0
+      });
+
+      expect(result.markets).toHaveLength(1);
+      expect(result.markets[0]).toMatchObject({
+        id: literalPercentMarket.id,
+        question: 'Will inflation exceed 5% this quarter?'
+      });
+    });
+  });
+
+  it('uses a deterministic id tiebreaker for paginated market sorting', async () => {
+    await withSingleAgentFixture(async ({ db, queries }) => {
+      const first = queries.upsertMarket({
+        polymarket_id: 'market-order-first',
+        question: 'Will the first tied market resolve?',
+        category: 'Politics',
+        close_date: '2030-05-01T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.51,
+        volume: 1000
+      });
+      const second = queries.upsertMarket({
+        polymarket_id: 'market-order-second',
+        question: 'Will the second tied market resolve?',
+        category: 'Politics',
+        close_date: '2030-05-01T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.49,
+        volume: 1000
+      });
+      const third = queries.upsertMarket({
+        polymarket_id: 'market-order-third',
+        question: 'Will the third tied market resolve?',
+        category: 'Politics',
+        close_date: '2030-05-01T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.5,
+        volume: 1000
+      });
+
+      db.prepare('UPDATE markets SET id = ? WHERE id = ?').run('market-a', second.id);
+      db.prepare('UPDATE markets SET id = ? WHERE id = ?').run('market-b', third.id);
+      db.prepare('UPDATE markets SET id = ? WHERE id = ?').run('market-c', first.id);
+
+      const { listMarkets } = await import('@/lib/application/markets');
+      const firstPage = listMarkets({
+        status: 'active',
+        category: 'Politics',
+        search: null,
+        sort: 'volume',
+        withCohortBets: false,
+        limit: 2,
+        offset: 0
+      });
+      const secondPage = listMarkets({
+        status: 'active',
+        category: 'Politics',
+        search: null,
+        sort: 'volume',
+        withCohortBets: false,
+        limit: 2,
+        offset: 2
+      });
+
+      expect(firstPage.markets.map((market) => market.id)).toEqual(['market-a', 'market-b']);
+      expect(secondPage.markets.map((market) => market.id)).toEqual(['market-c']);
+    });
+  });
+
   it('returns market detail and keeps the not-found contract intact', async () => {
     await withSingleAgentFixture(async ({ queries, agent, cohort }) => {
       const market = queries.upsertMarket({
@@ -301,11 +401,12 @@ describe('models application', () => {
         brier_score: 0.36,
         num_resolved_bets: 1
       });
+      const recentDecisionTimestamp = new Date(Date.now() + 60_000).toISOString();
       db.prepare(`
         UPDATE decisions
         SET decision_timestamp = ?
         WHERE id = ?
-      `).run('2026-03-11T00:00:00.000Z', decision2.id);
+      `).run(recentDecisionTimestamp, decision2.id);
 
       const { getModelDetail } = await import('@/lib/application/models');
       const family = db.prepare(`
@@ -430,11 +531,12 @@ describe('cohort shared application queries', () => {
         action: 'HOLD',
         reasoning: 'No trade this week'
       });
+      const recentHoldTimestamp = new Date(Date.now() + 60_000).toISOString();
       db.prepare(`
         UPDATE decisions
         SET decision_timestamp = ?
         WHERE id = ?
-      `).run('2026-03-11T00:00:00.000Z', holdDecision.id);
+      `).run(recentHoldTimestamp, holdDecision.id);
       queries.resolveMarket(resolvedMarket.id, 'YES');
 
       queries.createPortfolioSnapshot({

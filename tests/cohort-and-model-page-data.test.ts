@@ -41,7 +41,7 @@ describe('cohort detail page data helper', () => {
 });
 
 describe('model detail page data helper', () => {
-  it('returns model detail payloads and preserves non-ok null fallback', async () => {
+  it('returns model detail payloads and distinguishes 404s from server failures', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce(mockResponse(true, {
         model: { id: 'openai-gpt', slug: 'openai-gpt', legacy_model_id: 'gpt-5.1', display_name: 'GPT-5.2', provider: 'OpenAI', color: '#10B981' },
@@ -54,16 +54,27 @@ describe('model detail page data helper', () => {
         recent_decisions: [],
         equity_curve: []
       }))
-      .mockResolvedValueOnce(mockResponse(false, {}, 404)));
+      .mockResolvedValueOnce(mockResponse(false, {}, 404))
+      .mockResolvedValueOnce(mockResponse(false, {}, 500)));
 
     await expect(fetchModelDetailData('gpt-5.1')).resolves.toEqual(
       expect.objectContaining({
-        model: expect.objectContaining({ id: 'openai-gpt', legacy_model_id: 'gpt-5.1' }),
-        num_cohorts: 2,
-        total_pnl: 120
+        status: 'ok',
+        data: expect.objectContaining({
+          model: expect.objectContaining({ id: 'openai-gpt', legacy_model_id: 'gpt-5.1' }),
+          num_cohorts: 2,
+          total_pnl: 120
+        })
       })
     );
-    await expect(fetchModelDetailData('missing')).resolves.toBeNull();
+    await expect(fetchModelDetailData('missing')).resolves.toEqual({
+      status: 'error',
+      error: 'Model not found'
+    });
+    await expect(fetchModelDetailData('broken')).resolves.toEqual({
+      status: 'error',
+      error: 'Failed to load model'
+    });
   });
 });
 

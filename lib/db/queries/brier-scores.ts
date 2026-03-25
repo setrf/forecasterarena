@@ -13,20 +13,10 @@ export function createBrierScore(score: {
   brier_score: number;
 }): BrierScoreRecord {
   const db = getDb();
-  const existing = db.prepare(`
-    SELECT * FROM brier_scores
-    WHERE trade_id = ?
-    LIMIT 1
-  `).get(score.trade_id) as BrierScoreRecord | undefined;
-
-  if (existing) {
-    return existing;
-  }
-
   const id = generateId();
 
   db.prepare(`
-    INSERT INTO brier_scores (
+    INSERT OR IGNORE INTO brier_scores (
       id, agent_id, trade_id, market_id, family_id, release_id, benchmark_config_model_id,
       forecast_probability, actual_outcome, brier_score
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -43,7 +33,11 @@ export function createBrierScore(score: {
     score.brier_score
   );
 
-  return db.prepare('SELECT * FROM brier_scores WHERE id = ?').get(id) as BrierScoreRecord;
+  return db.prepare(`
+    SELECT * FROM brier_scores
+    WHERE trade_id = ?
+    LIMIT 1
+  `).get(score.trade_id) as BrierScoreRecord;
 }
 
 export function getBrierScoresByAgent(agentId: string): BrierScoreRecord[] {

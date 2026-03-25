@@ -17,13 +17,23 @@ import { TradeHistoryPanel } from '@/features/cohorts/model-detail/components/Tr
 import type { AgentCohortData, Decision } from '@/features/cohorts/model-detail/types';
 import { createAgentCohortChartData } from '@/features/cohorts/model-detail/utils';
 
-export default function AgentCohortDetailPageClient() {
+interface AgentCohortDetailPageClientProps {
+  initialData?: AgentCohortData | null;
+  cohortId?: string;
+  familySlugOrLegacyId?: string;
+}
+
+export default function AgentCohortDetailPageClient({
+  initialData = null,
+  cohortId: initialCohortId,
+  familySlugOrLegacyId: initialFamilySlugOrLegacyId
+}: AgentCohortDetailPageClientProps = {}) {
   const params = useParams<{ id: string; familySlugOrLegacyId: string }>();
   const router = useRouter();
-  const cohortId = params.id;
-  const familySlugOrLegacyId = params.familySlugOrLegacyId;
+  const cohortId = initialCohortId ?? params.id;
+  const familySlugOrLegacyId = initialFamilySlugOrLegacyId ?? params.familySlugOrLegacyId;
 
-  const { data, loading, error } = useAgentCohortDetailData(cohortId, familySlugOrLegacyId);
+  const { data, loading, error } = useAgentCohortDetailData(cohortId, familySlugOrLegacyId, initialData);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 

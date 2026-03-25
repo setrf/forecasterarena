@@ -33,7 +33,7 @@ export function ModelsHeroSection({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="metric-tile__label">Current Leader</p>
-                <h2 className="mt-2 text-2xl">{leader.displayName}</h2>
+                <h2 className="heading-block mt-2">{leader.displayName}</h2>
                 <p className="metric-tile__meta">{leader.provider}</p>
               </div>
               <div
@@ -69,7 +69,7 @@ export function ModelsHeroSection({
       ) : (
         <div className="surface-panel p-6 md:p-7">
           <p className="page-intro__eyebrow">Leaderboard Pending</p>
-          <h2 className="text-2xl">Competition data has not started yet</h2>
+          <h2 className="heading-block">Competition data has not started yet</h2>
           <p className="page-intro__description mt-3">
             Model profiles are live, but ranking, Brier score, and win-rate stats will appear after the first cohort executes and markets begin resolving.
           </p>

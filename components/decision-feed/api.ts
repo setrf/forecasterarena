@@ -4,8 +4,14 @@ interface DecisionFeedResponse {
   decisions?: DecisionFeedDecision[];
 }
 
-export async function fetchRecentDecisions(limit: number): Promise<DecisionFeedDecision[]> {
-  const response = await fetch(`/api/decisions/recent?limit=${limit}`);
+export async function fetchRecentDecisions(
+  limit: number,
+  signal?: AbortSignal
+): Promise<DecisionFeedDecision[]> {
+  const response = await fetch(`/api/decisions/recent?limit=${limit}`, {
+    cache: 'no-store',
+    signal
+  });
 
   if (!response.ok) {
     throw new Error('Failed to load recent decisions');

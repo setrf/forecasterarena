@@ -1,5 +1,5 @@
 import { logSystemEvent } from '@/lib/db';
-import { withTransaction } from '@/lib/db/transactions';
+import { withImmediateTransaction } from '@/lib/db/transactions';
 import {
   getDefaultBenchmarkConfig,
   createAgentsForCohort,
@@ -12,7 +12,7 @@ export function startNewCohort(): StartCohortResult {
   try {
     console.log('Starting new cohort...');
 
-    const result = withTransaction(() => {
+    const result = withImmediateTransaction(() => {
       const benchmarkConfig = getDefaultBenchmarkConfig();
       if (!benchmarkConfig) {
         throw new Error('No default benchmark config is configured for future cohorts');

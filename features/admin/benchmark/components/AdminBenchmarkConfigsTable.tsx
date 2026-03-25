@@ -18,7 +18,7 @@ export function AdminBenchmarkConfigsTable({
   return (
     <div className="glass-card p-6 border border-[var(--border-medium)]">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold">Recent Benchmark Configs</h2>
+        <h2 className="heading-block">Recent Benchmark Configs</h2>
         <p className="text-sm text-[var(--text-muted)]">
           Promotion changes the default lineup for future cohorts. Use active rollover preview to see and confirm immediate changes for running cohorts.
         </p>

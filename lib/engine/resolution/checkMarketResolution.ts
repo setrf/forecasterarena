@@ -1,7 +1,6 @@
 import { logSystemEvent } from '@/lib/db';
 import { resolveMarket } from '@/lib/db/queries';
 import {
-  handleCancelledMarket,
   processResolvedMarket
 } from '@/lib/engine/resolution/settlement';
 import type { MarketResolutionResult } from '@/lib/engine/resolution/types';
@@ -30,25 +29,22 @@ export async function checkMarketResolution(market: Market): Promise<MarketResol
     }
 
     if (!resolution.winner || resolution.winner === 'UNKNOWN') {
-      const refundCount = handleCancelledMarket(market.id);
-
       logSystemEvent('resolution_unknown_winner', {
         market_id: market.id,
         polymarket_id: market.polymarket_id,
         question: market.question.slice(0, 100),
         error: resolution.error || 'Winner could not be determined',
-        fallback_outcome: 'CANCELLED',
-        positions_refunded: refundCount
-      }, 'error');
+        fallback_outcome: 'deferred'
+      }, 'warning');
 
       console.error(
-        `Market ${market.id} resolved but winner could not be determined - refunded as CANCELLED`
+        `Market ${market.id} resolved upstream but winner could not be determined; deferring settlement`
       );
 
       return {
-        resolved: true,
-        positions_settled: refundCount,
-        errors: [resolution.error || 'Winner could not be determined; market refunded as CANCELLED']
+        resolved: false,
+        positions_settled: 0,
+        errors: [resolution.error || 'Winner could not be determined yet']
       };
     }
 

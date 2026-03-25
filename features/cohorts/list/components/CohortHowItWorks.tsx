@@ -30,7 +30,7 @@ export function CohortHowItWorks() {
           >
             {item.num}
           </span>
-          <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
+          <h3 className="heading-card mb-2">{item.title}</h3>
           <p className="text-sm text-[var(--text-secondary)]">{item.desc}</p>
         </div>
       ))}

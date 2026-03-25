@@ -231,7 +231,7 @@ describe('engine/resolution', () => {
     }
   });
 
-  it('refunds positions as CANCELLED when a resolved market winner is undeterminable', async () => {
+  it('defers settlement when a resolved market winner is still undeterminable', async () => {
     const fetchMarketById = vi.fn().mockResolvedValue({ id: 'pm-closed' });
     const checkResolution = vi.fn().mockReturnValue({
       resolved: true,
@@ -248,7 +248,7 @@ describe('engine/resolution', () => {
       await withResolutionFixture(async ({ agent, queries, resolution }) => {
         const market = queries.upsertMarket({
           polymarket_id: `pm-resolution-${Date.now()}`,
-          question: 'Will unknown winners be refunded?',
+          question: 'Will unknown winners stay pending?',
           close_date: '2030-01-01T00:00:00.000Z',
           status: 'closed',
           current_price: 0.51,
@@ -257,24 +257,59 @@ describe('engine/resolution', () => {
         });
 
         const position = queries.upsertPosition(agent.id, market.id, 'YES', 10, 0.5, 5);
-        const startingAgent = queries.getAgentById(agent.id)!;
-
         const result = await resolution.checkAllResolutions();
         const updatedMarket = queries.getMarketById(market.id)!;
         const updatedPosition = queries.getPositionById(position.id)!;
-        const updatedAgent = queries.getAgentById(agent.id)!;
 
         expect(result.markets_checked).toBe(1);
-        expect(result.markets_resolved).toBe(1);
-        expect(result.positions_settled).toBe(1);
+        expect(result.markets_resolved).toBe(0);
+        expect(result.positions_settled).toBe(0);
         expect(result.errors).toEqual([
           `Market ${market.id}: Token prices were not decisive`
         ]);
-        expect(updatedMarket.status).toBe('resolved');
-        expect(updatedMarket.resolution_outcome).toBe('CANCELLED');
-        expect(updatedPosition.status).toBe('settled');
-        expect(updatedAgent.cash_balance).toBeCloseTo(startingAgent.cash_balance + 5, 10);
-        expect(updatedAgent.total_invested).toBe(0);
+        expect(updatedMarket.status).toBe('closed');
+        expect(updatedMarket.resolution_outcome).toBeNull();
+        expect(updatedPosition.status).toBe('open');
+      });
+    } finally {
+      vi.doUnmock('@/lib/polymarket/client');
+    }
+  });
+
+  it('rechecks unresolved markets that were already marked resolved by market sync', async () => {
+    const fetchMarketById = vi.fn().mockResolvedValue({ id: 'pm-closed' });
+    const checkResolution = vi.fn().mockReturnValue({ resolved: true, winner: 'YES' });
+
+    vi.doMock('@/lib/polymarket/client', () => ({
+      fetchMarketById,
+      checkResolution
+    }));
+
+    try {
+      await withResolutionFixture(async ({ agent, queries, resolution }) => {
+        const market = queries.upsertMarket({
+          polymarket_id: `pm-resolution-${Date.now()}`,
+          question: 'Will resolved-but-unsettled markets still be checked?',
+          close_date: '2030-01-01T00:00:00.000Z',
+          status: 'resolved',
+          current_price: 0.8,
+          volume: 1000,
+          liquidity: 500
+        });
+
+        const position = queries.upsertPosition(agent.id, market.id, 'YES', 10, 0.5, 5);
+
+        const result = await resolution.checkAllResolutions();
+
+        expect(result).toMatchObject({
+          markets_checked: 1,
+          markets_resolved: 1,
+          positions_settled: 1,
+          errors: []
+        });
+        expect(fetchMarketById).toHaveBeenCalledWith(market.polymarket_id);
+        expect(queries.getMarketById(market.id)?.resolution_outcome).toBe('YES');
+        expect(queries.getPositionById(position.id)?.status).toBe('settled');
       });
     } finally {
       vi.doUnmock('@/lib/polymarket/client');

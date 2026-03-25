@@ -24,7 +24,7 @@ export function PageIntro({
   contentClassName,
 }: PageIntroProps) {
   return (
-    <section className={['page-intro', className].filter(Boolean).join(' ')}>
+    <section className={['page-intro', !aside && 'page-intro--solo', className].filter(Boolean).join(' ')}>
       <div className={['page-intro__grid', containerClassName].filter(Boolean).join(' ')}>
         <div className={['page-intro__content', contentClassName].filter(Boolean).join(' ')}>
           {eyebrow && <p className="page-intro__eyebrow">{eyebrow}</p>}

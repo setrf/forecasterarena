@@ -44,7 +44,7 @@ export function AdminExportSection({
     <div className="glass-card p-6 mb-10 border border-[var(--border-medium)]">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-semibold">Export Data (CSV + zip)</h3>
+          <h3 className="heading-card">Export Data (CSV + zip)</h3>
           <p className="text-sm text-[var(--text-muted)]">Admin-only, capped to 7 days / 50k rows per table</p>
         </div>
       </div>

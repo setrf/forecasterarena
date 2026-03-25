@@ -174,7 +174,12 @@ describe('schema seeds and idempotency behavior', () => {
         FROM brier_scores
         WHERE trade_id = ?
       `).get(trade.id) as { count: number };
+      const indexInfo = db.prepare(`
+        PRAGMA index_list('brier_scores')
+      `).all() as Array<{ name: string; unique: number }>;
+
       expect(count.count).toBe(1);
+      expect(indexInfo.find((index) => index.name === 'idx_brier_trade')?.unique).toBe(1);
     } finally {
       await ctx.cleanup();
     }

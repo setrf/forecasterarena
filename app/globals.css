@@ -87,6 +87,47 @@ h1, h2, h3, .font-serif {
   letter-spacing: -0.02em;
 }
 
+.heading-page,
+.page-intro__title {
+  max-width: 52rem;
+  text-wrap: balance;
+  font-size: clamp(2.1rem, 4.8vw, 4.4rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.heading-detail,
+.detail-header__title {
+  text-wrap: balance;
+  font-size: clamp(1.95rem, 3.25vw, 3.2rem);
+  line-height: 1.03;
+  letter-spacing: -0.04em;
+}
+
+.heading-section,
+.section-heading__title {
+  text-wrap: balance;
+  font-size: clamp(1.7rem, 3vw, 2.7rem);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.heading-block,
+.prose h2:not(.page-intro__title):not(.section-heading__title):not(.detail-header__title) {
+  text-wrap: balance;
+  font-size: clamp(1.35rem, 2.15vw, 1.9rem);
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+}
+
+.heading-card,
+.prose h3 {
+  text-wrap: balance;
+  font-size: clamp(1.05rem, 1.1rem + 0.45vw, 1.28rem);
+  line-height: 1.24;
+  letter-spacing: -0.022em;
+}
+
 h1 {
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   line-height: 1.05;
@@ -587,6 +628,26 @@ h3 {
 .container-medium { max-width: 1080px; }
 .container-wide { max-width: 1320px; }
 
+.flow-xl > * + * {
+  margin-top: 3rem;
+}
+
+.flow-lg > * + * {
+  margin-top: 2rem;
+}
+
+.flow-md > * + * {
+  margin-top: 1.5rem;
+}
+
+.flow-sm > * + * {
+  margin-top: 1rem;
+}
+
+.flow-xs > * + * {
+  margin-top: 0.75rem;
+}
+
 /* ========================================
    PAGE SYSTEM
    ======================================== */
@@ -629,8 +690,24 @@ h3 {
   gap: 1.75rem;
 }
 
+.page-intro__grid.container-narrow {
+  max-width: 720px;
+}
+
+.page-intro__grid.container-medium {
+  max-width: 1080px;
+}
+
+.page-intro__grid.container-wide {
+  max-width: 1320px;
+}
+
 .page-intro__content {
   max-width: 52rem;
+}
+
+.page-intro__content--measure {
+  max-width: 46rem;
 }
 
 .page-intro__eyebrow,
@@ -642,14 +719,6 @@ h3 {
   font-weight: 500;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-}
-
-.page-intro__title {
-  max-width: 52rem;
-  text-wrap: balance;
-  font-size: clamp(2.1rem, 4.8vw, 4.4rem);
-  line-height: 0.98;
-  letter-spacing: -0.045em;
 }
 
 .page-intro__description,
@@ -783,11 +852,6 @@ h3 {
   margin-bottom: 1.75rem;
 }
 
-.section-heading__title {
-  font-size: clamp(1.7rem, 3vw, 2.7rem);
-  line-height: 1.1;
-}
-
 .section-heading__action {
   align-self: flex-start;
 }
@@ -846,8 +910,6 @@ h3 {
 
 .detail-header__title {
   margin-top: 0.35rem;
-  font-size: clamp(1.9rem, 3vw, 3rem);
-  line-height: 1.05;
   overflow-wrap: anywhere;
 }
 
@@ -869,6 +931,10 @@ h3 {
     grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 28rem);
     gap: 2.5rem;
     align-items: end;
+  }
+
+  .page-intro--solo .page-intro__grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .section-heading {

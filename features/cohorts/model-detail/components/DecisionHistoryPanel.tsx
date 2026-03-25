@@ -17,7 +17,7 @@ export function DecisionHistoryPanel({
 }: DecisionHistoryPanelProps) {
   return (
     <div className="glass-card p-6 mb-8">
-      <h2 className="text-xl font-semibold mb-4">
+      <h2 className="heading-block mb-4">
         Decision History ({decisions.length})
       </h2>
 

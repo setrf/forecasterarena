@@ -48,7 +48,7 @@ export function LeaderboardPreview({ data, hasRealData }: LeaderboardPreviewProp
                   {index + 1}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">{entry.display_name}</h3>
+                  <h3 className="heading-card">{entry.display_name}</h3>
                   <p className="text-sm text-[var(--text-muted)]">{entry.provider}</p>
                 </div>
               </div>

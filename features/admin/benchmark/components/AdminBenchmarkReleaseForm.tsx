@@ -22,7 +22,7 @@ export function AdminBenchmarkReleaseForm({
   return (
     <div className="glass-card p-6 border border-[var(--border-medium)]">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold">Register Release</h2>
+        <h2 className="heading-block">Register Release</h2>
         <p className="text-sm text-[var(--text-muted)]">
           Add a new exact release for an existing benchmark family without rewriting history.
         </p>

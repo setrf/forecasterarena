@@ -45,7 +45,7 @@ export function ModelCard({
             <span className="relative z-10">{model.displayName.substring(0, 2).toUpperCase()}</span>
           </div>
           <div>
-            <h3 className="font-semibold text-lg group-hover:text-[var(--accent-gold)] transition-colors">
+            <h3 className="heading-card group-hover:text-[var(--accent-gold)] transition-colors">
               {model.displayName}
             </h3>
             <p className="text-sm text-[var(--text-muted)]">{model.provider}</p>

@@ -84,9 +84,15 @@ function buildPerformanceCacheKey(range: PerformanceTimeRange, cohortId: string 
   return `${range}::${cohortId ?? 'all'}`;
 }
 
+function parseSqliteUtcTimestamp(timestamp: string): number | null {
+  const parsed = Date.parse(timestamp.includes('T') ? timestamp : `${timestamp.replace(' ', 'T')}Z`);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
 function readPersistedPerformanceData(
   range: PerformanceTimeRange,
-  cohortId: string | null
+  cohortId: string | null,
+  nowMs: number
 ): Array<Record<string, number | string>> | null {
   if (cohortId) {
     return null;
@@ -94,13 +100,20 @@ function readPersistedPerformanceData(
 
   const db = getDb();
   const row = db.prepare(`
-    SELECT payload_json
+    SELECT payload_json, generated_at
     FROM performance_chart_cache
     WHERE cache_key = ?
     LIMIT 1
-  `).get(buildPerformanceCacheKey(range, cohortId)) as { payload_json: string } | undefined;
+  `).get(buildPerformanceCacheKey(range, cohortId)) as
+    | { payload_json: string; generated_at: string }
+    | undefined;
 
   if (!row?.payload_json) {
+    return null;
+  }
+
+  const generatedAtMs = parseSqliteUtcTimestamp(row.generated_at);
+  if (generatedAtMs === null || nowMs - generatedAtMs > PERFORMANCE_CACHE_TTL_MS) {
     return null;
   }
 
@@ -215,50 +228,52 @@ export function getReleaseChangeEvents(args?: {
     latestReleaseNameByModel.set(row.model_id, row.release_name);
   }
 
-  let currentQuery = `
-    SELECT
-      bc.created_at as config_created_at,
-      COALESCE(mf.slug, mf.id) as model_id,
-      mf.public_display_name as model_name,
-      bcm.release_display_name_snapshot as release_name,
-      COALESCE(bcm.color_snapshot, '#94A3B8') as color,
-      bcm.release_id as release_id
-    FROM benchmark_configs bc
-    JOIN benchmark_config_models bcm ON bcm.benchmark_config_id = bc.id
-    JOIN model_families mf ON mf.id = bcm.family_id
-    WHERE bc.is_default_for_future_cohorts = 1
-  `;
-  const currentParams: Array<string> = [];
+  if (!args?.cohortId) {
+    let currentQuery = `
+      SELECT
+        bc.created_at as config_created_at,
+        COALESCE(mf.slug, mf.id) as model_id,
+        mf.public_display_name as model_name,
+        bcm.release_display_name_snapshot as release_name,
+        COALESCE(bcm.color_snapshot, '#94A3B8') as color,
+        bcm.release_id as release_id
+      FROM benchmark_configs bc
+      JOIN benchmark_config_models bcm ON bcm.benchmark_config_id = bc.id
+      JOIN model_families mf ON mf.id = bcm.family_id
+      WHERE bc.is_default_for_future_cohorts = 1
+    `;
+    const currentParams: Array<string> = [];
 
-  if (args?.familyId) {
-    currentQuery += ' AND bcm.family_id = ?';
-    currentParams.push(args.familyId);
-  }
-
-  const currentRows = db.prepare(currentQuery).all(...currentParams) as Array<{
-    config_created_at: string;
-    model_id: string;
-    model_name: string;
-    release_name: string;
-    color: string;
-    release_id: string;
-  }>;
-
-  for (const row of currentRows) {
-    const previousReleaseId = latestByModel.get(row.model_id);
-    if (!previousReleaseId || previousReleaseId === row.release_id) {
-      continue;
+    if (args?.familyId) {
+      currentQuery += ' AND bcm.family_id = ?';
+      currentParams.push(args.familyId);
     }
 
-    events.push({
-      date: row.config_created_at,
-      model_id: row.model_id,
-      model_name: row.model_name,
-      previous_release_name: latestReleaseNameByModel.get(row.model_id) ?? row.model_name,
-      release_name: row.release_name,
-      color: row.color
-    });
-    latestReleaseNameByModel.set(row.model_id, row.release_name);
+    const currentRows = db.prepare(currentQuery).all(...currentParams) as Array<{
+      config_created_at: string;
+      model_id: string;
+      model_name: string;
+      release_name: string;
+      color: string;
+      release_id: string;
+    }>;
+
+    for (const row of currentRows) {
+      const previousReleaseId = latestByModel.get(row.model_id);
+      if (!previousReleaseId || previousReleaseId === row.release_id) {
+        continue;
+      }
+
+      events.push({
+        date: row.config_created_at,
+        model_id: row.model_id,
+        model_name: row.model_name,
+        previous_release_name: latestReleaseNameByModel.get(row.model_id) ?? row.model_name,
+        release_name: row.release_name,
+        color: row.color
+      });
+      latestReleaseNameByModel.set(row.model_id, row.release_name);
+    }
   }
 
   return events.sort((left, right) => left.date.localeCompare(right.date));
@@ -393,7 +408,7 @@ export function getPerformanceData(rawRange: string | null, cohortId: string | n
     return cached.data;
   }
 
-  const dataPoints = readPersistedPerformanceData(range, cohortId) ?? computePerformanceSeries(range, cohortId);
+  const dataPoints = readPersistedPerformanceData(range, cohortId, nowMs) ?? computePerformanceSeries(range, cohortId);
   if (!cohortId) {
     writePersistedPerformanceData(range, cohortId, dataPoints);
   }

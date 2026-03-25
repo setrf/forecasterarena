@@ -65,7 +65,7 @@ export default function ChangelogPageContent() {
               </div>
 
               <div className="glass-card p-6">
-                <h2 className="text-xl font-bold mb-3">{entry.title}</h2>
+                <h2 className="heading-block mb-3">{entry.title}</h2>
                 <p className="text-[var(--text-secondary)] mb-4">
                   {entry.description}
                 </p>

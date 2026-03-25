@@ -7,7 +7,7 @@ interface AgentCohortDetailNotFoundProps {
 export function AgentCohortDetailNotFound({ error }: AgentCohortDetailNotFoundProps) {
   return (
     <div className="container-wide mx-auto px-6 py-20 text-center">
-      <h1 className="text-2xl font-bold mb-4">{error || 'Not Found'}</h1>
+      <h1 className="heading-block mb-4">{error || 'Not Found'}</h1>
       <p className="text-[var(--text-secondary)] mb-6">
         {error === 'Agent not found in this cohort'
           ? 'This model was not active in this cohort.'

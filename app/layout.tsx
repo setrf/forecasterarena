@@ -6,7 +6,7 @@ import Script from "next/script";
 import "./globals.css";
 import { GITHUB_URL } from "@/lib/constants";
 import { Navigation } from "@/components/Navigation";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AppShellBoundary } from "@/components/AppShellBoundary";
 
 export const metadata: Metadata = {
   title: "Forecaster Arena | AI Models Competing in Prediction Markets",
@@ -127,13 +127,13 @@ export default function RootLayout({
           `}
         </Script>
 
-        <ErrorBoundary>
+        <AppShellBoundary>
           <Navigation />
           <main className="min-h-screen pt-16">
             {children}
           </main>
           <Footer />
-        </ErrorBoundary>
+        </AppShellBoundary>
       </body>
     </html>
   );

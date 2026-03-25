@@ -36,7 +36,7 @@ export default function AdminDashboardPageClient() {
         description="System status, operational controls, and export tooling."
       >
         <div className="glass-card mx-auto max-w-md p-8 text-center border border-[var(--border-medium)]">
-          <h2 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">Checking admin session...</h2>
+          <h2 className="heading-block mb-3 text-[var(--text-primary)]">Checking admin session...</h2>
           <p className="text-[var(--text-secondary)]">Verifying your existing admin cookie before loading controls.</p>
         </div>
       </AdminPageShell>

@@ -25,7 +25,7 @@ export function MarketPositionsTable({
 }: MarketPositionsTableProps) {
   return (
     <div className="glass-card p-6 mb-8">
-      <h2 className="text-xl font-semibold mb-4">Agent Positions</h2>
+      <h2 className="heading-block mb-4">Agent Positions</h2>
       {positions.length === 0 ? (
         <p className="text-[var(--text-muted)] text-center py-8">
           No agents have positions on this market

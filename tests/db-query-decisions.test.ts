@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 import { withDbQueryModules } from '@/tests/helpers/db-query-test-utils';
 
 describe('db query modules - decision and trade operations', () => {
@@ -253,5 +254,20 @@ describe('db query modules - decision and trade operations', () => {
       expect(trades.getTradesByMarket(market.id).map(trade => trade.id)).toEqual([sell.id, buy.id]);
       expect(trades.getTradesByDecision(decision.id).map(trade => trade.id)).toEqual([buy.id, sell.id]);
     });
+  });
+
+  it('throws when decision lineage is requested for an agent missing frozen benchmark metadata', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const { getDecisionLineageSnapshot } = await import('@/lib/db/queries/decisions/lineage');
+      const missingAgentId = 'missing-agent';
+
+      expect(() => getDecisionLineageSnapshot(missingAgentId)).toThrow(
+        `Agent ${missingAgentId} is missing frozen benchmark lineage`
+      );
+    } finally {
+      await ctx.cleanup();
+    }
   });
 });

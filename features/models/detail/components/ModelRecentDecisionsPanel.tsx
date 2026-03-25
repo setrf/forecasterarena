@@ -14,7 +14,7 @@ export function ModelRecentDecisionsPanel({
 }: ModelRecentDecisionsPanelProps) {
   return (
     <div className="glass-card p-6">
-      <h3 className="text-lg font-semibold mb-4">Recent Decisions</h3>
+      <h3 className="heading-card mb-4">Recent Decisions</h3>
 
       {loading ? (
         <div className="text-center py-8 text-[var(--text-muted)]">Loading...</div>

@@ -26,7 +26,7 @@ export function MarketTradesTable({
 }: MarketTradesTableProps) {
   return (
     <div className="glass-card p-6">
-      <h2 className="text-xl font-semibold mb-4">Trade History</h2>
+      <h2 className="heading-block mb-4">Trade History</h2>
       {trades.length === 0 ? (
         <p className="text-[var(--text-muted)] text-center py-8">
           No trades on this market yet

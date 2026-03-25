@@ -15,26 +15,55 @@ function isNonNegativeFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
+function getRequiredTrimmedString(
+  value: unknown,
+  label: string
+): { ok: true; value: string } | { ok: false; error: string } {
+  if (typeof value !== 'string') {
+    return { ok: false, error: `${label} is required` };
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { ok: false, error: `${label} is required` };
+  }
+
+  return { ok: true, value: trimmed };
+}
+
+function getOptionalTrimmedString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
 export function createAdminModelReleaseRecord(
   input: CreateAdminModelReleaseInput
 ): AdminOperationResult<{
   success: true;
   release: AdminBenchmarkReleaseSummary;
 }> {
-  const family = getModelFamilyById(input.family_id);
+  const familyId = getRequiredTrimmedString(input.family_id, 'Model family');
+  if (!familyId.ok) {
+    return { ok: false, status: 400, error: familyId.error };
+  }
+
+  const family = getModelFamilyById(familyId.value);
   if (!family) {
     return { ok: false, status: 404, error: 'Unknown model family' };
   }
 
-  const releaseName = input.release_name.trim();
-  const openrouterId = input.openrouter_id.trim();
-
-  if (!releaseName) {
-    return { ok: false, status: 400, error: 'Release name is required' };
+  const releaseName = getRequiredTrimmedString(input.release_name, 'Release name');
+  if (!releaseName.ok) {
+    return { ok: false, status: 400, error: releaseName.error };
   }
 
-  if (!openrouterId) {
-    return { ok: false, status: 400, error: 'OpenRouter model ID is required' };
+  const openrouterId = getRequiredTrimmedString(input.openrouter_id, 'OpenRouter model ID');
+  if (!openrouterId.ok) {
+    return { ok: false, status: 400, error: openrouterId.error };
   }
 
   if (!isNonNegativeFiniteNumber(input.default_input_price_per_million)) {
@@ -45,9 +74,9 @@ export function createAdminModelReleaseRecord(
     return { ok: false, status: 400, error: 'Output price must be a non-negative number' };
   }
 
-  const releaseSlug = slugifyReleaseName(input.release_slug?.trim() || releaseName);
+  const releaseSlug = slugifyReleaseName(getOptionalTrimmedString(input.release_slug) || releaseName.value);
   const existingRelease = getModelReleasesByFamily(family.id).find((release) => (
-    release.release_slug === releaseSlug || release.openrouter_id === openrouterId
+    release.release_slug === releaseSlug || release.openrouter_id === openrouterId.value
   ));
 
   if (existingRelease) {
@@ -60,8 +89,9 @@ export function createAdminModelReleaseRecord(
     };
   }
 
+  const notes = getOptionalTrimmedString(input.notes);
   const metadata = JSON.stringify({
-    notes: input.notes?.trim() || undefined,
+    notes,
     default_input_price_per_million: input.default_input_price_per_million,
     default_output_price_per_million: input.default_output_price_per_million,
     created_via: 'admin'
@@ -70,9 +100,9 @@ export function createAdminModelReleaseRecord(
   const release = createModelRelease({
     id: buildModelReleaseId(family.id, releaseSlug),
     family_id: family.id,
-    release_name: releaseName,
+    release_name: releaseName.value,
     release_slug: releaseSlug,
-    openrouter_id: openrouterId,
+    openrouter_id: openrouterId.value,
     provider: family.provider,
     metadata_json: metadata,
     release_status: 'active'
@@ -94,7 +124,7 @@ export function createAdminModelReleaseRecord(
         default_input_price_per_million: input.default_input_price_per_million,
         default_output_price_per_million: input.default_output_price_per_million,
         metadata: {
-          notes: input.notes?.trim() || undefined,
+          notes,
           default_input_price_per_million: input.default_input_price_per_million,
           default_output_price_per_million: input.default_output_price_per_million,
           created_via: 'admin'

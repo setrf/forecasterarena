@@ -19,9 +19,10 @@ export type DecisionDetailLoadResult =
     };
 
 export async function fetchDecisionDetailData(
-  decisionId: string
+  decisionId: string,
+  signal?: AbortSignal
 ): Promise<DecisionDetailLoadResult> {
-  const response = await fetch(`/api/decisions/${decisionId}`);
+  const response = await fetch(`/api/decisions/${decisionId}`, { signal });
   if (!response.ok) {
     return {
       status: 'error',

@@ -311,6 +311,11 @@ describe('db query modules - core operations', () => {
         status: 'closed',
         volume: 750
       });
+      const unresolvedResolvedMarket = createMarket(markets, {
+        question: 'Resolved without outcome',
+        status: 'resolved',
+        volume: 600
+      });
 
       expect(updated.question).toBe('Inserted market');
       expect(updated.volume).toBe(2500);
@@ -326,14 +331,24 @@ describe('db query modules - core operations', () => {
         ''
       ]);
       expect(markets.getTopMarketsByVolume(1).map(market => market.id)).toEqual([activeHighVolume.id]);
-      expect(markets.getClosedMarkets().map(market => market.id)).toEqual([closedMarket.id, inserted.id]);
+      const pendingResolutionIds = markets.getClosedMarkets().map(market => market.id);
+      expect(pendingResolutionIds).toHaveLength(3);
+      expect(pendingResolutionIds).toEqual(expect.arrayContaining([
+        unresolvedResolvedMarket.id,
+        closedMarket.id,
+        inserted.id
+      ]));
 
       markets.resolveMarket(activeLowVolume.id, 'YES');
+      markets.resolveMarket(unresolvedResolvedMarket.id, 'NO');
 
       const resolved = markets.getMarketById(activeLowVolume.id)!;
       expect(resolved.status).toBe('resolved');
       expect(resolved.resolution_outcome).toBe('YES');
       expect(resolved.resolved_at).toBeTruthy();
+      const closedIdsAfterResolution = markets.getClosedMarkets().map(market => market.id);
+      expect(closedIdsAfterResolution).toHaveLength(2);
+      expect(closedIdsAfterResolution).toEqual(expect.arrayContaining([closedMarket.id, inserted.id]));
     });
   });
 });

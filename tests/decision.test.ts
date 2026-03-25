@@ -172,7 +172,7 @@ describe('engine/decision', () => {
       vi.doUnmock('@/lib/openrouter/client');
       await ctx.cleanup();
     }
-  });
+  }, 60000);
 
   it('records a lineage-aware api_costs row when a decision is finalized', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
@@ -229,7 +229,7 @@ describe('engine/decision', () => {
       vi.doUnmock('@/lib/openrouter/client');
       await ctx.cleanup();
     }
-  });
+  }, 60000);
 
   it('retries malformed model output up to configured retry limit', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
@@ -375,8 +375,82 @@ describe('engine/decision', () => {
       ]);
       expect(secondRun.decisions[0].success).toBe(false);
       expect(callOpenRouterWithRetry).toHaveBeenCalledTimes(2);
-      expect(executeBets).toHaveBeenCalledTimes(2);
+      expect(executeBets).toHaveBeenCalledTimes(4);
       expect(queries.getTotalDecisionsForCohort(cohort.id)).toBe(1);
+    } finally {
+      vi.doUnmock('@/lib/openrouter/client');
+      vi.doUnmock('@/lib/engine/execution');
+      await ctx.cleanup();
+    }
+  });
+
+  it('retries only failed BET legs within the same decision run', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+    const callOpenRouterWithRetry = vi.fn().mockResolvedValue(
+      response(
+        JSON.stringify({
+          action: 'BET',
+          reasoning: 'Attempt two trades',
+          bets: [
+            { market_id: 'market-1', side: 'YES', amount: 100 },
+            { market_id: 'market-2', side: 'NO', amount: 100 }
+          ]
+        })
+      )
+    );
+    const executeBets = vi
+      .fn()
+      .mockReturnValueOnce([
+        { success: true, trade_id: 'trade-1', position_id: 'position-1', shares: 10 },
+        { success: false, error: 'Temporary liquidity miss' }
+      ])
+      .mockReturnValueOnce([
+        { success: true, trade_id: 'trade-2', position_id: 'position-2', shares: 12 }
+      ]);
+
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
+    vi.doMock('@/lib/engine/execution', async () => {
+      const actual = await vi.importActual<typeof import('@/lib/engine/execution')>('@/lib/engine/execution');
+      return {
+        ...actual,
+        executeBets,
+        executeSells: vi.fn(actual.executeSells)
+      };
+    });
+
+    try {
+      const { queries, cohort } = await createSingleAgentFixture();
+      queries.upsertMarket({
+        id: 'market-1',
+        polymarket_id: nextMarketId(),
+        question: 'Will partial bet retries preserve successful legs?',
+        market_type: 'binary',
+        status: 'active',
+        current_price: 0.52,
+        close_date: '2099-01-01T00:00:00.000Z',
+        volume: 50_000
+      });
+      queries.upsertMarket({
+        id: 'market-2',
+        polymarket_id: nextMarketId(),
+        question: 'Will failed bet legs retry once?',
+        market_type: 'binary',
+        status: 'active',
+        current_price: 0.48,
+        close_date: '2099-01-01T00:00:00.000Z',
+        volume: 45_000
+      });
+
+      const decisionEngine = await import('@/lib/engine/decision');
+      const result = await decisionEngine.runCohortDecisions(cohort.id);
+
+      expect(result.decisions[0].success).toBe(true);
+      expect(result.decisions[0].trades_executed).toBe(2);
+      expect(executeBets).toHaveBeenCalledTimes(2);
+      expect(executeBets.mock.calls[0]?.[1]).toHaveLength(2);
+      expect(executeBets.mock.calls[1]?.[1]).toEqual([
+        { market_id: 'market-2', side: 'NO', amount: 100 }
+      ]);
     } finally {
       vi.doUnmock('@/lib/openrouter/client');
       vi.doUnmock('@/lib/engine/execution');

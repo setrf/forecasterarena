@@ -11,14 +11,25 @@ import { CohortLeaderboardTable } from '@/features/cohorts/detail/components/Coh
 import { CohortPerformanceSection } from '@/features/cohorts/detail/components/CohortPerformanceSection';
 import { CohortRecentDecisionsPanel } from '@/features/cohorts/detail/components/CohortRecentDecisionsPanel';
 import { CohortStatsGrid } from '@/features/cohorts/detail/components/CohortStatsGrid';
+import type { CohortDetailLoadResult } from '@/features/cohorts/detail/api';
 import { createCohortChartData, getCohortChartModels, sortAgentsByValue } from '@/features/cohorts/detail/utils';
 
-export default function CohortDetailPageClient() {
+type CohortDetailPageData = Extract<CohortDetailLoadResult, { status: 'ok' }>['data'];
+
+interface CohortDetailPageClientProps {
+  initialData?: CohortDetailPageData | null;
+  cohortId?: string;
+}
+
+export default function CohortDetailPageClient({
+  initialData = null,
+  cohortId: initialCohortId
+}: CohortDetailPageClientProps = {}) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const cohortId = params.id;
+  const cohortId = initialCohortId ?? params.id;
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
-  const { cohort, agents, stats, equityCurves, releaseChanges, decisions, loading, error } = useCohortDetailData(cohortId);
+  const { cohort, agents, stats, equityCurves, releaseChanges, decisions, loading, error } = useCohortDetailData(cohortId, initialData);
 
   const chartData = useMemo(() => createCohortChartData(equityCurves), [equityCurves]);
   const sortedAgents = useMemo(() => sortAgentsByValue(agents), [agents]);

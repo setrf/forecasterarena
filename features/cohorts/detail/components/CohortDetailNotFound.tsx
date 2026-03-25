@@ -7,7 +7,7 @@ interface CohortDetailNotFoundProps {
 export function CohortDetailNotFound({ title }: CohortDetailNotFoundProps) {
   return (
     <div className="container-wide mx-auto px-6 py-20 text-center">
-      <h1 className="text-2xl font-bold mb-4">{title}</h1>
+      <h1 className="heading-block mb-4">{title}</h1>
       <p className="text-[var(--text-secondary)] mb-6">
         The cohort may no longer be active, or the link may be pointing to a missing record.
       </p>

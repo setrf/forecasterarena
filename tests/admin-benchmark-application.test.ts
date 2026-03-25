@@ -89,6 +89,20 @@ describe('admin benchmark lineage services', () => {
         status: 409,
         error: 'A release with that slug already exists for this family'
       });
+
+      const malformed = createAdminModelReleaseRecord({
+        family_id: family.id,
+        release_name: null as never,
+        openrouter_id: `${family.provider.toLowerCase()}/bad-release`,
+        default_input_price_per_million: 3,
+        default_output_price_per_million: 9
+      });
+
+      expect(malformed).toEqual({
+        ok: false,
+        status: 400,
+        error: 'Release name is required'
+      });
     } finally {
       await ctx.cleanup();
     }
@@ -232,6 +246,65 @@ describe('admin benchmark lineage services', () => {
       expect(reloadedFirstOpenAiAgent.model.release_name).not.toBe('GPT-5.4');
     } finally {
       vi.useRealTimers();
+      await ctx.cleanup();
+    }
+  });
+
+  it('rejects malformed config payloads and rolls back partial config writes', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const queries = await import('@/lib/db/queries');
+      const actualAdmin = await import('@/lib/application/admin-benchmark');
+      const actualDbQueries = await import('@/lib/db/queries');
+      const assignments = await buildFullAssignments();
+      const malformed = actualAdmin.createAdminBenchmarkConfigRecord({
+        version_name: null as never,
+        methodology_version: 'v1',
+        assignments
+      });
+
+      expect(malformed).toEqual({
+        ok: false,
+        status: 400,
+        error: 'Version name is required'
+      });
+
+      const baselineCount = queries.getAllBenchmarkConfigs().length;
+
+      vi.resetModules();
+      vi.doMock('@/lib/db/queries', async () => {
+        const actual = await vi.importActual<typeof import('@/lib/db/queries')>('@/lib/db/queries');
+        let createCalls = 0;
+
+        return {
+          ...actual,
+          createBenchmarkConfigModel(args: Parameters<typeof actual.createBenchmarkConfigModel>[0]) {
+            createCalls += 1;
+            if (createCalls === 2) {
+              throw new Error('synthetic config model failure');
+            }
+
+            return actual.createBenchmarkConfigModel(args);
+          }
+        };
+      });
+
+      const failingAdmin = await import('@/lib/application/admin-benchmark');
+
+      expect(() => failingAdmin.createAdminBenchmarkConfigRecord({
+        version_name: 'should-rollback',
+        methodology_version: 'v1',
+        assignments
+      })).toThrow('synthetic config model failure');
+
+      vi.doUnmock('@/lib/db/queries');
+      vi.resetModules();
+      const reloadedQueries = await import('@/lib/db/queries');
+      expect(reloadedQueries.getAllBenchmarkConfigs()).toHaveLength(baselineCount);
+    } finally {
+      vi.doUnmock('@/lib/db/queries');
+      vi.resetModules();
       await ctx.cleanup();
     }
   });

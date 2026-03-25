@@ -19,7 +19,7 @@ export function ModelCohortPerformancePanel({
 }: ModelCohortPerformancePanelProps) {
   return (
     <div className="glass-card p-6">
-      <h3 className="text-lg font-semibold mb-4">Cohort Performance</h3>
+      <h3 className="heading-card mb-4">Cohort Performance</h3>
 
       {loading ? (
         <div className="text-center py-8 text-[var(--text-muted)]">Loading...</div>

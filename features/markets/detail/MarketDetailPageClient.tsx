@@ -9,14 +9,25 @@ import { MarketPositionsTable } from '@/features/markets/detail/components/Marke
 import { MarketPriceCard } from '@/features/markets/detail/components/MarketPriceCard';
 import { MarketStatsGrid } from '@/features/markets/detail/components/MarketStatsGrid';
 import { MarketTradesTable } from '@/features/markets/detail/components/MarketTradesTable';
+import type { MarketDetailLoadResult } from '@/features/markets/detail/api';
 import { useMarketDetailData } from '@/features/markets/detail/useMarketDetailData';
 import { getMarketStatusBadge } from '@/features/markets/detail/utils';
 
-export default function MarketDetailPageClient() {
+type MarketDetailPageData = Extract<MarketDetailLoadResult, { status: 'ok' }>['data'];
+
+interface MarketDetailPageClientProps {
+  initialData?: MarketDetailPageData | null;
+  marketId?: string;
+}
+
+export default function MarketDetailPageClient({
+  initialData = null,
+  marketId
+}: MarketDetailPageClientProps = {}) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = params.id;
-  const { market, positions, trades, brierScores, loading, error } = useMarketDetailData(id);
+  const id = marketId ?? params.id;
+  const { market, positions, trades, brierScores, loading, error } = useMarketDetailData(id, initialData);
 
   if (loading) {
     return (

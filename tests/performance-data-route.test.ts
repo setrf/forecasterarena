@@ -160,4 +160,109 @@ describe('performance data route', () => {
       ]);
     });
   });
+
+  it('recomputes stale persisted chart cache entries instead of serving them forever', async () => {
+    await withPerformanceFixture(async ({ agent, queries, route }) => {
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+
+      queries.createPortfolioSnapshot({
+        agent_id: agent.id,
+        snapshot_timestamp: snapshotIso('2026-03-05T11:55:00.000Z'),
+        cash_balance: 10_500,
+        positions_value: 0,
+        total_value: 10_500,
+        total_pnl: 500,
+        total_pnl_percent: 5
+      });
+
+      db.prepare(`
+        INSERT INTO performance_chart_cache (
+          cache_key, cohort_id, range_key, payload_json, generated_at
+        ) VALUES (?, NULL, ?, ?, ?)
+      `).run(
+        '1M::all',
+        '1M',
+        JSON.stringify([{ date: '2000-01-01 00:00:00', stale: 1 }]),
+        '2026-03-05 11:59:00'
+      );
+
+      const response = await route.GET(
+        new Request('http://localhost/api/performance-data?range=1M') as any
+      );
+      const payload = await response.json();
+
+      expect(payload.data).toEqual([
+        expect.objectContaining({
+          date: '2026-03-05 06:00:00'
+        })
+      ]);
+
+      const refreshedCache = db.prepare(`
+        SELECT payload_json
+        FROM performance_chart_cache
+        WHERE cache_key = ?
+      `).get('1M::all') as { payload_json: string };
+
+      expect(JSON.parse(refreshedCache.payload_json)).toEqual(payload.data);
+    });
+  });
+
+  it('does not append current default release changes onto historical cohort charts', async () => {
+    await withPerformanceFixture(async ({ agent, cohort, queries, route }) => {
+      const benchmarkConfigs = await import('@/lib/db/queries/benchmark-configs');
+      const modelFamilies = await import('@/lib/db/queries/model-families');
+      const modelReleases = await import('@/lib/db/queries/model-releases');
+
+      queries.createDecision({
+        agent_id: agent.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'HOLD',
+        reasoning: 'Historical cohort decision'
+      });
+
+      const family = modelFamilies.getModelFamilyById(agent.family_id)!;
+      const currentRelease = modelReleases.getModelReleaseById(agent.release_id)!;
+      const nextRelease = modelReleases.createModelRelease({
+        id: `${currentRelease.id}-next`,
+        family_id: family.id,
+        release_name: `${currentRelease.release_name} Next`,
+        release_slug: `${currentRelease.release_slug}-next`,
+        openrouter_id: `${currentRelease.openrouter_id}-next`,
+        provider: currentRelease.provider,
+        release_status: 'active'
+      });
+
+      const config = benchmarkConfigs.createBenchmarkConfig({
+        version_name: `future-default-${Date.now()}`,
+        methodology_version: 'v1',
+        created_by: 'vitest',
+        is_default_for_future_cohorts: true
+      });
+      benchmarkConfigs.createBenchmarkConfigModel({
+        benchmark_config_id: config.id,
+        family_id: family.id,
+        release_id: nextRelease.id,
+        slot_order: 0,
+        family_display_name_snapshot: family.public_display_name,
+        short_display_name_snapshot: family.short_display_name,
+        release_display_name_snapshot: nextRelease.release_name,
+        provider_snapshot: nextRelease.provider,
+        color_snapshot: family.color,
+        openrouter_id_snapshot: nextRelease.openrouter_id,
+        input_price_per_million_snapshot: 0,
+        output_price_per_million_snapshot: 0
+      });
+
+      const response = await route.GET(
+        new Request(`http://localhost/api/performance-data?range=1M&cohort_id=${cohort.id}`) as any
+      );
+      const payload = await response.json();
+
+      expect(payload.release_changes).toEqual([]);
+    });
+  });
 });

@@ -9,6 +9,7 @@ import {
   getModelFamilyById,
   getModelReleaseById
 } from '@/lib/db/queries';
+import { withTransaction } from '@/lib/db/transactions';
 import type { AdminOperationResult } from '@/lib/application/admin/types';
 import type {
   AdminBenchmarkConfigSummary,
@@ -19,15 +20,40 @@ function isNonNegativeFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
+function getRequiredTrimmedString(
+  value: unknown,
+  label: string
+): { ok: true; value: string } | { ok: false; error: string } {
+  if (typeof value !== 'string') {
+    return { ok: false, error: `${label} is required` };
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { ok: false, error: `${label} is required` };
+  }
+
+  return { ok: true, value: trimmed };
+}
+
+function getOptionalTrimmedString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
 export function createAdminBenchmarkConfigRecord(
   input: CreateAdminBenchmarkConfigInput
 ): AdminOperationResult<{
   success: true;
   config: AdminBenchmarkConfigSummary;
 }> {
-  const versionName = input.version_name.trim();
-  if (!versionName) {
-    return { ok: false, status: 400, error: 'Version name is required' };
+  const versionName = getRequiredTrimmedString(input.version_name, 'Version name');
+  if (!versionName.ok) {
+    return { ok: false, status: 400, error: versionName.error };
   }
 
   const assignments = Array.isArray(input.assignments) ? input.assignments : [];
@@ -40,27 +66,37 @@ export function createAdminBenchmarkConfigRecord(
   const seenFamilies = new Set<string>();
 
   for (const assignment of assignments) {
-    if (!activeFamilyIds.has(assignment.family_id)) {
-      return { ok: false, status: 400, error: `Unknown or inactive model family: ${assignment.family_id}` };
+    const familyId = getRequiredTrimmedString(assignment.family_id, 'Lineup assignment family');
+    if (!familyId.ok) {
+      return { ok: false, status: 400, error: familyId.error };
     }
 
-    if (seenFamilies.has(assignment.family_id)) {
-      return { ok: false, status: 400, error: `Duplicate lineup assignment for family: ${assignment.family_id}` };
+    const releaseId = getRequiredTrimmedString(assignment.release_id, 'Lineup assignment release');
+    if (!releaseId.ok) {
+      return { ok: false, status: 400, error: releaseId.error };
     }
-    seenFamilies.add(assignment.family_id);
+
+    if (!activeFamilyIds.has(familyId.value)) {
+      return { ok: false, status: 400, error: `Unknown or inactive model family: ${familyId.value}` };
+    }
+
+    if (seenFamilies.has(familyId.value)) {
+      return { ok: false, status: 400, error: `Duplicate lineup assignment for family: ${familyId.value}` };
+    }
+    seenFamilies.add(familyId.value);
 
     if (!isNonNegativeFiniteNumber(assignment.input_price_per_million)) {
-      return { ok: false, status: 400, error: `Invalid input price for family: ${assignment.family_id}` };
+      return { ok: false, status: 400, error: `Invalid input price for family: ${familyId.value}` };
     }
 
     if (!isNonNegativeFiniteNumber(assignment.output_price_per_million)) {
-      return { ok: false, status: 400, error: `Invalid output price for family: ${assignment.family_id}` };
+      return { ok: false, status: 400, error: `Invalid output price for family: ${familyId.value}` };
     }
 
-    const family = getModelFamilyById(assignment.family_id);
-    const release = getModelReleaseById(assignment.release_id);
+    const family = getModelFamilyById(familyId.value);
+    const release = getModelReleaseById(releaseId.value);
     if (!family || !release || release.family_id !== family.id) {
-      return { ok: false, status: 400, error: `Release ${assignment.release_id} does not belong to family ${assignment.family_id}` };
+      return { ok: false, status: 400, error: `Release ${releaseId.value} does not belong to family ${familyId.value}` };
     }
 
     if (release.release_status === 'retired') {
@@ -77,35 +113,42 @@ export function createAdminBenchmarkConfigRecord(
     };
   }
 
-  const config = createBenchmarkConfig({
-    version_name: versionName,
-    methodology_version: input.methodology_version.trim() || METHODOLOGY_VERSION,
-    notes: input.notes?.trim() || null,
-    created_by: 'admin',
-    is_default_for_future_cohorts: false
-  });
+  const methodologyVersion = getOptionalTrimmedString(input.methodology_version) || METHODOLOGY_VERSION;
+  const notes = getOptionalTrimmedString(input.notes);
 
-  activeFamilies
-    .sort((left, right) => left.sort_order - right.sort_order)
-    .forEach((family, index) => {
-      const assignment = assignments.find((item) => item.family_id === family.id)!;
-      const release = getModelReleaseById(assignment.release_id)!;
-
-      createBenchmarkConfigModel({
-        benchmark_config_id: config.id,
-        family_id: family.id,
-        release_id: release.id,
-        slot_order: index,
-        family_display_name_snapshot: family.public_display_name,
-        short_display_name_snapshot: family.short_display_name,
-        release_display_name_snapshot: release.release_name,
-        provider_snapshot: release.provider,
-        color_snapshot: family.color,
-        openrouter_id_snapshot: release.openrouter_id,
-        input_price_per_million_snapshot: assignment.input_price_per_million,
-        output_price_per_million_snapshot: assignment.output_price_per_million
-      });
+  const config = withTransaction(() => {
+    const createdConfig = createBenchmarkConfig({
+      version_name: versionName.value,
+      methodology_version: methodologyVersion,
+      notes,
+      created_by: 'admin',
+      is_default_for_future_cohorts: false
     });
+
+    activeFamilies
+      .sort((left, right) => left.sort_order - right.sort_order)
+      .forEach((family, index) => {
+        const assignment = assignments.find((item) => item.family_id === family.id)!;
+        const release = getModelReleaseById(assignment.release_id)!;
+
+        createBenchmarkConfigModel({
+          benchmark_config_id: createdConfig.id,
+          family_id: family.id,
+          release_id: release.id,
+          slot_order: index,
+          family_display_name_snapshot: family.public_display_name,
+          short_display_name_snapshot: family.short_display_name,
+          release_display_name_snapshot: release.release_name,
+          provider_snapshot: release.provider,
+          color_snapshot: family.color,
+          openrouter_id_snapshot: release.openrouter_id,
+          input_price_per_million_snapshot: assignment.input_price_per_million,
+          output_price_per_million_snapshot: assignment.output_price_per_million
+        });
+      });
+
+    return createdConfig;
+  });
 
   logSystemEvent('admin_benchmark_config_created', {
     benchmark_config_id: config.id,

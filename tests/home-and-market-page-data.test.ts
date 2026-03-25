@@ -46,6 +46,42 @@ describe('home page data helpers', () => {
     });
   });
 
+  it('keeps leaderboard data when the market count request fails independently', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(mockResponse(true, {
+        leaderboard: [
+          {
+            family_slug: 'openai-gpt',
+            family_id: 'openai-gpt',
+            legacy_model_id: 'gpt-5.1',
+            display_name: 'GPT-5.2',
+            provider: 'OpenAI',
+            color: '#10B981',
+            total_pnl: 100,
+            total_pnl_percent: 1,
+            avg_brier_score: 0.12,
+            num_cohorts: 2,
+            num_resolved_bets: 3,
+            win_rate: 0.66
+          }
+        ],
+        cohorts: [{ id: 'c1' }]
+      }))
+      .mockResolvedValueOnce(mockResponse(false, {}, 503)));
+
+    await expect(fetchHomeSummary()).resolves.toEqual({
+      models: [],
+      leaderboard: [
+        expect.objectContaining({
+          family_slug: 'openai-gpt',
+          total_pnl: 100
+        })
+      ],
+      hasRealData: true,
+      marketCount: null
+    });
+  });
+
   it('throws stable errors for unavailable summary and performance endpoints', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce(mockResponse(false, {})));

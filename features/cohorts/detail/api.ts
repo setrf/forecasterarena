@@ -33,9 +33,10 @@ export type CohortDetailLoadResult =
     };
 
 export async function fetchCohortDetailData(
-  cohortId: string
+  cohortId: string,
+  signal?: AbortSignal
 ): Promise<CohortDetailLoadResult> {
-  const response = await fetch(`/api/cohorts/${cohortId}`);
+  const response = await fetch(`/api/cohorts/${cohortId}`, { signal });
   if (!response.ok) {
     return {
       status: 'error',

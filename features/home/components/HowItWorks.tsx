@@ -63,7 +63,7 @@ export function HowItWorks({ integrated = false }: HowItWorksProps) {
               >
                 {step.num}
               </span>
-              <h3 className="font-semibold text-base md:text-lg mb-2 md:mb-3">{step.title}</h3>
+              <h3 className="heading-card mb-2 md:mb-3">{step.title}</h3>
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{step.description}</p>
             </div>
           ))}

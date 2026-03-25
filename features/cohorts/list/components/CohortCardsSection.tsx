@@ -26,10 +26,10 @@ export function CohortCardsSection({
       {isActive ? (
         <div className="flex items-center gap-3 mb-6">
           <span className="w-2 h-2 rounded-full bg-[var(--color-positive)] animate-pulse" />
-          <h2 className="text-xl font-semibold">{title}</h2>
+          <h2 className="heading-block">{title}</h2>
         </div>
       ) : (
-        <h2 className="text-xl font-semibold mb-6">{title}</h2>
+        <h2 className="heading-block mb-6">{title}</h2>
       )}
 
       {loading ? (
@@ -62,7 +62,7 @@ export function CohortCardsSection({
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <span className="badge badge-active mb-3">Live</span>
-                  <h3 className="text-2xl font-bold group-hover:text-[var(--accent-gold)] transition-colors">
+                  <h3 className="heading-block group-hover:text-[var(--accent-gold)] transition-colors">
                     Cohort #{cohort.cohort_number}
                   </h3>
                 </div>
@@ -97,7 +97,7 @@ export function CohortCardsSection({
               className="card p-6 group"
             >
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-bold group-hover:text-[var(--accent-gold)] transition-colors">
+                <h3 className="heading-card group-hover:text-[var(--accent-gold)] transition-colors">
                   Cohort #{cohort.cohort_number}
                 </h3>
                 <span className="badge badge-completed">Completed</span>
