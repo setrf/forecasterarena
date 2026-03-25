@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { seededRoutes } from './constants';
-import { loginAsAdmin } from './helpers';
+import { expectAuthenticatedAdminShell, loginAsAdmin } from './helpers';
 
 test('admin benchmark control registers a release and promotes the default lineup', async ({ page }) => {
   await loginAsAdmin(page);
@@ -9,6 +9,7 @@ test('admin benchmark control registers a release and promotes the default lineu
 
   await expect(page.getByRole('heading', { level: 1, name: 'Benchmark Control' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Current Default Lineup' })).toBeVisible();
+  await expectAuthenticatedAdminShell(page);
   await expect(page.getByText('e2e-default').first()).toBeVisible();
 
   await page.getByLabel('Family').selectOption('openai-gpt');
@@ -26,11 +27,12 @@ test('admin benchmark control registers a release and promotes the default lineu
   await page.getByRole('button', { name: 'Create Benchmark Config' }).click();
 
   await expect(page.getByText('playwright-lineup-gpt54 created successfully')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Promote playwright-lineup-gpt54' })).toBeVisible();
+  await expect(page.locator('tr').filter({ hasText: 'playwright-lineup-gpt54' }).getByRole('button', { name: 'Promote default' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Promote playwright-lineup-gpt54' }).click();
+  await page.locator('tr').filter({ hasText: 'playwright-lineup-gpt54' }).getByRole('button', { name: 'Promote default' }).click();
 
   await expect(page.getByText('playwright-lineup-gpt54 promoted as the default lineup')).toBeVisible();
+  await expectAuthenticatedAdminShell(page);
   await expect(page.locator('tr').filter({ hasText: 'playwright-lineup-gpt54' }).getByText('Default')).toBeVisible();
   await expect(page.locator('table').first()).toContainText('GPT-5.4');
 });

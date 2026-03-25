@@ -1,11 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { seededExportWindow } from './constants';
-import { loginAsAdmin } from './helpers';
+import { expectAdminNav, loginAsAdmin } from './helpers';
+
+function toDateTimeLocalValue(value: string) {
+  return value.slice(0, 16);
+}
 
 test('admin login unlocks dashboard, actions, costs, logs, and export download', async ({ page }) => {
   await loginAsAdmin(page);
-  await expect(page.getByRole('link', { name: /System Logs/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /API Costs/i })).toBeVisible();
 
   await page.getByRole('button', { name: /Start New Cohort/i }).click();
   await expect(page.getByText('Cohort #2 started successfully')).toBeVisible();
@@ -46,13 +48,15 @@ test('admin login unlocks dashboard, actions, costs, logs, and export download',
   await page.goto('/admin/costs');
   await page.waitForLoadState('domcontentloaded');
   await expect(page.getByRole('heading', { level: 1, name: 'API Costs' })).toBeVisible();
-  await expect(page.getByText('$0.600')).toBeVisible();
+  await expectAdminNav(page);
+  await expect(page.getByText('$0.60', { exact: true })).toBeVisible();
   await expect(page.locator('tbody tr').filter({ hasText: 'GPT' })).toHaveCount(1);
   await expect(page.locator('tbody tr').filter({ hasText: 'Gemini' })).toHaveCount(1);
 
   await page.goto('/admin/logs');
   await page.waitForLoadState('domcontentloaded');
   await expect(page.getByRole('heading', { level: 1, name: 'System Logs' })).toBeVisible();
+  await expectAdminNav(page);
   await page.getByRole('button', { name: 'Warning', exact: true }).click();
   await expect(page.getByText('admin_seed_warning')).toBeVisible();
   await page.getByRole('button', { name: 'Error', exact: true }).click();
@@ -63,9 +67,9 @@ test('admin login unlocks dashboard, actions, costs, logs, and export download',
   await expect(page.getByRole('heading', { level: 1, name: 'Admin Dashboard' })).toBeVisible();
   await expect(page.getByLabel('Cohort ID')).toBeVisible();
   await page.getByLabel('Cohort ID').fill(seededExportWindow.cohortId);
-  await page.getByLabel('From (ISO)').fill(seededExportWindow.from);
-  await page.getByLabel('To (ISO)').fill(seededExportWindow.to);
-  await page.getByLabel(/Include prompts\/responses/i).check();
+  await page.getByRole('textbox', { name: 'From' }).fill(toDateTimeLocalValue(seededExportWindow.from));
+  await page.getByRole('textbox', { name: 'To' }).fill(toDateTimeLocalValue(seededExportWindow.to));
+  await page.getByLabel('Include prompts/responses (decisions)').check();
   await page.getByRole('button', { name: 'Generate Export' }).click();
 
   await expect(page.getByText('Export ready. Click to download.')).toBeVisible();
