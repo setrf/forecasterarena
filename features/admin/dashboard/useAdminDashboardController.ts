@@ -8,8 +8,38 @@ import {
   logoutAdmin,
   runAdminAction
 } from '@/features/admin/dashboard/api';
+import type { AdminStatsFetchResult } from '@/features/admin/dashboard/api';
 import { initialExportState } from '@/features/admin/dashboard/constants';
 import type { AdminStats, ExportState, ResultMessage } from '@/features/admin/dashboard/types';
+
+export function applyAdminStatsFetchResult(
+  currentStats: AdminStats | null,
+  result: AdminStatsFetchResult
+): {
+  isAuthenticated: boolean;
+  stats: AdminStats | null;
+} {
+  if (result.kind === 'unauthorized') {
+    return {
+      isAuthenticated: false,
+      stats: null
+    };
+  }
+
+  return {
+    isAuthenticated: true,
+    stats: result.stats ?? currentStats
+  };
+}
+
+export async function loadAdminStats(
+  currentStats: AdminStats | null
+): Promise<{
+  isAuthenticated: boolean;
+  stats: AdminStats | null;
+}> {
+  return applyAdminStatsFetchResult(currentStats, await fetchAdminStats());
+}
 
 export function useAdminDashboardController() {
   const [password, setPassword] = useState('');
@@ -18,6 +48,7 @@ export function useAdminDashboardController() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [hasLoadedStats, setHasLoadedStats] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionResult, setActionResult] = useState<ResultMessage | null>(null);
   const [exportState, setExportState] = useState<ExportState>(initialExportState);
@@ -29,15 +60,14 @@ export function useAdminDashboardController() {
 
     async function hydrateAdminSession() {
       try {
-        const existingStats = await fetchAdminStats();
+        const existingStats = await loadAdminStats(null);
         if (cancelled) {
           return;
         }
 
-        if (existingStats) {
-          setIsAuthenticated(true);
-          setStats(existingStats);
-        }
+        setIsAuthenticated(existingStats.isAuthenticated);
+        setStats(existingStats.stats);
+        setHasLoadedStats(existingStats.isAuthenticated);
       } catch (fetchError) {
         console.error('Error restoring admin session:', fetchError);
       } finally {
@@ -55,23 +85,29 @@ export function useAdminDashboardController() {
   }, []);
 
   useEffect(() => {
-    if (!hasResolvedAuth || !isAuthenticated || stats) {
+    if (!hasResolvedAuth || !isAuthenticated || hasLoadedStats) {
       return;
     }
 
     async function loadStats() {
       try {
-        setStats(await fetchAdminStats());
+        const nextState = await loadAdminStats(stats);
+        setIsAuthenticated(nextState.isAuthenticated);
+        setStats(nextState.stats);
+        setHasLoadedStats(true);
       } catch (fetchError) {
         console.error('Error fetching stats:', fetchError);
       }
     }
 
     void loadStats();
-  }, [hasResolvedAuth, isAuthenticated, stats]);
+  }, [hasResolvedAuth, hasLoadedStats, isAuthenticated, stats]);
 
   async function refreshStats() {
-    setStats(await fetchAdminStats());
+    const nextState = await loadAdminStats(stats);
+    setIsAuthenticated(nextState.isAuthenticated);
+    setStats(nextState.stats);
+    setHasLoadedStats(true);
   }
 
   async function handleLogin(event: React.FormEvent) {
@@ -84,6 +120,7 @@ export function useAdminDashboardController() {
       if (result.success) {
         setIsAuthenticated(true);
         setHasResolvedAuth(true);
+        setHasLoadedStats(false);
       } else {
         setError(result.error);
       }
@@ -98,6 +135,7 @@ export function useAdminDashboardController() {
     await logoutAdmin();
     setIsAuthenticated(false);
     setHasResolvedAuth(true);
+    setHasLoadedStats(false);
     setPassword('');
     setStats(null);
   }

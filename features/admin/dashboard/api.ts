@@ -1,13 +1,27 @@
 import type { AdminStats, ExportState, ResultMessage } from '@/features/admin/dashboard/types';
 import { getAdminActionSuccessMessage } from '@/features/admin/dashboard/utils';
 
-export async function fetchAdminStats(): Promise<AdminStats | null> {
-  const response = await fetch('/api/admin/stats');
-  if (!response.ok) {
-    return null;
+export type AdminStatsFetchResult =
+  | { kind: 'unauthorized' }
+  | { kind: 'authenticated'; stats: AdminStats | null };
+
+export async function fetchAdminStats(): Promise<AdminStatsFetchResult> {
+  const response = await fetch('/api/admin/stats', {
+    cache: 'no-store'
+  });
+
+  if (response.status === 401) {
+    return { kind: 'unauthorized' };
   }
 
-  return response.json() as Promise<AdminStats>;
+  if (!response.ok) {
+    return { kind: 'authenticated', stats: null };
+  }
+
+  return {
+    kind: 'authenticated',
+    stats: await response.json() as AdminStats
+  };
 }
 
 export async function loginAdmin(password: string): Promise<{
