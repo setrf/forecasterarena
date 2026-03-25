@@ -9,6 +9,7 @@ afterEach(() => {
   fs.rmSync(EXPORTS_DIR, { recursive: true, force: true });
   vi.doUnmock('child_process');
   vi.doUnmock('@/lib/api/admin-route');
+  vi.doUnmock('@/lib/api/admin-session');
   vi.doUnmock('@/lib/application/health');
   vi.doUnmock('@/lib/db');
   vi.resetModules();
@@ -101,6 +102,37 @@ describe('admin export route', () => {
       expect(await response.json()).toEqual({
         error: 'No valid tables requested'
       });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('sanitizes unexpected admin login errors through the shared helper', async () => {
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'production',
+      env: {
+        ADMIN_PASSWORD: 'admin',
+        ADMIN_SESSION_SECRET: 'session-secret'
+      }
+    });
+
+    try {
+      vi.doMock('@/lib/api/admin-session', () => ({
+        createAdminLoginResponse: () => {
+          throw new Error('login parser detail');
+        },
+        createAdminLogoutResponse: () => Response.json({ success: true })
+      }));
+
+      const route = await import('@/app/api/admin/login/route');
+      const response = await route.POST(new Request('http://localhost/api/admin/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password: 'admin' })
+      }) as any);
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: 'An internal error occurred' });
     } finally {
       await ctx.cleanup();
     }
