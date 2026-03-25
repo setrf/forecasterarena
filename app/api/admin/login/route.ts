@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createAdminLoginResponse, createAdminLogoutResponse } from '@/lib/api/admin-session';
+import { adminSafeErrorJson } from '@/lib/api/admin-route';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,8 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     return createAdminLoginResponse(request, body);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return adminSafeErrorJson(error);
   }
 }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runAdminAction } from '@/lib/application/admin';
-import { ensureAdminAuthenticated } from '@/lib/api/admin-route';
+import { adminSafeErrorJson, ensureAdminAuthenticated } from '@/lib/api/admin-route';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result.data);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return adminSafeErrorJson(error);
   }
 }

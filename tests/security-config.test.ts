@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
+
+afterEach(() => {
+  vi.doUnmock('next/headers');
+  vi.resetModules();
+});
 
 describe('security and config behavior', () => {
   it('fails closed for admin/cron secrets in production when env vars are missing', async () => {
@@ -44,11 +49,12 @@ describe('security and config behavior', () => {
     }
   });
 
-  it('returns 503 from admin login when production password is not configured', async () => {
+  it('returns 503 from admin login when production admin auth is not fully configured', async () => {
     const ctx = await createIsolatedTestContext({
       nodeEnv: 'production',
       env: {
-        ADMIN_PASSWORD: undefined
+        ADMIN_PASSWORD: undefined,
+        ADMIN_SESSION_SECRET: undefined
       }
     });
 
@@ -64,6 +70,38 @@ describe('security and config behavior', () => {
       expect(response.status).toBe(503);
       const body = await response.json();
       expect(body).toEqual({ error: 'Admin authentication is not configured' });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('verifies admin cookies with the session secret instead of the admin password', async () => {
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'development',
+      env: {
+        ADMIN_PASSWORD: 'admin-password',
+        ADMIN_SESSION_SECRET: 'separate-session-secret'
+      }
+    });
+
+    try {
+      const { createAdminSessionToken } = await import('@/lib/auth/adminSession');
+      const token = createAdminSessionToken('separate-session-secret');
+
+      vi.doMock('next/headers', () => ({
+        cookies: () => ({
+          get(name: string) {
+            if (name !== 'forecaster_admin') {
+              return undefined;
+            }
+
+            return { name, value: token };
+          }
+        })
+      }));
+
+      const auth = await import('@/lib/auth');
+      expect(auth.isAuthenticated()).toBe(true);
     } finally {
       await ctx.cleanup();
     }
