@@ -5,7 +5,7 @@ single Linux host. It is intentionally opinionated around the current codebase:
 
 - Next.js 14 application
 - SQLite primary database
-- PM2 process manager
+- systemd process manager
 - Nginx reverse proxy
 - cron-triggered internal endpoints
 
@@ -66,8 +66,9 @@ NEXT_PUBLIC_GITHUB_URL=https://github.com/setrf/forecasterarena
 Optional variables:
 
 ```env
-DATABASE_PATH=/opt/forecasterarena/data/forecaster.db
-BACKUP_PATH=/opt/forecasterarena/backups
+DATABASE_PATH=/opt/forecasterarena-state/data/forecaster.db
+BACKUP_PATH=/opt/forecasterarena-state/backups
+BACKUP_RETENTION_COUNT=7
 ```
 
 Notes:
@@ -113,7 +114,16 @@ Example layout:
   app/                 # git checkout
   data/                # sqlite database
   backups/             # sqlite backups + exports
-  logs/                # PM2 / cron logs
+  logs/                # cron logs
+```
+
+The current production VPS instead uses release and state directories:
+
+```text
+/opt/forecasterarena-release-<timestamp>/   # immutable app release snapshot
+/opt/forecasterarena-state/data/            # sqlite database
+/opt/forecasterarena-state/backups/         # sqlite backups
+/var/log/forecaster-arena/                  # cron logs
 ```
 
 Permissions:
@@ -124,46 +134,54 @@ Permissions:
 
 ---
 
-## 6. PM2 Setup
+## 6. systemd Setup
 
-Install PM2:
+The current production VPS runs Forecaster Arena through a native systemd unit,
+not PM2. A release directory can be swapped by changing the unit working
+directory or by using a drop-in override.
 
-```bash
-npm install -g pm2
+Example `/etc/systemd/system/forecasterarena.service`:
+
+```ini
+[Unit]
+Description=Forecaster Arena web application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/forecasterarena-release-current
+Environment=NODE_ENV=production
+Environment=PORT=3010
+EnvironmentFile=/opt/forecasterarena-release-current/.env.local
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-Example `ecosystem.config.js`:
-
-```javascript
-module.exports = {
-  apps: [
-    {
-      name: 'forecaster-arena',
-      cwd: '/opt/forecasterarena/app',
-      script: 'npm',
-      args: 'start',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 3010
-      }
-    }
-  ]
-};
-```
-
-Start and persist:
+Start and persist the service:
 
 ```bash
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
+systemctl daemon-reload
+systemctl enable --now forecasterarena
 ```
 
 Operational note:
 
 - `npm run start` serves the built app
-- if you rotate releases by symlink or directory swap, ensure PM2 `cwd` points
-  to the active build directory
+- if you rotate releases by symlink or directory swap, ensure the service
+  `WorkingDirectory` and `EnvironmentFile` point to the active build directory
+- prefer binding the app to `127.0.0.1:3010` or using host firewall rules so
+  Nginx is the only public entrypoint
 
 ---
 
@@ -233,8 +251,8 @@ Recommended schedule:
 */10 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/take-snapshots \
   -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/snapshots.log 2>&1
 
-# Create a backup before the next weekly cycle (recommended: Saturday 23:00 UTC)
-0 23 * * 6 curl -s -X POST http://127.0.0.1:3010/api/cron/backup \
+# Create a daily database backup
+0 2 * * * curl -s -X POST http://127.0.0.1:3010/api/cron/backup \
   -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/backup.log 2>&1
 ```
 
@@ -244,6 +262,8 @@ Why this schedule works with the current code:
 - start-cohort and run-decisions are ordered
 - decision execution is sequential, so giving it a dedicated weekly slot matters
 - snapshots are timestamp-based and intended for 10-minute cadence
+- backup retention must be enforced externally or in code so daily SQLite
+  backups do not fill the root filesystem
 
 ---
 
@@ -315,30 +335,33 @@ Cron flow checks:
 Database checks:
 
 ```bash
-sqlite3 /opt/forecasterarena/data/forecaster.db "PRAGMA integrity_check;"
-sqlite3 /opt/forecasterarena/data/forecaster.db "SELECT COUNT(*) FROM cohorts;"
-sqlite3 /opt/forecasterarena/data/forecaster.db "SELECT COUNT(*) FROM decisions;"
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "PRAGMA integrity_check;"
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "SELECT COUNT(*) FROM cohorts;"
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "SELECT COUNT(*) FROM decisions;"
 ```
 
 ---
 
 ## 11. Upgrade Procedure
 
-For a normal code upgrade:
+For a normal code upgrade on the current release-snapshot deployment model:
 
 ```bash
-git fetch origin
-git checkout main
-git pull --ff-only origin main
+release=/opt/forecasterarena-release-$(date -u +%Y%m%d-%H%M%S)
+mkdir -p "$release"
+# copy or unpack the reviewed release into "$release"
+cd "$release"
 npm ci
 npm run check
 npm run test:e2e
-pm2 restart forecaster-arena
+install -o www-data -g www-data -m 600 /path/to/prod.env "$release/.env.local"
+systemctl edit forecasterarena
+systemctl restart forecasterarena
 ```
 
 If the new build succeeds but runtime looks wrong:
 
-1. inspect PM2 logs
+1. inspect `journalctl -u forecasterarena`
 2. hit `/api/health`
 3. verify `.env.local`
 4. verify cron auth still matches `CRON_SECRET`
@@ -351,18 +374,17 @@ If the new build succeeds but runtime looks wrong:
 If a release must be rolled back:
 
 ```bash
-git log --oneline -n 5
-git checkout <previous-known-good-commit>
-npm ci
-npm run build
-npm run typecheck
-pm2 restart forecaster-arena
+systemctl edit forecasterarena
+systemctl restart forecasterarena
 ```
 
-Why rollback uses the narrower validation flow:
+Rollback should point the systemd service back to the previous known-good
+release directory and leave the production SQLite database in place unless the
+incident is explicitly a data problem.
+
+Why rollback uses the narrower service flow:
 
 - the goal is to restore service quickly with a known-good commit
-- `build` + `typecheck` is the minimum fast validation path
 - rerun `npm run check` and browser coverage after service is back if time allows
 
 If the problem is database corruption rather than code:
@@ -380,7 +402,13 @@ If the problem is database corruption rather than code:
   closed and `/api/health` will return `503`
 - Because SQLite is the source of truth, disk health and backup discipline
   matter
+- Because daily backups can exceed 600 MB each, keep only a bounded retention
+  window on the VPS and move longer-term backups off-box
+- Because OpenRouter billing failures produce decision rows with `ERROR`,
+  verify account credit before the Sunday decision window
 - Because decision runs are sequential, provider latency spikes can still affect
   Sunday completion time even with the current timeout budget
 - Because cron is the scheduler, host timezone drift or missing jobs will show
   up quickly as stale sync/snapshot data
+- Because app ports are only meant for local reverse proxy traffic, firewall
+  public access to raw service ports such as `3010`

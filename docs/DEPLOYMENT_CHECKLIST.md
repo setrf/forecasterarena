@@ -29,12 +29,18 @@ than a generic Next.js app.
 - [ ] `ADMIN_PASSWORD` is configured and strong
 - [ ] `NEXT_PUBLIC_SITE_URL` points to the deployment URL
 - [ ] Optional `DATABASE_PATH` and `BACKUP_PATH` are correct for the host
+- [ ] Optional `BACKUP_RETENTION_COUNT` is set intentionally, or the default
+      one-week retention is acceptable
 
 ### Host Requirements
 
 - [ ] `zip` is installed for admin exports
-- [ ] enough disk exists for SQLite, backups, and export archives
+- [ ] root filesystem has enough free disk for SQLite, WAL growth, backups,
+      export archives, and one new release directory
+- [ ] backup retention is bounded so daily SQLite backups cannot fill the host
 - [ ] TLS / reverse proxy configuration is ready
+- [ ] raw app ports are not publicly reachable; Nginx should be the public
+      entrypoint for Forecaster Arena
 
 ---
 
@@ -46,16 +52,21 @@ than a generic Next.js app.
 - [ ] admin endpoints require login in the target environment
 - [ ] cron endpoints return `401` without valid auth
 - [ ] `/api/health` has been spot-checked to confirm it does not leak secret names
+- [ ] host firewall or service bind addresses prevent direct public access to
+      internal app ports such as `3010`
 
 ---
 
 ## 3. Database Readiness
 
 - [ ] target database file exists, or first boot creation is expected
-- [ ] latest backup exists before deploy
+- [ ] latest full backup exists before deploy
+- [ ] backup path has enough free space for the next scheduled backup
 - [ ] `PRAGMA integrity_check` passes on the target database
 - [ ] there are no known duplicate weekly cohorts or duplicate per-week
       decisions that would conflict with current uniqueness constraints
+- [ ] production database is treated as the source of truth; local development
+      SQLite files are not copied over production data
 
 Recommended checks:
 
@@ -104,6 +115,8 @@ Recommended schedule:
 - [ ] `/api/leaderboard` returns JSON
 - [ ] `/api/markets?limit=1` returns JSON
 - [ ] `/api/performance-data?range=1M` returns JSON
+- [ ] latest system logs do not show recurring OpenRouter billing/auth errors
+- [ ] OpenRouter credit has been verified before the next decision run
 
 ### Admin
 
@@ -121,8 +134,8 @@ Recommended schedule:
 
 ## 6. Observability Checks
 
-- [ ] PM2 process is online
-- [ ] PM2 logs show no startup crash loop
+- [ ] `forecasterarena.service` is active under systemd
+- [ ] `journalctl -u forecasterarena` shows no startup crash loop
 - [ ] Nginx config tests cleanly
 - [ ] Nginx error log is quiet after traffic warm-up
 - [ ] system logs table is receiving expected operational events
@@ -130,8 +143,8 @@ Recommended schedule:
 Suggested commands:
 
 ```bash
-pm2 status
-pm2 logs forecaster-arena --lines 100
+systemctl status forecasterarena --no-pager
+journalctl -u forecasterarena --no-pager -n 100
 sudo nginx -t
 sqlite3 /path/to/forecaster.db "SELECT event_type, severity, created_at FROM system_logs ORDER BY created_at DESC LIMIT 20;"
 ```
@@ -144,14 +157,17 @@ sqlite3 /path/to/forecaster.db "SELECT event_type, severity, created_at FROM sys
 - [ ] snapshots continue landing every 10 minutes
 - [ ] Sunday cohort start remains idempotent
 - [ ] Sunday decision run creates one weekly decision row per agent
+- [ ] Sunday decision run does not create all-`ERROR` decision rows
 - [ ] resolution checks do not leave growing numbers of stale closed markets
 - [ ] backups are actually created on schedule
+- [ ] old backups are pruned or moved off-box according to the retention policy
 
 ---
 
 ## 8. Rollback Preparedness
 
 - [ ] previous working commit is known
+- [ ] previous release directory is known
 - [ ] latest DB backup path is known
 - [ ] rollback command path is documented
-- [ ] the operator has verified they can restart PM2 and Nginx if required
+- [ ] the operator has verified they can restart systemd service and Nginx if required

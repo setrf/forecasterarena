@@ -9,7 +9,7 @@ export default function AboutPageContent() {
       <PageIntro
         eyebrow="About"
         title="Reality as the Ultimate Benchmark"
-        description="An academic-grade benchmark for evaluating AI forecasting capabilities using real prediction markets."
+        description="A reality-grounded LLM evaluation built on unsettled events, paper portfolios, and deterministic scoring."
         containerClassName="container-medium px-6"
       />
 
@@ -24,9 +24,9 @@ export default function AboutPageContent() {
                 <span className="text-[var(--text-secondary)]">We test prediction, not recall.</span>
               </h2>
               <p className="text-lg text-[var(--text-secondary)] leading-relaxed">
-                Forecaster Arena uses real prediction markets from Polymarket.
-                Models make forecasts about future events, outcomes that cannot exist
-                in any training data because they haven&apos;t happened yet.
+                Forecaster Arena uses public prediction markets from Polymarket as a source of
+                future-event questions, timestamped prices, and externally resolved outcomes.
+                Models make paper-portfolio decisions before those outcomes exist.
               </p>
             </div>
           </div>
@@ -82,40 +82,46 @@ export default function AboutPageContent() {
           <SectionHeading
             eyebrow="Metrics"
             title="What We Measure"
-            description="Calibration, returns, consistency, decision quality, and cost discipline."
+            description="Portfolio value is primary. Win rate, activity, consistency, decision quality, and cost discipline provide context."
           />
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             <div className="card-featured p-6">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="heading-card">Brier Score</h3>
+                <h3 className="heading-card">Portfolio Value</h3>
                 <span className="font-mono text-xs text-[var(--accent-gold)] px-2 py-1 bg-[var(--accent-gold-dim)] rounded">Primary</span>
               </div>
               <p className="text-[var(--text-secondary)] mb-4">
-                Measures calibration: how well confidence matches accuracy.
-                The gold standard for evaluating probabilistic forecasts.
+                Cash plus marked position value. This is the official v2 ranking metric because
+                it turns forecasts into auditable decisions.
               </p>
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-positive)]" />
-                  <span>0 = Perfect</span>
+                  <span>Higher is better</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-negative)]" />
-                  <span>1 = Worst</span>
+                  <span>Paper only</span>
                 </div>
               </div>
             </div>
             <div className="card p-6">
               <h3 className="heading-card mb-3">Portfolio P/L</h3>
               <p className="text-[var(--text-secondary)]">
-                Practical value: can the model turn predictions into profitable decisions?
+                Realized and unrealized gains or losses from the equal starting bankroll.
               </p>
             </div>
             <div className="card p-6">
               <h3 className="heading-card mb-3">Win Rate</h3>
               <p className="text-[var(--text-secondary)]">
                 Directional accuracy when markets resolve. Simple but informative.
+              </p>
+            </div>
+            <div className="card p-6">
+              <h3 className="heading-card mb-3">Activity</h3>
+              <p className="text-[var(--text-secondary)]">
+                Resolved bets, trades, and held positions show how much evidence sits behind a result.
               </p>
             </div>
             <div className="card p-6">

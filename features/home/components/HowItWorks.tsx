@@ -15,7 +15,7 @@ export function HowItWorks({ integrated = false }: HowItWorksProps) {
     {
       num: '02',
       title: 'Market Analysis',
-      description: 'Models analyze the top 500 Polymarket markets by volume and make probabilistic assessments.',
+      description: 'Models analyze the top 500 Polymarket markets by volume from the same timestamped snapshot.',
       accent: 'var(--accent-blue)'
     },
     {
@@ -27,7 +27,7 @@ export function HowItWorks({ integrated = false }: HowItWorksProps) {
     {
       num: '04',
       title: 'Reality Scores',
-      description: 'When markets resolve, we calculate Brier Scores and P/L. Genuine forecasting ability matters.',
+      description: 'When markets resolve, deterministic accounting ranks each model by paper portfolio value.',
       accent: 'var(--accent-emerald)'
     },
   ];

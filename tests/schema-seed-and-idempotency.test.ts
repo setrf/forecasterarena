@@ -112,6 +112,20 @@ describe('schema seeds and idempotency behavior', () => {
       expect(row.title).toBe('Forecaster Arena Methodology v1');
       expect(row.description).toMatch(/Initial methodology for LLM forecasting benchmark/i);
       expect(row.effective_from_cohort).toBe(1);
+
+      const v2Row = db.prepare(`
+        SELECT title, description, effective_from_cohort
+        FROM methodology_versions
+        WHERE version = 'v2'
+      `).get() as {
+        title: string;
+        description: string;
+        effective_from_cohort: number | null;
+      };
+
+      expect(v2Row.title).toBe('Forecaster Arena Methodology v2');
+      expect(v2Row.description).toMatch(/Reality-grounded LLM evaluation/i);
+      expect(v2Row.effective_from_cohort).toBeNull();
     } finally {
       await ctx.cleanup();
     }

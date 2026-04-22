@@ -52,6 +52,10 @@ export default function ModelDetailPageClient({
     color: model.color,
     currentReleaseName: model.currentReleaseName ?? null
   }] : [];
+  const totalResolvedBets = data?.cohort_performance.reduce(
+    (sum, cohort) => sum + cohort.num_resolved_bets,
+    0
+  ) ?? 0;
 
   if (!loading && !model) {
     return <ModelDetailNotFound message={error || 'Model Not Found'} />;
@@ -61,10 +65,10 @@ export default function ModelDetailPageClient({
     <div className="container-wide mx-auto px-6 py-12">
       {model && <ModelDetailHeader model={model} />}
       <ModelStatsGrid
-        avgBrier={data?.avg_brier_score ?? null}
         avgPnlPercent={data?.avg_pnl_percent ?? 0}
         loading={loading}
         numCohorts={data?.num_cohorts ?? 0}
+        totalResolvedBets={totalResolvedBets}
         totalPnl={data?.total_pnl ?? 0}
         winRate={data?.win_rate ?? null}
       />

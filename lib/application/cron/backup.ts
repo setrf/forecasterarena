@@ -7,12 +7,12 @@ type BackupSuccess = {
   duration_ms: number;
 };
 
-export function createDatabaseBackup(): CronAppResult<BackupSuccess> {
+export async function createDatabaseBackup(): Promise<CronAppResult<BackupSuccess>> {
   try {
     console.log('Creating database backup...');
 
     const startTime = Date.now();
-    const backupPath = createBackup();
+    const backupPath = await createBackup();
     const duration = Date.now() - startTime;
 
     logSystemEvent('backup_created', {

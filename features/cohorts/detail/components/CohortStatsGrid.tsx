@@ -1,4 +1,3 @@
-import { formatDecimal } from '@/lib/format/display';
 import type { CohortStats } from '@/features/cohorts/detail/types';
 
 interface CohortStatsGridProps {
@@ -25,10 +24,8 @@ export function CohortStatsGrid({ stats }: CohortStatsGridProps) {
         <div className="stat-label">Markets</div>
       </div>
       <div className="stat-card">
-        <div className="stat-value font-mono">
-          {formatDecimal(stats?.avg_brier_score)}
-        </div>
-        <div className="stat-label">Avg Brier</div>
+        <div className="stat-value">{stats?.total_resolved_bets ?? 0}</div>
+        <div className="stat-label">Resolved Bets</div>
       </div>
     </div>
   );

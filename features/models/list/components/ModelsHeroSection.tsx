@@ -1,10 +1,6 @@
 import Link from 'next/link';
 import { PageIntro } from '@/components/ui/PageIntro';
-import {
-  formatDecimal,
-  formatRatePercent,
-  formatSignedUsd
-} from '@/lib/format/display';
+import { formatRatePercent, formatSignedUsd } from '@/lib/format/display';
 import type { CatalogModel, ModelStats } from '@/features/models/list/types';
 
 interface ModelsHeroSectionProps {
@@ -52,9 +48,9 @@ export function ModelsHeroSection({
                 </p>
               </div>
               <div className="metric-tile">
-                <p className="metric-tile__label">Brier</p>
+                <p className="metric-tile__label">Resolved</p>
                 <p className="metric-tile__value font-mono">
-                  {formatDecimal(leaderStats?.avg_brier_score, { decimals: 3 })}
+                  {leaderStats?.num_resolved_bets ?? 0}
                 </p>
               </div>
               <div className="metric-tile col-span-2">
@@ -71,7 +67,7 @@ export function ModelsHeroSection({
           <p className="page-intro__eyebrow">Leaderboard Pending</p>
           <h2 className="heading-block">Competition data has not started yet</h2>
           <p className="page-intro__description mt-3">
-            Model profiles are live, but ranking, Brier score, and win-rate stats will appear after the first cohort executes and markets begin resolving.
+            Model profiles are live, but ranking, win-rate, and activity stats will appear after the first cohort executes and markets begin resolving.
           </p>
         </div>
       )}

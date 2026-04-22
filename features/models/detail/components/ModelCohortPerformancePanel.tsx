@@ -1,9 +1,5 @@
 import Link from 'next/link';
-import {
-  formatDecimal,
-  formatSignedUsd,
-  formatUsd
-} from '@/lib/format/display';
+import { formatSignedUsd, formatUsd } from '@/lib/format/display';
 import type { CohortPerformance } from '@/features/models/detail/types';
 
 interface ModelCohortPerformancePanelProps {
@@ -55,8 +51,8 @@ export function ModelCohortPerformancePanel({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[var(--text-muted)]">Brier</p>
-                  <p className="font-mono">{formatDecimal(cohort.brier_score)}</p>
+                  <p className="text-[var(--text-muted)]">Resolved</p>
+                  <p className="font-mono">{cohort.num_resolved_bets}</p>
                 </div>
               </div>
             </Link>

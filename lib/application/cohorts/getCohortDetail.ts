@@ -63,6 +63,7 @@ export function getCohortDetail(
   const brierScores = agents
     .map((agent) => agent.brier_score)
     .filter((score): score is number => score !== null);
+  const totalResolvedBets = agents.reduce((sum, agent) => sum + agent.num_resolved_bets, 0);
 
   const equityCurves = Object.fromEntries(
     rawAgents.map((agent) => [
@@ -87,6 +88,7 @@ export function getCohortDetail(
         total_trades: getCohortTradeCount(db, cohortId),
         total_positions_open: getCohortOpenPositionCount(db, cohortId),
         markets_with_positions: getCohortMarketsWithPositionsCount(db, cohortId),
+        total_resolved_bets: totalResolvedBets,
         avg_brier_score: brierScores.length > 0
           ? brierScores.reduce((sum, score) => sum + score, 0) / brierScores.length
           : null

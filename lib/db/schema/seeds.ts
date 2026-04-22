@@ -7,6 +7,12 @@ VALUES (
   'Forecaster Arena Methodology v1',
   'Initial methodology for LLM forecasting benchmark using Polymarket prediction markets. Features: 7 LLMs competing in weekly cohorts, $10,000 starting balance, Brier score + P/L scoring, temperature 0 for reproducibility.',
   1
+),
+(
+  'v2',
+  'Forecaster Arena Methodology v2',
+  'Reality-grounded LLM evaluation using unsettled real-world events, top-volume Polymarket markets, paper portfolios, and deterministic portfolio-value ranking. Applies to future cohorts after v2 deployment.',
+  NULL
 )
 ON CONFLICT(version) DO UPDATE SET
   title = excluded.title,

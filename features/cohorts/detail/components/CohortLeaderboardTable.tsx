@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react';
-import { formatDecimal, formatSignedPercent, formatSignedUsd, formatUsd } from '@/lib/format/display';
+import { formatSignedPercent, formatSignedUsd, formatUsd } from '@/lib/format/display';
 import type { AgentStats } from '@/features/cohorts/detail/types';
 
 interface CohortLeaderboardTableProps {
@@ -34,7 +34,7 @@ export function CohortLeaderboardTable({
               <th className="text-right">Total Value</th>
               <th className="text-right">P/L</th>
               <th className="text-right">Return</th>
-              <th className="text-right hidden md:table-cell">Brier</th>
+              <th className="text-right hidden md:table-cell">Resolved</th>
               <th className="text-right hidden lg:table-cell">Trades</th>
             </tr>
           </thead>
@@ -87,7 +87,7 @@ export function CohortLeaderboardTable({
                     </span>
                   </td>
                   <td className="text-right font-mono hidden md:table-cell">
-                    {formatDecimal(agent.brier_score)}
+                    {agent.num_resolved_bets}
                   </td>
                   <td className="text-right hidden lg:table-cell text-[var(--text-muted)]">
                     {agent.trade_count}

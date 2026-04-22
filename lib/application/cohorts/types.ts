@@ -33,6 +33,7 @@ export interface CohortDetailPayload {
     total_positions_open: number;
     markets_with_positions: number;
     avg_brier_score: number | null;
+    total_resolved_bets: number;
   };
   equity_curves: Record<string, Array<{ date: string; value: number }>>;
   release_changes: Array<{

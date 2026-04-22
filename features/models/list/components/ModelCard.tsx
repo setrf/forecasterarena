@@ -1,9 +1,5 @@
 import Link from 'next/link';
-import {
-  formatDecimal,
-  formatRatePercent,
-  formatSignedUsd
-} from '@/lib/format/display';
+import { formatRatePercent, formatSignedUsd } from '@/lib/format/display';
 import type { CatalogModel, ModelStats } from '@/features/models/list/types';
 
 interface ModelCardProps {
@@ -24,7 +20,6 @@ export function ModelCard({
   rank
 }: ModelCardProps) {
   const pnl = modelStats?.total_pnl ?? 0;
-  const brier = modelStats?.avg_brier_score;
   const winRate = modelStats?.win_rate;
 
   return (
@@ -73,9 +68,9 @@ export function ModelCard({
           </p>
         </div>
         <div>
-          <p className="text-xs text-[var(--text-muted)] mb-1">Brier</p>
+          <p className="text-xs text-[var(--text-muted)] mb-1">Resolved</p>
           <p className="font-mono text-sm">
-            {loading ? '...' : hasRealData ? formatDecimal(brier, { decimals: 3 }) : 'N/A'}
+            {loading ? '...' : hasRealData ? modelStats?.num_resolved_bets ?? 0 : 'N/A'}
           </p>
         </div>
         <div>

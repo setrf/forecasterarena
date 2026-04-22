@@ -1,4 +1,4 @@
-import { formatDecimal, formatRatePercent, formatSignedPercent, formatSignedUsd, formatUsd } from '@/lib/format/display';
+import { formatRatePercent, formatSignedPercent, formatSignedUsd, formatUsd } from '@/lib/format/display';
 import type { AgentCohortData } from '@/features/cohorts/model-detail/types';
 
 interface AgentStatsGridsProps {
@@ -29,9 +29,9 @@ export function AgentStatsGrids({ data }: AgentStatsGridsProps) {
         </div>
         <div className="stat-card">
           <div className="stat-value font-mono">
-            {formatDecimal(data.agent.brier_score)}
+            {data.agent.num_resolved_bets}
           </div>
-          <div className="stat-label">Brier Score</div>
+          <div className="stat-label">Resolved Bets</div>
         </div>
         <div className="stat-card">
           <div className="stat-value">

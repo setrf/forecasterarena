@@ -2,7 +2,7 @@
  * Database Backup Cron Endpoint
  * 
  * Creates a backup of the database.
- * Schedule: Every Saturday at 23:00 UTC (before Sunday cohort)
+ * Schedule: daily at 02:00 UTC
  * 
  * @route POST /api/cron/backup
  */
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     return cronUnauthorizedResponse();
   }
 
-  const result = createDatabaseBackup();
+  const result = await createDatabaseBackup();
   if (!result.ok) {
     return NextResponse.json(
       { error: safeErrorMessage(result.error) },

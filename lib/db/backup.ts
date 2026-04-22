@@ -1,16 +1,19 @@
 import fs from 'fs';
 import path from 'path';
 
+import { DEFAULT_BACKUP_RETENTION_COUNT } from '@/lib/constants';
 import { getDb } from '@/lib/db/connection';
 import { BACKUP_PATH } from '@/lib/db/runtime';
 
-export function createBackup(): string {
+const STALE_BACKUP_JOURNAL_AGE_MS = 60 * 60 * 1000;
+
+export async function createBackup(): Promise<string> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const backupFilename = `forecaster-${timestamp}.db`;
   const backupPath = path.join(BACKUP_PATH, backupFilename);
 
   const database = getDb();
-  database.backup(backupPath);
+  await database.backup(backupPath);
 
   console.log(`[DB] Backup created: ${backupPath}`);
 
@@ -25,6 +28,7 @@ function cleanupOldBackups(): void {
       return;
     }
 
+    const retentionCount = getBackupRetentionCount();
     const files = fs.readdirSync(BACKUP_PATH)
       .filter(file => file.startsWith('forecaster-') && file.endsWith('.db'))
       .map(file => ({
@@ -34,20 +38,15 @@ function cleanupOldBackups(): void {
       }))
       .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
 
-    if (files.length <= 10) {
-      return;
-    }
-
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
     let deletedCount = 0;
 
-    for (let index = 10; index < files.length; index++) {
+    for (let index = retentionCount; index < files.length; index++) {
       const file = files[index];
-      if (file.mtime.getTime() < thirtyDaysAgo) {
-        fs.unlinkSync(file.path);
-        deletedCount++;
-      }
+      fs.unlinkSync(file.path);
+      deletedCount++;
     }
+
+    deletedCount += cleanupStaleBackupJournals();
 
     if (deletedCount > 0) {
       console.log(`[DB] Cleaned up ${deletedCount} old backup(s)`);
@@ -55,4 +54,40 @@ function cleanupOldBackups(): void {
   } catch (error) {
     console.error('[DB] Error cleaning up old backups:', error);
   }
+}
+
+function cleanupStaleBackupJournals(): number {
+  const cutoff = Date.now() - STALE_BACKUP_JOURNAL_AGE_MS;
+  let deletedCount = 0;
+
+  for (const file of fs.readdirSync(BACKUP_PATH)) {
+    if (!file.startsWith('forecaster-') || !file.endsWith('.db-journal')) {
+      continue;
+    }
+
+    const filePath = path.join(BACKUP_PATH, file);
+    const stats = fs.statSync(filePath);
+    if (stats.mtime.getTime() > cutoff) {
+      continue;
+    }
+
+    fs.unlinkSync(filePath);
+    deletedCount++;
+  }
+
+  return deletedCount;
+}
+
+function getBackupRetentionCount(): number {
+  const rawValue = process.env.BACKUP_RETENTION_COUNT;
+  if (!rawValue) {
+    return DEFAULT_BACKUP_RETENTION_COUNT;
+  }
+
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsedValue) || parsedValue < 1) {
+    return DEFAULT_BACKUP_RETENTION_COUNT;
+  }
+
+  return parsedValue;
 }

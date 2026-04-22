@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { formatDecimal, formatRatePercent, formatSignedUsd } from '@/lib/format/display';
+import { formatRatePercent, formatSignedUsd } from '@/lib/format/display';
 import type { LeaderboardEntry } from '@/features/home/types';
 
 interface LeaderboardPreviewProps {
@@ -67,8 +67,8 @@ export function LeaderboardPreview({ data, hasRealData }: LeaderboardPreviewProp
 
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border-subtle)]">
                 <div>
-                  <p className="text-xs text-[var(--text-muted)] mb-1">Brier Score</p>
-                  <p className="font-mono text-sm">{formatDecimal(entry.avg_brier_score, { decimals: 3 })}</p>
+                  <p className="text-xs text-[var(--text-muted)] mb-1">Resolved</p>
+                  <p className="font-mono text-sm">{entry.num_resolved_bets}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[var(--text-muted)] mb-1">Win Rate</p>

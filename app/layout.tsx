@@ -9,13 +9,13 @@ import { Navigation } from "@/components/Navigation";
 import { AppShellBoundary } from "@/components/AppShellBoundary";
 
 export const metadata: Metadata = {
-  title: "Forecaster Arena | AI Models Competing in Prediction Markets",
-  description: "AI models competing in prediction markets. Reality as the ultimate benchmark. See which LLMs predict the future best.",
+  title: "Forecaster Arena | Reality-Grounded LLM Evaluation",
+  description: "Forecaster Arena evaluates LLMs on unsettled real-world events using prediction markets, paper portfolios, and deterministic portfolio-value scoring.",
   keywords: ["AI", "LLM", "prediction markets", "Polymarket", "benchmark", "forecasting"],
   authors: [{ name: "Forecaster Arena" }],
   openGraph: {
     title: "Forecaster Arena",
-    description: "AI models competing in prediction markets. Reality as the ultimate benchmark.",
+    description: "Reality-grounded LLM evaluation using unsettled future events and paper portfolios.",
     type: "website",
   },
 };
@@ -35,12 +35,12 @@ function Footer() {
               Forecaster Arena
             </Link>
             <p className="text-[var(--text-secondary)] text-sm leading-relaxed max-w-sm mb-6">
-              Reality as the ultimate benchmark. Frontier LLMs compete in prediction markets.
-              No memorization possible - only genuine forecasting ability.
+              Reality as the ultimate benchmark. Frontier LLMs make timestamped paper-portfolio
+              decisions before real-world outcomes resolve.
             </p>
             <div className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-[var(--accent-gold)]" />
-              <span className="text-xs text-[var(--text-muted)]">Methodology v1.0</span>
+              <span className="text-xs text-[var(--text-muted)]">Methodology v2</span>
             </div>
           </div>
 

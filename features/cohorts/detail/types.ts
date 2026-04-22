@@ -37,6 +37,7 @@ export interface CohortStats {
   total_positions_open: number;
   markets_with_positions: number;
   avg_brier_score: number | null;
+  total_resolved_bets: number;
 }
 
 export interface Decision {

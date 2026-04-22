@@ -64,8 +64,8 @@ export function runCheckCohortsAction(): AdminActionResult {
   };
 }
 
-export function runBackupAction(): AdminActionResult {
-  const backupPath = createBackup();
+export async function runBackupAction(): Promise<AdminActionResult> {
+  const backupPath = await createBackup();
   logSystemEvent('admin_backup', { backup_path: backupPath }, 'info');
 
   return {

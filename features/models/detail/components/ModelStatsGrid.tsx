@@ -1,24 +1,23 @@
 import {
-  formatDecimal,
   formatRatePercent,
   formatSignedPercent,
   formatSignedUsd
 } from '@/lib/format/display';
 
 interface ModelStatsGridProps {
-  avgBrier: number | null;
   avgPnlPercent: number;
   loading: boolean;
   numCohorts: number;
+  totalResolvedBets: number;
   totalPnl: number;
   winRate: number | null;
 }
 
 export function ModelStatsGrid({
-  avgBrier,
   avgPnlPercent,
   loading,
   numCohorts,
+  totalResolvedBets,
   totalPnl,
   winRate
 }: ModelStatsGridProps) {
@@ -38,9 +37,9 @@ export function ModelStatsGrid({
       </div>
       <div className="stat-card">
         <div className="stat-value font-mono">
-          {loading ? '...' : formatDecimal(avgBrier)}
+          {loading ? '...' : totalResolvedBets}
         </div>
-        <div className="stat-label">Avg Brier Score</div>
+        <div className="stat-label">Resolved Bets</div>
       </div>
       <div className="stat-card">
         <div className="stat-value">
