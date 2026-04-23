@@ -1,9 +1,8 @@
-import { INITIAL_BALANCE } from '@/lib/constants';
 import {
-  calculateActualPortfolioValue,
   getAverageBrierScore,
   getSnapshotsByAgent
 } from '@/lib/db/queries';
+import { resolveAgentPortfolioSummary } from '@/lib/application/portfolio-summary';
 import type { AgentWithCohort, ModelDetailPayload } from '@/lib/application/models/types';
 
 type CohortPerformance = ModelDetailPayload['cohort_performance'][number];
@@ -13,11 +12,8 @@ export function buildCohortPerformance(
 ): CohortPerformance[] {
   return agents.map((agent) => {
     const snapshots = getSnapshotsByAgent(agent.id);
-    const latestSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
     const brierScore = getAverageBrierScore(agent.id);
-    const totalValue = latestSnapshot?.total_value ?? calculateActualPortfolioValue(agent.id);
-    const totalPnl = latestSnapshot?.total_pnl ?? (totalValue - INITIAL_BALANCE);
-    const totalPnlPercent = latestSnapshot?.total_pnl_percent ?? ((totalPnl / INITIAL_BALANCE) * 100);
+    const portfolio = resolveAgentPortfolioSummary(agent.id, snapshots);
 
     return {
       cohort_id: agent.cohort_id,
@@ -25,11 +21,11 @@ export function buildCohortPerformance(
       cohort_status: agent.cohort_status,
       agent_status: agent.status,
       cash_balance: agent.cash_balance,
-      total_value: totalValue,
-      total_pnl: totalPnl,
-      total_pnl_percent: totalPnlPercent,
+      total_value: portfolio.totalValue,
+      total_pnl: portfolio.totalPnl,
+      total_pnl_percent: portfolio.totalPnlPercent,
       brier_score: brierScore,
-      num_resolved_bets: latestSnapshot?.num_resolved_bets ?? 0
+      num_resolved_bets: portfolio.numResolvedBets
     };
   });
 }

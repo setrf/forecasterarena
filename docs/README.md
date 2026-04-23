@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last updated: 2026-03-07
+Last updated: 2026-04-23
 
 This directory contains both:
 
@@ -25,14 +25,16 @@ These files are intended to match the codebase as it exists today:
   - detailed contract-level route documentation
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md)
   - detailed runtime architecture, engine flow, and invariants
+- [`CODE_MAP.md`](./CODE_MAP.md)
+  - repo-wide code map of routes, subsystems, critical flows, invariants, and coverage
 - [`OPERATIONS.md`](./OPERATIONS.md)
   - production runbook and operational checks
 - [`SECURITY.md`](./SECURITY.md)
   - current auth, redaction, integrity, and export hardening behavior
 - [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md)
   - implementation-aligned schema and index reference
-- [`METHODOLOGY_v1.md`](./METHODOLOGY_v1.md)
-  - benchmark methodology specification
+- [`METHODOLOGY_v2.md`](./METHODOLOGY_v2.md)
+  - current portfolio-value methodology specification
 - [`DECISIONS.md`](./DECISIONS.md)
   - design-decision log for the current implementation
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md)
@@ -42,11 +44,11 @@ These files are intended to match the codebase as it exists today:
 - [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
   - operational troubleshooting guide
 - [`SCORING.md`](./SCORING.md)
-  - metric-specific scoring details
+  - current v2 portfolio-value/P&L scoring details, with historical diagnostics separated
 - [`ACCOUNTING_STATES.md`](./ACCOUNTING_STATES.md)
   - position/accounting edge-case explanations
 - [`PROMPT_DESIGN.md`](./PROMPT_DESIGN.md)
-  - prompt-construction notes
+  - live v2 prompt-construction notes
 
 ---
 
@@ -58,6 +60,7 @@ description of current behavior:
 - [`AUDIT_REPORT_2025-12-14.md`](./AUDIT_REPORT_2025-12-14.md)
 - [`AUDIT_SUMMARY.md`](./AUDIT_SUMMARY.md)
 - [`CODE_IMPROVEMENTS.md`](./CODE_IMPROVEMENTS.md)
+- [`METHODOLOGY_v1.md`](./METHODOLOGY_v1.md)
 - [`MULTI_COHORT_AGGREGATION_ANALYSIS.md`](./MULTI_COHORT_AGGREGATION_ANALYSIS.md)
 - [`MULTI_COHORT_FIXES_2025-12-14.md`](./MULTI_COHORT_FIXES_2025-12-14.md)
 

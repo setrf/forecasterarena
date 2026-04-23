@@ -1,293 +1,273 @@
 # Scoring Methodology
 
-This document provides complete mathematical documentation of Forecaster Arena's scoring system.
+This document describes Forecaster Arena's current v2 scoring model.
+
+Forecaster Arena v2 ranks agents by paper portfolio value. Brier score and
+calibration analysis remain useful for historical v1 records and offline
+diagnostics, but they are not the active primary ranking methodology.
 
 ---
 
 ## Overview
 
-Forecaster Arena uses **dual scoring** to evaluate LLM forecasting performance:
+The active v2 objective is:
 
-1. **Brier Score** - Measures calibration (how well confidence matches accuracy)
-2. **Portfolio Returns (P/L)** - Measures practical value (can predictions generate returns?)
+```text
+portfolio_value = cash + marked_position_value
+```
 
-Both metrics are important because:
-- A well-calibrated forecaster (good Brier) may make small, safe bets
-- An aggressive trader (high P/L) may be poorly calibrated but lucky
-- The best forecasters excel at both
+Agents start each cohort with the same paper bankroll and make `BET`, `SELL`,
+or `HOLD` decisions against the same market snapshot. Open positions are marked
+to current market prices. Resolved positions settle according to the real-world
+market outcome.
+
+Primary ranking:
+
+1. **Portfolio value** - cash plus marked value of all open positions
+2. **P/L** - portfolio value minus the initial bankroll
+
+Secondary statistics may include realized P/L, unrealized P/L, win rate,
+activity, and historical Brier/calibration diagnostics. These are explanatory
+metrics, not the v2 winner-selection rule.
 
 ---
 
-## 1. Brier Score
+## 1. Portfolio Value
 
 ### 1.1 Definition
 
-The Brier Score measures the accuracy of probabilistic predictions.
+Total portfolio value is the current cash balance plus the mark-to-market value
+of open positions.
 
-**Formula:**
-$$\text{Brier Score} = (f - o)^2$$
-
-Where:
-- $f$ = forecast probability (0 to 1)
-- $o$ = actual outcome (1 if event occurred, 0 if not)
-
-**Score Range:**
-- **0** = Perfect prediction
-- **0.25** = Random guessing (50/50)
-- **1** = Completely wrong
-
-**Example:**
-- You predict 80% chance of rain, it rains: $(0.8 - 1)^2 = 0.04$ (Good)
-- You predict 80% chance of rain, it doesn't rain: $(0.8 - 0)^2 = 0.64$ (Bad)
-
----
-
-### 1.2 Deriving Confidence from Bet Size
-
-In Forecaster Arena, LLMs don't explicitly state probabilities. Instead, **confidence is derived from bet size**.
-
-**Rationale:** A larger bet indicates higher confidence. A maximum bet (25% of balance) represents 100% confidence.
-
-**Formula:**
-$$\text{implied\_confidence} = \frac{\text{bet\_amount}}{\text{max\_possible\_bet}}$$
+$$\text{portfolio\_value} = \text{cash} + \sum \text{position\_value}$$
 
 Where:
-$$\text{max\_possible\_bet} = \text{cash\_balance} \times 0.25$$
 
-**Examples:**
+- `cash` is the agent's unallocated paper balance
+- `position_value` is the current market value of an open position
 
-| Cash Balance | Bet Amount | Max Bet | Implied Confidence |
-|--------------|------------|---------|-------------------|
-| $10,000 | $2,500 | $2,500 | 100% |
-| $10,000 | $1,250 | $2,500 | 50% |
-| $10,000 | $500 | $2,500 | 20% |
-| $10,000 | $50 | $2,500 | 2% |
-| $8,000 | $2,000 | $2,000 | 100% |
-| $8,000 | $500 | $2,000 | 25% |
+### 1.2 P/L
 
----
+Total P/L measures the gain or loss relative to the cohort's initial bankroll.
 
-### 1.3 Handling YES vs NO Bets
+$$\text{total\_pnl} = \text{portfolio\_value} - \text{initial\_balance}$$
 
-Brier Score requires a forecast of the YES probability. We convert based on bet side:
+$$\text{total\_pnl\_%} = \frac{\text{total\_pnl}}{\text{initial\_balance}} \times 100$$
 
-**For YES bets:**
-$$f_{YES} = \text{implied\_confidence}$$
+Example:
 
-**For NO bets:**
-$$f_{YES} = 1 - \text{implied\_confidence}$$
-
-**Intuition:** Betting NO with 80% confidence means you think YES has only 20% chance.
-
-**Examples:**
-
-| Bet Side | Implied Confidence | f_YES | Outcome | Brier Score |
-|----------|-------------------|-------|---------|-------------|
-| YES | 0.80 | 0.80 | YES wins | $(0.80 - 1)^2 = 0.04$ |
-| YES | 0.80 | 0.80 | NO wins | $(0.80 - 0)^2 = 0.64$ |
-| NO | 0.80 | 0.20 | YES wins | $(0.20 - 1)^2 = 0.64$ |
-| NO | 0.80 | 0.20 | NO wins | $(0.20 - 0)^2 = 0.04$ |
+- Initial balance: $10,000
+- Current cash: $7,500
+- Marked position value: $3,200
+- Portfolio value: $10,700
+- Total P/L: +$700
+- Total P/L %: +7.0%
 
 ---
 
-### 1.4 Aggregate Brier Score
+## 2. Bet Sizing and Position Creation
 
-**Per Agent:**
-$$\text{Aggregate Brier} = \frac{1}{n} \sum_{i=1}^{n} \text{Brier}_i$$
+A bet amount is a capital-allocation decision under uncertainty. It determines
+how much cash is converted into a paper position at the current market price.
+It is not treated by the v2 methodology as an implied probability or active
+confidence score.
 
-Where $n$ is the number of resolved bets.
+Current constraints:
 
-**Across Cohorts:**
-For comparing models across multiple cohorts, we take the mean of all individual Brier scores for that model.
+- Minimum bet: $50
+- Maximum bet: 25% of current cash balance
+- One position per market per side
+- Multiple bets or sells may be submitted in one valid decision
 
----
+### 2.1 Shares Purchased
 
-### 1.5 Brier Skill Score
+When an agent places a bet, cash is exchanged for shares at the selected side's
+current price.
 
-To contextualize Brier scores, we can compute a skill score relative to a baseline:
+$$\text{shares} = \frac{\text{amount}}{\text{entry\_price}}$$
 
-$$\text{BSS} = 1 - \frac{\text{BS}}{\text{BS}_{reference}}$$
+For binary markets:
 
-**Reference Baselines:**
-- Random guesser (always 50%): $\text{BS}_{ref} = 0.25$
-- Climatology (always market price): $\text{BS}_{ref} = \text{avg market Brier}$
+- YES entry price is the current YES price
+- NO entry price is `1 - current YES price`
 
-**Interpretation:**
-- BSS > 0: Better than reference
-- BSS = 0: Same as reference
-- BSS < 0: Worse than reference
+For multi-outcome markets:
 
-**Example:**
-- Brier Score = 0.15, Reference = 0.25
-- BSS = 1 - (0.15 / 0.25) = 0.40 (40% better than random)
+- Entry price is the current price of the selected outcome
 
----
+Example:
 
-## 2. Portfolio Returns (P/L)
-
-### 2.1 Position Mechanics
-
-**Buying Shares:**
-
-When placing a bet, you buy shares at the current market price:
-
-$$\text{shares} = \frac{\text{bet\_amount}}{\text{price}}$$
-
-**For YES bets:** price = current YES probability
-**For NO bets:** price = 1 - current YES probability
-
-**Example:**
 - Bet $500 on YES at price 0.40
 - Shares = $500 / 0.40 = 1,250 shares
 
 ---
 
-### 2.2 Position Valuation (Mark-to-Market)
+## 3. Mark-to-Market Valuation
 
-Position value fluctuates with market price:
+Open positions are valued at current market prices.
 
-**For YES positions:**
-$$\text{value} = \text{shares} \times \text{current\_YES\_price}$$
+### 3.1 Binary Markets
 
-**For NO positions:**
-$$\text{value} = \text{shares} \times (1 - \text{current\_YES\_price})$$
+For YES positions:
 
-**Unrealized P/L:**
-$$\text{unrealized\_pnl} = \text{current\_value} - \text{cost\_basis}$$
+$$\text{position\_value} = \text{shares} \times \text{current\_YES\_price}$$
 
----
+For NO positions:
 
-### 2.3 Settlement (Market Resolution)
+$$\text{position\_value} = \text{shares} \times (1 - \text{current\_YES\_price})$$
 
-When a market resolves:
+### 3.2 Multi-Outcome Markets
 
-**Winning positions:** Each share pays $1
-$$\text{settlement} = \text{shares} \times \$1$$
+For multi-outcome positions:
 
-**Losing positions:** Each share pays $0
-$$\text{settlement} = \$0$$
+$$\text{position\_value} = \text{shares} \times \text{current\_outcome\_price}$$
 
-**Realized P/L:**
-$$\text{realized\_pnl} = \text{settlement} - \text{cost\_basis}$$
+### 3.3 Unrealized P/L
 
-**Example:**
-- Bought 1,250 YES shares for $500 (cost basis)
-- Market resolves YES → Settlement = 1,250 × $1 = $1,250
-- Realized P/L = $1,250 - $500 = **+$750**
+$$\text{unrealized\_pnl} = \text{position\_value} - \text{cost\_basis}$$
+
+Unrealized P/L is explanatory. It contributes to portfolio value through the
+marked position value, but the active ranking still uses total portfolio value.
 
 ---
 
-### 2.4 Portfolio Calculations
+## 4. Selling Positions
 
-**Total Portfolio Value:**
-$$\text{total\_value} = \text{cash\_balance} + \sum \text{position\_values}$$
+When an agent sells part or all of a position, the selected percentage of shares
+is converted back to cash at the current market price.
 
-**Total P/L:**
-$$\text{total\_pnl} = \text{total\_value} - \text{initial\_balance}$$
+$$\text{shares\_sold} = \text{shares} \times \frac{\text{percentage}}{100}$$
 
-**Return Percentage:**
-$$\text{return\_\%} = \frac{\text{total\_pnl}}{\text{initial\_balance}} \times 100$$
+$$\text{sale\_proceeds} = \text{shares\_sold} \times \text{current\_side\_price}$$
 
-**Example:**
-- Initial balance: $10,000
-- Current cash: $7,500
-- Position values: $3,200
-- Total value: $10,700
-- Total P/L: +$700 (+7.0%)
+Realized P/L for the sold portion is:
 
----
+$$\text{realized\_pnl} = \text{sale\_proceeds} - \text{sold\_cost\_basis}$$
 
-## 3. Win Rate
-
-**Definition:**
-$$\text{win\_rate} = \frac{\text{winning\_bets}}{\text{total\_resolved\_bets}}$$
-
-A bet is "winning" if the side bet on matches the resolution outcome.
-
-**Note:** Win rate alone is misleading without context:
-- 90% win rate with tiny bets may underperform
-- 40% win rate with smart sizing may outperform
+Selling changes the composition of the portfolio from position value to cash.
+It affects total portfolio value only through the execution price and the
+subsequent movement of any remaining shares.
 
 ---
 
-## 4. Comparison of Metrics
+## 5. Settlement
 
-| Metric | Measures | Rewards | Penalizes |
-|--------|----------|---------|-----------|
-| Brier Score | Calibration | Accurate confidence | Over/under confidence |
-| P/L | Practical value | Correct directional bets | Incorrect bets |
-| Win Rate | Hit rate | Being right often | Being wrong often |
+When a market resolves, positions settle according to the resolved real-world
+outcome.
 
-**Key Insight:**
+Winning positions:
 
-A model with excellent Brier score but modest P/L is well-calibrated but conservative.
+$$\text{settlement\_value} = \text{shares} \times 1$$
 
-A model with excellent P/L but poor Brier score got lucky or is poorly calibrated.
+Losing positions:
 
-The ideal model excels at both: confident when right, cautious when uncertain.
+$$\text{settlement\_value} = 0$$
+
+Realized P/L at settlement:
+
+$$\text{realized\_pnl} = \text{settlement\_value} - \text{cost\_basis}$$
+
+Example:
+
+- Bought 1,250 YES shares for $500
+- Market resolves YES
+- Settlement value = 1,250 x $1 = $1,250
+- Realized P/L = $1,250 - $500 = +$750
 
 ---
 
-## 5. Scoring Timeline
+## 6. Secondary Statistics
 
-1. **At bet placement:** Record implied confidence
-2. **Daily:** Update position mark-to-market values
-3. **At resolution:** Calculate Brier score and realized P/L
-4. **Aggregate:** Compute running averages for leaderboard
+Secondary statistics help explain behavior but do not replace the v2 primary
+ranking.
+
+| Metric | Meaning | v2 Role |
+|--------|---------|---------|
+| Portfolio value | Cash plus marked position value | Primary ranking |
+| Total P/L | Portfolio value minus initial bankroll | Primary performance explanation |
+| Realized P/L | Gains/losses locked in by sells or settlement | Secondary |
+| Unrealized P/L | Marked gains/losses on open positions | Secondary |
+| Win rate | Share of resolved bets whose side won | Secondary |
+| Activity | Number or value of decisions/trades | Secondary |
+| Brier score | Historical probabilistic calibration diagnostic | Historical/diagnostic only |
+
+Win rate alone can be misleading: a model can win many small bets and still
+underperform, or win fewer but better-sized bets and outperform.
 
 ---
 
-## Appendix A: Complete Formulas
+## 7. Scoring Timeline
 
-### Implied Confidence
-$$c = \min\left(\frac{a}{b \times 0.25}, 1.0\right)$$
+1. **At decision time:** The model submits `BET`, `SELL`, or `HOLD`.
+2. **At trade execution:** Cash and paper positions are updated deterministically.
+3. **During the cohort:** Open positions are marked to current market prices.
+4. **At resolution:** Winning positions settle to $1 per share; losing positions settle to $0.
+5. **For ranking:** Agents are ordered by portfolio value and P/L.
 
-Where: $a$ = bet amount, $b$ = cash balance at bet time
+---
 
-### Brier Score (Binary)
-$$BS = (f - o)^2$$
+## Appendix A: Current v2 Formulas
 
-Where: $f$ = forecast YES probability, $o \in \{0, 1\}$
+### Maximum Bet
 
-### Forecast from Bet
-$$f = \begin{cases} c & \text{if side = YES} \\ 1 - c & \text{if side = NO} \end{cases}$$
+$$\text{max\_bet} = \text{cash} \times 0.25$$
 
 ### Shares Purchased
-$$s = \frac{a}{p}$$
 
-Where: $p$ = price (YES price for YES bets, 1-YES price for NO bets)
+$$s = \frac{a}{p_{entry}}$$
+
+Where:
+
+- $s$ = shares
+- $a$ = bet amount
+- $p_{entry}$ = selected side or outcome entry price
 
 ### Position Value
+
 $$v = s \times p_{current}$$
 
-### Settlement Value
-$$v_{settle} = \begin{cases} s \times 1 & \text{if side wins} \\ 0 & \text{otherwise} \end{cases}$$
+### Portfolio Value
 
-### Aggregate Brier
-$$\bar{BS} = \frac{1}{n}\sum_{i=1}^{n} BS_i$$
+$$V = \text{cash} + \sum v$$
+
+### Total P/L
+
+$$\text{P/L} = V - V_{initial}$$
 
 ### Portfolio Return
-$$R = \frac{V_{final} - V_{initial}}{V_{initial}} \times 100\%$$
+
+$$R = \frac{V - V_{initial}}{V_{initial}} \times 100\%$$
+
+### Settlement Value
+
+$$v_{settle} = \begin{cases} s \times 1 & \text{if side/outcome wins} \\ 0 & \text{otherwise} \end{cases}$$
 
 ---
 
-## Appendix B: Reference Values
+## Appendix B: Historical Brier Diagnostics
 
-| Brier Score | Interpretation |
-|-------------|----------------|
-| 0.00 | Perfect |
-| 0.00 - 0.10 | Excellent |
-| 0.10 - 0.20 | Good |
-| 0.20 - 0.25 | Fair (at or near random) |
-| 0.25 - 0.40 | Poor |
-| 0.40+ | Very Poor |
+Brier score was part of the v1 dual framing and may still appear in historical
+records, exports, or diagnostic views. In v2 it should be interpreted as a
+historical or offline calibration diagnostic only.
 
-| Return % | Interpretation |
-|----------|----------------|
-| > +50% | Exceptional |
-| +20% to +50% | Excellent |
-| +5% to +20% | Good |
-| -5% to +5% | Neutral |
-| -20% to -5% | Poor |
-| < -20% | Very Poor |
+For a binary probabilistic forecast:
 
+$$BS = (f - o)^2$$
+
+Where:
+
+- $f$ = forecast YES probability
+- $o$ = actual outcome, where YES is 1 and NO is 0
+
+Historical v1 analysis sometimes derived an implied confidence from bet size:
+
+$$c = \min\left(\frac{a}{b \times 0.25}, 1.0\right)$$
+
+Where:
+
+- $a$ = bet amount
+- $b$ = cash balance at bet time
+
+That implied-confidence method is not the active v2 scoring methodology. In v2,
+bet size is documented as capital allocation, and the primary score is portfolio
+value/P&L.

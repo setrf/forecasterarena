@@ -12,7 +12,7 @@ test('market filters and footer navigation stay usable', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Explore' }).getByRole('link', { name: 'Changelog' }).click();
   await expect(page).toHaveURL(/\/changelog$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Changelog' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /Methodology and platform changes/i })).toBeVisible();
 
   await page.getByRole('navigation', { name: 'Research' }).getByRole('link', { name: 'About' }).click();
   await expect(page).toHaveURL(/\/about$/);

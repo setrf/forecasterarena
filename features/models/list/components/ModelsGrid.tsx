@@ -15,7 +15,7 @@ export function ModelsGrid({
   stats
 }: ModelsGridProps) {
   return (
-    <section className="container-wide mx-auto px-6 py-10">
+    <section className="container-wide mx-auto px-6 pb-10 pt-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="heading-block">All Competitors</h2>
         <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">

@@ -151,11 +151,13 @@ Implementation note:
 
 ---
 
-### D007: Confidence Derived From Bet Size
+### D007: Historical V1 Confidence Derived From Bet Size
 
-- Status: Active
-- Decision: Brier scoring uses implied confidence derived from bet size rather
-  than a separately requested probability field.
+- Status: Historical
+- Decision: v1 Brier diagnostics derived confidence from bet size rather than
+  a separately requested probability field. v2 does not use this as active
+  scoring methodology; v2 treats bet size as capital allocation and ranks by
+  paper portfolio value / P&L.
 
 Rationale:
 

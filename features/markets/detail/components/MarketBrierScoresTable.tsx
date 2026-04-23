@@ -12,7 +12,12 @@ export function MarketBrierScoresTable({ scores }: MarketBrierScoresTableProps) 
 
   return (
     <div className="glass-card p-6 mb-8">
-      <h2 className="heading-block mb-4">Brier Scores</h2>
+      <div className="mb-4">
+        <h2 className="heading-block mb-2">Historical Brier Diagnostics</h2>
+        <p className="text-sm text-[var(--text-muted)]">
+          Calibration records from resolved buy trades. Portfolio value is the primary v2 ranking metric.
+        </p>
+      </div>
       <div className="overflow-x-auto">
         <table className="data-table">
           <thead>
@@ -21,7 +26,7 @@ export function MarketBrierScoresTable({ scores }: MarketBrierScoresTableProps) 
               <th>Model</th>
               <th className="text-right">Forecast</th>
               <th className="text-right">Outcome</th>
-              <th className="text-right">Brier Score</th>
+              <th className="text-right">Diagnostic Brier</th>
             </tr>
           </thead>
           <tbody>

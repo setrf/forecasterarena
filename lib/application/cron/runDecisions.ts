@@ -28,6 +28,24 @@ type RunDecisionsSuccess = {
   results: Awaited<ReturnType<typeof runAllDecisions>>;
 };
 
+function pluralize(count: number, singular: string, plural: string = `${singular}s`): string {
+  return count === 1 ? singular : plural;
+}
+
+function decisionRunFailureMessage(args: {
+  cohortsProcessed: number;
+  totalAgents: number;
+  totalErrors: number;
+  firstError?: string;
+}): string {
+  const summary =
+    `Decision run failed for all ${args.totalAgents} ${pluralize(args.totalAgents, 'agent')} ` +
+    `across ${args.cohortsProcessed} ${pluralize(args.cohortsProcessed, 'cohort')} ` +
+    `with ${args.totalErrors} ${pluralize(args.totalErrors, 'error')}`;
+
+  return args.firstError ? `${summary}. First error: ${args.firstError}` : summary;
+}
+
 function refreshActiveCohortsToDefaultBenchmarkConfig(): LineupRefreshSummary {
   const benchmarkConfig = getDefaultBenchmarkConfig();
   if (!benchmarkConfig) {
@@ -122,17 +140,42 @@ export async function runDecisions(): Promise<CronAppResult<RunDecisionsSuccess>
     const duration = Date.now() - startTime;
     const totalAgents = results.reduce((sum, result) => sum + result.agents_processed, 0);
     const totalErrors = results.reduce((sum, result) => sum + result.errors.length, 0);
-
-    logSystemEvent('decisions_run_complete', {
+    const successfulAgents = results.reduce(
+      (sum, result) => sum + result.decisions.filter((decision) => decision.success).length,
+      0
+    );
+    const summary = {
       cohorts_processed: results.length,
       total_agents: totalAgents,
       total_errors: totalErrors,
+      successful_agents: successfulAgents,
       duration_ms: duration
-    });
+    };
+
+    logSystemEvent('decisions_run_complete', summary);
 
     console.log(
       `Decision run complete: ${results.length} cohorts, ${totalAgents} agents, ${totalErrors} errors, ${duration}ms`
     );
+
+    if (totalAgents > 0 && totalErrors >= totalAgents && successfulAgents === 0) {
+      const sampleErrors = results.flatMap((result) => result.errors).slice(0, 5);
+      const message = decisionRunFailureMessage({
+        cohortsProcessed: results.length,
+        totalAgents,
+        totalErrors,
+        firstError: sampleErrors[0]
+      });
+
+      logSystemEvent('decisions_run_failed', {
+        ...summary,
+        error: message,
+        sample_errors: sampleErrors
+      }, 'error');
+      console.error(message);
+
+      return failure(502, message);
+    }
 
     return ok({
       success: true,

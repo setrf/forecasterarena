@@ -11,39 +11,15 @@ import {
 } from '@/lib/db/queries';
 import { withTransaction } from '@/lib/db/transactions';
 import type { AdminOperationResult } from '@/lib/application/admin/types';
+import {
+  getNullableTrimmedString,
+  getRequiredTrimmedString,
+  isNonNegativeFiniteNumber
+} from '@/lib/application/admin-benchmark/validation';
 import type {
   AdminBenchmarkConfigSummary,
   CreateAdminBenchmarkConfigInput
 } from '@/lib/application/admin-benchmark/types';
-
-function isNonNegativeFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
-}
-
-function getRequiredTrimmedString(
-  value: unknown,
-  label: string
-): { ok: true; value: string } | { ok: false; error: string } {
-  if (typeof value !== 'string') {
-    return { ok: false, error: `${label} is required` };
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { ok: false, error: `${label} is required` };
-  }
-
-  return { ok: true, value: trimmed };
-}
-
-function getOptionalTrimmedString(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed || null;
-}
 
 export function createAdminBenchmarkConfigRecord(
   input: CreateAdminBenchmarkConfigInput
@@ -113,8 +89,8 @@ export function createAdminBenchmarkConfigRecord(
     };
   }
 
-  const methodologyVersion = getOptionalTrimmedString(input.methodology_version) || METHODOLOGY_VERSION;
-  const notes = getOptionalTrimmedString(input.notes);
+  const methodologyVersion = getNullableTrimmedString(input.methodology_version) || METHODOLOGY_VERSION;
+  const notes = getNullableTrimmedString(input.notes);
 
   const config = withTransaction(() => {
     const createdConfig = createBenchmarkConfig({

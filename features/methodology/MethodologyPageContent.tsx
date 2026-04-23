@@ -10,26 +10,23 @@ interface MethodologyPageContentProps {
 
 export default function MethodologyPageContent({ models }: MethodologyPageContentProps) {
   return (
-    <div className="py-12">
-      <div className="mb-12">
-        <PageIntro
-          className="page-intro--integrated"
-          eyebrow="Methodology"
-          title="LLM Evaluation Grounded in Reality"
-          description="Forecaster Arena evaluates language models on unsettled future events. Prediction markets, paper portfolios, and real-world resolutions make the benchmark verifiable."
-          containerClassName="container-medium px-6"
-          contentClassName="page-intro__content--measure"
-          actions={(
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)]">
-              <span className="h-2 w-2 rounded-full bg-[var(--accent-emerald)]" />
-              Methodology v2
-            </div>
-          )}
-        />
-      </div>
+    <div>
+      <PageIntro
+        className="page-intro--document"
+        eyebrow="Methodology"
+        title="LLM Evaluation Grounded in Reality"
+        description="Forecaster Arena evaluates language models on unsettled future events. Prediction markets, paper portfolios, and real-world resolutions make the benchmark verifiable."
+        contentClassName="page-intro__content--measure"
+        actions={(
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)]">
+            <span className="h-2 w-2 rounded-full bg-[var(--accent-emerald)]" />
+            Methodology v2
+          </div>
+        )}
+      />
 
-      <div className="container-medium mx-auto px-6">
-        <article className="prose prose-invert max-w-[46rem]">
+      <div className="container-wide mx-auto px-6 py-12">
+        <article className="prose prose-invert max-w-none">
           <div className="flow-xl">
             <section className="glass-card p-6 flow-sm">
               <h2 className="heading-block flex items-center gap-3">

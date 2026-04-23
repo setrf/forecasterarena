@@ -3,8 +3,11 @@ import {
   SEEDED_COHORT_ID,
   SEEDED_EXPORT_FROM,
   SEEDED_EXPORT_TO,
+  SEEDED_MARKET_CLOSE,
   SEEDED_MARKET_ID,
   SEEDED_MODELS,
+  RECENT_SNAPSHOT_END,
+  RECENT_SNAPSHOT_START,
   SNAPSHOT_END,
   SNAPSHOT_START
 } from '../models.mjs';
@@ -80,6 +83,30 @@ export function seedRichScenario(db) {
       null,
       0
     );
+    insertSnapshot.run(
+      `snapshot-recent-a-${model.id}`,
+      agentId,
+      RECENT_SNAPSHOT_START,
+      10000,
+      0,
+      model.valueA,
+      model.valueA - 10000,
+      ((model.valueA - 10000) / 10000) * 100,
+      null,
+      0
+    );
+    insertSnapshot.run(
+      `snapshot-recent-b-${model.id}`,
+      agentId,
+      RECENT_SNAPSHOT_END,
+      model.cash,
+      model.valueB - model.cash,
+      model.valueB,
+      model.valueB - 10000,
+      ((model.valueB - 10000) / 10000) * 100,
+      null,
+      0
+    );
   }
 
   db.prepare(`
@@ -95,7 +122,7 @@ export function seedRichScenario(db) {
     'Will the Fed cut rates by 50+ bps in the seeded e2e market?',
     'Seeded binary market used for browser smoke coverage.',
     'Macro',
-    '2026-12-31T00:00:00.000Z',
+    SEEDED_MARKET_CLOSE,
     0.55,
     250000,
     50000,

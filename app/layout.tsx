@@ -129,7 +129,7 @@ export default function RootLayout({
 
         <AppShellBoundary>
           <Navigation />
-          <main className="min-h-screen pt-16">
+          <main className="app-main min-h-screen pt-16">
             {children}
           </main>
           <Footer />

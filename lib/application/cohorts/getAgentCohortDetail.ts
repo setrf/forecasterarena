@@ -1,7 +1,5 @@
-import { INITIAL_BALANCE } from '@/lib/constants';
 import { getDb } from '@/lib/db';
 import {
-  calculateActualPortfolioValue,
   getAverageBrierScore,
   getClosedPositionsWithMarkets,
   getCohortById,
@@ -22,6 +20,7 @@ import {
   getCohortWeek
 } from '@/lib/application/cohorts/shared';
 import { getReleaseChangeEvents } from '@/lib/application/performance';
+import { resolveAgentPortfolioSummary } from '@/lib/application/portfolio-summary';
 import type {
   AgentCohortDetailPayload,
   AgentCohortNotFoundResult,
@@ -55,11 +54,8 @@ export function getAgentCohortDetail(
 
   const db = getDb();
   const snapshots = getSnapshotsByAgent(agent.id);
-  const latestSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
-  const totalValue = latestSnapshot?.total_value ?? calculateActualPortfolioValue(agent.id);
-  const totalPnl = latestSnapshot?.total_pnl ?? (totalValue - INITIAL_BALANCE);
-  const totalPnlPercent = latestSnapshot?.total_pnl_percent ?? ((totalPnl / INITIAL_BALANCE) * 100);
-  const rankResult = getAgentRank(db, cohortId, totalValue);
+  const portfolio = resolveAgentPortfolioSummary(agent.id, snapshots);
+  const rankResult = getAgentRank(db, cohortId, portfolio.totalValue);
   const winRateResult = getAgentWinRate(db, agent.id);
   const cohortStats = getCohortPnlStats(db, cohortId);
 
@@ -98,11 +94,11 @@ export function getAgentCohortDetail(
         status: agent.status,
         cash_balance: agent.cash_balance,
         total_invested: agent.total_invested,
-        total_value: totalValue,
-        total_pnl: totalPnl,
-        total_pnl_percent: totalPnlPercent,
+        total_value: portfolio.totalValue,
+        total_pnl: portfolio.totalPnl,
+        total_pnl_percent: portfolio.totalPnlPercent,
         brier_score: getAverageBrierScore(agent.id),
-        num_resolved_bets: latestSnapshot?.num_resolved_bets ?? 0,
+        num_resolved_bets: portfolio.numResolvedBets,
         rank: rankResult.rank,
         total_agents: rankResult.total_agents
       },

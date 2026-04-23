@@ -1,6 +1,6 @@
 # Forecaster Arena Operations Runbook
 
-Last updated: 2026-03-07
+Last updated: 2026-04-22
 
 This runbook documents how to operate the application that exists in the repository today. It focuses on practical runtime procedures, verification steps, and failure handling.
 
@@ -19,6 +19,18 @@ This repository assumes:
 
 Because orchestration is route-driven, healthy operations depend on cron timing, environment configuration, and the SQLite file all being correct.
 
+Current production VPS baseline:
+
+- runtime: Next.js served by `forecasterarena.service` under systemd, behind Nginx
+- public domain: `https://forecasterarena.com`
+- active release shape: copied release snapshots under `/opt/forecasterarena-release-*`
+- current production release path: `/opt/forecasterarena-release-20260308-161644`
+- state path: `/opt/forecasterarena-state`
+- database path: `/opt/forecasterarena-state/data/forecaster.db`
+- backup path: `/opt/forecasterarena-state/backups`
+- app port: `3010`, intended to be reached through Nginx or localhost cron calls
+- scheduler file: `/etc/cron.d/forecasterarena`
+
 ---
 
 ## 2. Required Environment
@@ -28,8 +40,8 @@ Production should define all of the following:
 - `OPENROUTER_API_KEY`
 - `CRON_SECRET`
 - `ADMIN_PASSWORD`
-- `DATABASE_PATH` (optional override)
-- `BACKUP_PATH` (optional override)
+- `DATABASE_PATH=/opt/forecasterarena-state/data/forecaster.db`
+- `BACKUP_PATH=/opt/forecasterarena-state/backups`
 - `NEXT_PUBLIC_SITE_URL` (recommended)
 - `NEXT_PUBLIC_GITHUB_URL` (optional)
 
@@ -48,27 +60,27 @@ The code does not contain its own scheduler. The currently intended cadence is:
 
 ```cron
 # Sync top markets from Polymarket
-*/5 * * * * curl -s -X POST https://yourdomain.com/api/cron/sync-markets \
+*/5 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/sync-markets \
   -H "Authorization: Bearer $CRON_SECRET"
 
 # Start the weekly cohort at Sunday 00:00 UTC
-0 0 * * 0 curl -s -X POST https://yourdomain.com/api/cron/start-cohort \
+0 0 * * 0 curl -s -X POST http://127.0.0.1:3010/api/cron/start-cohort \
   -H "Authorization: Bearer $CRON_SECRET"
 
 # Run model decisions after cohort creation
-5 0 * * 0 curl -s -X POST https://yourdomain.com/api/cron/run-decisions \
+5 0 * * 0 curl -s -X POST http://127.0.0.1:3010/api/cron/run-decisions \
   -H "Authorization: Bearer $CRON_SECRET"
 
 # Re-check closed markets for resolution
-0 * * * * curl -s -X POST https://yourdomain.com/api/cron/check-resolutions \
+0 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/check-resolutions \
   -H "Authorization: Bearer $CRON_SECRET"
 
 # Mark to market all active cohorts
-*/10 * * * * curl -s -X POST https://yourdomain.com/api/cron/take-snapshots \
+*/10 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/take-snapshots \
   -H "Authorization: Bearer $CRON_SECRET"
 
 # Create a database backup before the next weekly cycle
-0 23 * * 6 curl -s -X POST https://yourdomain.com/api/cron/backup \
+0 23 * * 6 curl -s -X POST http://127.0.0.1:3010/api/cron/backup \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
@@ -127,20 +139,20 @@ Interpretation:
 ### 4.2 Application Process Health
 
 ```bash
-pm2 status
-pm2 logs forecaster-arena --lines 100
+systemctl status forecasterarena --no-pager
+journalctl -u forecasterarena --no-pager -n 100
 ```
 
 Expected:
 
-- the process is `online`,
+- the service is `active (running)`,
 - no restart loop,
 - no repeated OpenRouter timeout or auth failures.
 
 ### 4.3 Recent Errors
 
 ```bash
-sqlite3 data/forecaster.db "
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "
   SELECT severity, event_type, created_at
   FROM system_logs
   WHERE severity = 'error'
@@ -162,7 +174,7 @@ Pay attention to:
 ### 4.4 Market Freshness
 
 ```bash
-sqlite3 data/forecaster.db "
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "
   SELECT MAX(last_updated_at) AS last_market_update,
          COUNT(*) AS total_markets
   FROM markets;
@@ -213,7 +225,7 @@ Rollback rule:
 ### 5.2 Cohort Existence
 
 ```bash
-sqlite3 data/forecaster.db "
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "
   SELECT id, cohort_number, started_at, status
   FROM cohorts
   ORDER BY started_at DESC
@@ -231,7 +243,7 @@ Expected:
 ### 5.3 Decision Coverage
 
 ```bash
-sqlite3 data/forecaster.db "
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "
   SELECT cohort_id, decision_week, COUNT(*) AS decisions
   FROM decisions
   WHERE decision_timestamp > datetime('now', '-24 hours')
@@ -250,7 +262,7 @@ Because the application now claims a single canonical decision row per agent/wee
 ### 5.4 Trades Recorded
 
 ```bash
-sqlite3 data/forecaster.db "
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "
   SELECT d.id, d.action, COUNT(t.id) AS trades
   FROM decisions d
   LEFT JOIN trades t ON t.decision_id = d.id
@@ -268,7 +280,7 @@ Interpretation:
 ### 5.5 Snapshot Freshness
 
 ```bash
-sqlite3 data/forecaster.db "
+sqlite3 /opt/forecasterarena-state/data/forecaster.db "
   SELECT MAX(snapshot_timestamp) AS latest_snapshot,
          COUNT(*) AS snapshots_last_hour
   FROM portfolio_snapshots
@@ -288,7 +300,7 @@ Important:
 ### 6.1 Sync Markets
 
 ```bash
-curl -s -X POST http://localhost:3000/api/cron/sync-markets \
+curl -s -X POST http://127.0.0.1:3010/api/cron/sync-markets \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
@@ -301,7 +313,7 @@ Use when:
 ### 6.2 Start Weekly Cohort
 
 ```bash
-curl -s -X POST http://localhost:3000/api/cron/start-cohort \
+curl -s -X POST http://127.0.0.1:3010/api/cron/start-cohort \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
@@ -320,7 +332,7 @@ Current safeguards:
 ### 6.3 Run Decisions
 
 ```bash
-curl -s -X POST http://localhost:3000/api/cron/run-decisions \
+curl -s -X POST http://127.0.0.1:3010/api/cron/run-decisions \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
@@ -336,7 +348,7 @@ Current runtime behavior:
 ### 6.4 Check Resolutions
 
 ```bash
-curl -s -X POST http://localhost:3000/api/cron/check-resolutions \
+curl -s -X POST http://127.0.0.1:3010/api/cron/check-resolutions \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
@@ -348,7 +360,7 @@ Important current behavior:
 ### 6.5 Take Snapshots
 
 ```bash
-curl -s -X POST http://localhost:3000/api/cron/take-snapshots \
+curl -s -X POST http://127.0.0.1:3010/api/cron/take-snapshots \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
@@ -360,18 +372,18 @@ Important current behavior:
 ### 6.6 Create Backup
 
 ```bash
-curl -s -X POST http://localhost:3000/api/cron/backup \
+curl -s -X POST http://127.0.0.1:3010/api/cron/backup \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-Backups are written to `backups/` by default and old exports/backups are pruned according to their respective retention logic.
+Backups are written to `/opt/forecasterarena-state/backups` in production. If a local or staging environment omits `BACKUP_PATH`, the default is `backups/`.
 
 ### 6.7 Create Admin Export
 
 Admin exports are cookie-authenticated, not cron-authenticated.
 
 ```bash
-curl -s -X POST http://localhost:3000/api/admin/export \
+curl -s -X POST http://127.0.0.1:3010/api/admin/export \
   -H "Content-Type: application/json" \
   -H "Cookie: forecaster_admin=..." \
   -d '{
@@ -487,7 +499,7 @@ What to do:
 
 1. inspect actual process env,
 2. confirm `OPENROUTER_API_KEY`, `CRON_SECRET`, and `ADMIN_PASSWORD`,
-3. restart the service,
+3. restart `forecasterarena.service`,
 4. re-check `/api/health`.
 
 ### 8.2 Decisions Are Missing After Sunday Run

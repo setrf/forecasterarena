@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server';
 import { getModelDetail } from '@/lib/application/models';
-import { safeErrorMessage } from '@/lib/utils/security';
+import { jsonError, lookupResultJson } from '@/lib/api/result-response';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,20 +9,8 @@ export async function GET(
 ) {
   try {
     const { id: familySlugOrLegacyId } = await params;
-    const result = getModelDetail(familySlugOrLegacyId);
-
-    if (result.status === 'not_found') {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(result.data);
+    return lookupResultJson(getModelDetail(familySlugOrLegacyId));
   } catch (error) {
-    return NextResponse.json(
-      { error: safeErrorMessage(error) },
-      { status: 500 }
-    );
+    return jsonError(error);
   }
 }

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**AI Models Competing in Prediction Markets**
+**Reality-Grounded LLM Evaluation**
 
 *Reality as the ultimate benchmark*
 
@@ -12,7 +12,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)](https://sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Live Demo](https://forecasterarena.com) | [API Reference](./docs/API_REFERENCE.md) | [Architecture](./ARCHITECTURE.md) | [Methodology](./docs/METHODOLOGY_v1.md)
+[Live Demo](https://forecasterarena.com) | [API Reference](./docs/API_REFERENCE.md) | [Architecture](./ARCHITECTURE.md) | [Methodology](./docs/METHODOLOGY_v2.md)
 
 </div>
 
@@ -22,11 +22,11 @@
 
 ## What This Repository Does
 
-Forecaster Arena is a paper-trading benchmark for evaluating frontier LLMs on real prediction markets from [Polymarket](https://polymarket.com). Every active benchmark family receives the same market universe, the same portfolio constraints, and the same deterministic prompting setup. Performance is tracked through:
+Forecaster Arena is a reality-grounded evaluation for frontier LLMs. It uses real prediction markets from [Polymarket](https://polymarket.com), paper portfolios, and deterministic prompting as tools for testing whether models can turn forecasts about future events into measurable economic value. Every active benchmark family receives the same market universe, the same portfolio constraints, and the same setup.
 
-- **Brier score** for calibration quality
-- **Portfolio value / P&L** for practical trading outcomes
-- **Full decision logs** for reproducibility
+The primary ranking is **portfolio value / P&L**. Brier score and calibration views are retained as historical diagnostics for resolved markets, but they are not the core current methodology.
+
+The system also keeps **full decision logs** for reproducibility.
 
 The benchmark is intentionally built around future events so the models cannot rely on memorized benchmark answers from training corpora.
 
@@ -87,7 +87,8 @@ Why this matters:
 
 5. **Resolution and scoring**
    - Closed markets are checked for resolution on a recurring basis.
-   - Positions are settled and Brier scores are created from recorded buy trades.
+   - Positions are settled for portfolio value / P&L, which drives the primary leaderboard.
+   - Brier scores may be created from recorded buy trades as historical diagnostics for resolved markets.
    - The app only marks a market `resolved` locally **after** settlements succeed, so partial failures can be retried safely.
 
 6. **Portfolio snapshots**
@@ -158,7 +159,7 @@ This matters operationally because a fresh database now reads as a synchronized 
 | `lib/engine/` | Cohort, decision, execution, and resolution engines |
 | `lib/openrouter/` | OpenRouter client, prompts, parser |
 | `lib/polymarket/` | Polymarket fetch / transform / resolution helpers |
-| `lib/scoring/` | Brier and P&L calculations |
+| `lib/scoring/` | Portfolio value / P&L calculations and historical Brier diagnostics |
 | `playwright/` | Checked-in browser smoke and interaction coverage |
 | `tests/` | Vitest coverage for engines, routes, schema, and security |
 | `docs/` | Reference documentation and operational runbooks |
@@ -360,15 +361,8 @@ Admin exports:
 | [`docs/SECURITY.md`](./docs/SECURITY.md) | Auth, secrets, exposure boundaries, operational security |
 | [`docs/DATABASE_SCHEMA.md`](./docs/DATABASE_SCHEMA.md) | Tables, constraints, indexes, invariants |
 | [`docs/DECISIONS.md`](./docs/DECISIONS.md) | Decision semantics and reasoning format |
-| [`docs/SCORING.md`](./docs/SCORING.md) | P&L and Brier details |
-| [`docs/METHODOLOGY_v1.md`](./docs/METHODOLOGY_v1.md) | Benchmark methodology narrative |
-
-### Auxiliary Materials
-
-- [`launch/README.md`](./launch/README.md) for launch-era templates and social copy
-- [`presentation/README.md`](./presentation/README.md) for the slide deck and export workflow
-
----
+| [`docs/SCORING.md`](./docs/SCORING.md) | P&L details and historical Brier diagnostics |
+| [`docs/METHODOLOGY_v2.md`](./docs/METHODOLOGY_v2.md) | Current evaluation methodology |
 
 ## Contributing
 

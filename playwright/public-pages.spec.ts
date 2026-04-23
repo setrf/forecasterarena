@@ -3,18 +3,18 @@ import { seededRoutes } from './constants';
 
 test('models and research pages stay navigable from real UI links', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'View All Models' }).click();
+  await page.getByRole('link', { name: 'Inspect lineup' }).click();
   await expect(page).toHaveURL(/\/models$/);
-  await expect(page.getByRole('heading', { level: 1, name: /Frontier LLMs/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /Frontier model families/i })).toBeVisible();
 
   await page.getByRole('link', { name: /Current Leader/i }).click();
   await expect(page).toHaveURL(new RegExp(`${seededRoutes.leaderModel}$`));
   await expect(page.getByRole('heading', { level: 1, name: 'Kimi' })).toBeVisible();
 
   await page.goto('/');
-  await page.getByRole('link', { name: 'Read the Methodology' }).click();
+  await page.getByRole('link', { name: 'Read Methodology v2' }).click();
   await expect(page).toHaveURL(/\/methodology$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Methodology' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /LLM Evaluation Grounded in Reality/i })).toBeVisible();
 
   await page.getByRole('link', { name: 'About' }).first().click();
   await expect(page).toHaveURL(/\/about$/);
@@ -24,7 +24,7 @@ test('models and research pages stay navigable from real UI links', async ({ pag
   await expect(page).toHaveURL(/\/methodology$/);
 
   await page.goto('/changelog');
-  await expect(page.getByRole('heading', { level: 1, name: 'Changelog' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /Methodology and platform changes/i })).toBeVisible();
   await page.getByRole('link', { name: 'Read Full Methodology' }).click();
   await expect(page).toHaveURL(/\/methodology$/);
 });

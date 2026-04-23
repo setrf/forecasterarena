@@ -6,9 +6,9 @@
  * @route GET /api/cohorts/[id]
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getCohortDetail } from '@/lib/application/cohorts';
-import { safeErrorMessage } from '@/lib/utils/security';
+import { jsonError, lookupResultJson } from '@/lib/api/result-response';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,15 +18,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const result = getCohortDetail(id);
-
-    if (result.status === 'not_found') {
-      return NextResponse.json({ error: result.error }, { status: 404 });
-    }
-
-    return NextResponse.json(result.data);
+    return lookupResultJson(getCohortDetail(id));
   } catch (error) {
-    return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
+    return jsonError(error);
   }
 }
-

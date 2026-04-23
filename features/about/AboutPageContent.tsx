@@ -7,16 +7,17 @@ export default function AboutPageContent() {
   return (
     <div className="min-h-screen">
       <PageIntro
+        className="page-intro--document"
         eyebrow="About"
         title="Reality as the Ultimate Benchmark"
         description="A reality-grounded LLM evaluation built on unsettled events, paper portfolios, and deterministic scoring."
-        containerClassName="container-medium px-6"
+        contentClassName="page-intro__content--measure"
       />
 
       <div className="section-band section-band--soft">
         <section className="relative py-12 overflow-hidden">
-          <div className="container-medium mx-auto px-6">
-            <div className="max-w-3xl">
+          <div className="container-wide mx-auto px-6">
+            <div>
               <div className="accent-line mb-4" />
               <h2 className="heading-section mb-6">
                 Traditional benchmarks fail when models memorize answers.
@@ -34,44 +35,46 @@ export default function AboutPageContent() {
 
         <section className="py-12 relative">
           <div className="container-wide mx-auto px-6 relative z-10">
-            <SectionHeading
-              eyebrow="Philosophy"
-              title="Core Principles"
-              description="The rules that keep the arena rigorous, fair, and transparent."
-            />
+            <div>
+              <SectionHeading
+                eyebrow="Philosophy"
+                title="Core Principles"
+                description="The rules that keep the arena rigorous, fair, and transparent."
+              />
 
-            <div className="grid md:grid-cols-3 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden">
-              {[
-                {
-                  num: '01',
-                  title: 'Rigorous Methodology',
-                  desc: 'Every decision documented. Every prompt stored. Every calculation reproducible. Meeting standards for academic publication.',
-                  accent: 'var(--accent-gold)'
-                },
-                {
-                  num: '02',
-                  title: 'Fair Comparison',
-                  desc: 'Identical prompts, starting capital, and constraints for all models. Temperature = 0 for reproducibility. Level playing field.',
-                  accent: 'var(--accent-blue)'
-                },
-                {
-                  num: '03',
-                  title: 'Complete Transparency',
-                  desc: 'Open source codebase. Public methodology documentation. Anyone can verify results or build upon our work.',
-                  accent: 'var(--accent-violet)'
-                }
-              ].map((item) => (
-                <div key={item.num} className="bg-[var(--bg-secondary)] p-8 md:p-10">
-                  <span
-                    className="font-mono text-5xl font-bold opacity-20 block mb-6"
-                    style={{ color: item.accent }}
-                  >
-                    {item.num}
-                  </span>
-                  <h3 className="heading-card mb-3">{item.title}</h3>
-                  <p className="text-[var(--text-secondary)] leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
+              <div className="grid md:grid-cols-3 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden">
+                {[
+                  {
+                    num: '01',
+                    title: 'Rigorous Methodology',
+                    desc: 'Every decision documented. Every prompt stored. Every calculation reproducible. Meeting standards for academic publication.',
+                    accent: 'var(--accent-gold)'
+                  },
+                  {
+                    num: '02',
+                    title: 'Fair Comparison',
+                    desc: 'Identical prompts, starting capital, and constraints for all models. Temperature = 0 for reproducibility. Level playing field.',
+                    accent: 'var(--accent-blue)'
+                  },
+                  {
+                    num: '03',
+                    title: 'Complete Transparency',
+                    desc: 'Open source codebase. Public methodology documentation. Anyone can verify results or build upon our work.',
+                    accent: 'var(--accent-violet)'
+                  }
+                ].map((item) => (
+                  <div key={item.num} className="bg-[var(--bg-secondary)] p-8 md:p-10">
+                    <span
+                      className="font-mono text-5xl font-bold opacity-20 block mb-6"
+                      style={{ color: item.accent }}
+                    >
+                      {item.num}
+                    </span>
+                    <h3 className="heading-card mb-3">{item.title}</h3>
+                    <p className="text-[var(--text-secondary)] leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -79,75 +82,77 @@ export default function AboutPageContent() {
 
       <section className="py-12">
         <div className="container-wide mx-auto px-6">
-          <SectionHeading
-            eyebrow="Metrics"
-            title="What We Measure"
-            description="Portfolio value is primary. Win rate, activity, consistency, decision quality, and cost discipline provide context."
-          />
+          <div>
+            <SectionHeading
+              eyebrow="Metrics"
+              title="What We Measure"
+              description="Portfolio value is primary. Win rate, activity, consistency, decision quality, and cost discipline provide context."
+            />
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div className="card-featured p-6">
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="heading-card">Portfolio Value</h3>
-                <span className="font-mono text-xs text-[var(--accent-gold)] px-2 py-1 bg-[var(--accent-gold-dim)] rounded">Primary</span>
-              </div>
-              <p className="text-[var(--text-secondary)] mb-4">
-                Cash plus marked position value. This is the official v2 ranking metric because
-                it turns forecasts into auditable decisions.
-              </p>
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-positive)]" />
-                  <span>Higher is better</span>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="card-featured p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="heading-card">Portfolio Value</h3>
+                  <span className="font-mono text-xs text-[var(--accent-gold)] px-2 py-1 bg-[var(--accent-gold-dim)] rounded">Primary</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-negative)]" />
-                  <span>Paper only</span>
+                <p className="text-[var(--text-secondary)] mb-4">
+                  Cash plus marked position value. This is the official v2 ranking metric because
+                  it turns forecasts into auditable decisions.
+                </p>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-positive)]" />
+                    <span>Higher is better</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-negative)]" />
+                    <span>Paper only</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="card p-6">
-              <h3 className="heading-card mb-3">Portfolio P/L</h3>
-              <p className="text-[var(--text-secondary)]">
-                Realized and unrealized gains or losses from the equal starting bankroll.
-              </p>
-            </div>
-            <div className="card p-6">
-              <h3 className="heading-card mb-3">Win Rate</h3>
-              <p className="text-[var(--text-secondary)]">
-                Directional accuracy when markets resolve. Simple but informative.
-              </p>
-            </div>
-            <div className="card p-6">
-              <h3 className="heading-card mb-3">Activity</h3>
-              <p className="text-[var(--text-secondary)]">
-                Resolved bets, trades, and held positions show how much evidence sits behind a result.
-              </p>
-            </div>
-            <div className="card p-6">
-              <h3 className="heading-card mb-3">Consistency</h3>
-              <p className="text-[var(--text-secondary)]">
-                Performance across cohorts distinguishes skill from luck.
-              </p>
-            </div>
-            <div className="card p-6">
-              <h3 className="heading-card mb-3">Decision Quality</h3>
-              <p className="text-[var(--text-secondary)]">
-                Reasoning analysis: are the models making sensible arguments?
-              </p>
-            </div>
-            <div className="card p-6">
-              <h3 className="heading-card mb-3">API Efficiency</h3>
-              <p className="text-[var(--text-secondary)]">
-                Cost per decision. Some models achieve more with fewer tokens.
-              </p>
+              <div className="card p-6">
+                <h3 className="heading-card mb-3">Portfolio P/L</h3>
+                <p className="text-[var(--text-secondary)]">
+                  Realized and unrealized gains or losses from the equal starting bankroll.
+                </p>
+              </div>
+              <div className="card p-6">
+                <h3 className="heading-card mb-3">Win Rate</h3>
+                <p className="text-[var(--text-secondary)]">
+                  Directional accuracy when markets resolve. Simple but informative.
+                </p>
+              </div>
+              <div className="card p-6">
+                <h3 className="heading-card mb-3">Activity</h3>
+                <p className="text-[var(--text-secondary)]">
+                  Resolved bets, trades, and held positions show how much evidence sits behind a result.
+                </p>
+              </div>
+              <div className="card p-6">
+                <h3 className="heading-card mb-3">Consistency</h3>
+                <p className="text-[var(--text-secondary)]">
+                  Performance across cohorts distinguishes skill from luck.
+                </p>
+              </div>
+              <div className="card p-6">
+                <h3 className="heading-card mb-3">Decision Quality</h3>
+                <p className="text-[var(--text-secondary)]">
+                  Reasoning analysis: are the models making sensible arguments?
+                </p>
+              </div>
+              <div className="card p-6">
+                <h3 className="heading-card mb-3">API Efficiency</h3>
+                <p className="text-[var(--text-secondary)]">
+                  Cost per decision. Some models achieve more with fewer tokens.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section className="py-10">
-        <div className="container-medium mx-auto px-6">
+        <div className="container-wide mx-auto px-6">
           <div className="card p-8 md:p-10 border-l-4 border-[var(--accent-amber)]">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-[rgba(251,191,36,0.15)] flex items-center justify-center flex-shrink-0">
@@ -174,7 +179,7 @@ export default function AboutPageContent() {
 
       <div className="section-band section-band--soft">
         <section className="py-12">
-          <div className="container-medium mx-auto px-6">
+          <div className="container-wide mx-auto px-6">
             <div className="card p-8 md:p-10 grid gap-6 md:grid-cols-[1.3fr,1fr] items-center">
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] flex items-center justify-center text-lg font-semibold">
@@ -202,40 +207,42 @@ export default function AboutPageContent() {
         </section>
 
         <section className="py-12 relative">
-          <div className="container-medium mx-auto px-6 relative z-10">
-            <SectionHeading
-              eyebrow="Stack"
-              title="Built With"
-              description="The application, data, and model infrastructure behind the benchmark."
-            />
+          <div className="container-wide mx-auto px-6 relative z-10">
+            <div>
+              <SectionHeading
+                eyebrow="Stack"
+                title="Built With"
+                description="The application, data, and model infrastructure behind the benchmark."
+              />
 
-            <div className="flex flex-wrap gap-3">
-              {[
-                { name: 'Next.js 14', role: 'Framework' },
-                { name: 'TypeScript', role: 'Language' },
-                { name: 'SQLite', role: 'Database' },
-                { name: 'OpenRouter', role: 'LLM API' },
-                { name: 'Polymarket', role: 'Market Data' },
-                { name: 'Tailwind', role: 'Styling' },
-                { name: 'Recharts', role: 'Charts' },
-              ].map((tech) => (
-                <div
-                  key={tech.name}
-                  className="flex items-center gap-3 px-5 py-3 bg-[var(--bg-primary)] rounded-xl border border-[var(--border-subtle)] hover:border-[var(--border-medium)] transition-colors"
-                >
-                  <span className="font-medium">{tech.name}</span>
-                  <span className="text-xs text-[var(--text-muted)] px-2 py-0.5 bg-[var(--bg-tertiary)] rounded">
-                    {tech.role}
-                  </span>
-                </div>
-              ))}
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { name: 'Next.js 14', role: 'Framework' },
+                  { name: 'TypeScript', role: 'Language' },
+                  { name: 'SQLite', role: 'Database' },
+                  { name: 'OpenRouter', role: 'LLM API' },
+                  { name: 'Polymarket', role: 'Market Data' },
+                  { name: 'Tailwind', role: 'Styling' },
+                  { name: 'Recharts', role: 'Charts' },
+                ].map((tech) => (
+                  <div
+                    key={tech.name}
+                    className="flex items-center gap-3 px-5 py-3 bg-[var(--bg-primary)] rounded-xl border border-[var(--border-subtle)] hover:border-[var(--border-medium)] transition-colors"
+                  >
+                    <span className="font-medium">{tech.name}</span>
+                    <span className="text-xs text-[var(--text-muted)] px-2 py-0.5 bg-[var(--bg-tertiary)] rounded">
+                      {tech.role}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
       </div>
 
       <section className="py-12">
-        <div className="container-medium mx-auto px-6 text-center">
+        <div className="container-wide mx-auto px-6 text-center">
           <h2 className="heading-section mb-4">
             Open Source. <span className="font-accent">Always.</span>
           </h2>

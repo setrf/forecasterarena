@@ -43,6 +43,10 @@
   
   /* Refined gradients */
   --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212, 168, 83, 0.15), transparent);
+  --gradient-page-warm:
+    radial-gradient(circle at top left, rgba(212, 168, 83, 0.1), transparent 30%),
+    radial-gradient(circle at top center, rgba(59, 130, 246, 0.06), transparent 32%),
+    linear-gradient(180deg, rgba(10, 10, 16, 0.98) 0%, rgba(7, 7, 11, 1) 100%);
   --gradient-card: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);
   --gradient-shine: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%);
 }
@@ -78,6 +82,27 @@ body::before {
   opacity: 0.03;
   pointer-events: none;
   z-index: -1;
+}
+
+.app-main {
+  position: relative;
+  overflow: hidden;
+  background: var(--gradient-page-warm);
+}
+
+.app-main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--border-subtle) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.app-main > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Typography - Dramatic headings */
@@ -655,20 +680,15 @@ h3 {
 .page-intro {
   position: relative;
   overflow: hidden;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
   border-bottom: 1px solid var(--border-subtle);
-  background:
-    radial-gradient(circle at top left, rgba(212, 168, 83, 0.12), transparent 34%),
-    linear-gradient(180deg, rgba(13, 14, 22, 0.94) 0%, rgba(7, 7, 11, 0.98) 100%);
+  background: transparent;
 }
 
 .page-intro::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, var(--border-subtle) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.18;
-  pointer-events: none;
+  display: none;
 }
 
 .page-intro--integrated {
@@ -739,27 +759,18 @@ h3 {
 }
 
 .page-intro__aside {
-  align-self: end;
+  align-self: start;
 }
 
 .home-overview {
   position: relative;
   overflow: hidden;
   border-bottom: 1px solid var(--border-subtle);
-  background:
-    radial-gradient(circle at top left, rgba(212, 168, 83, 0.1), transparent 30%),
-    radial-gradient(circle at top center, rgba(59, 130, 246, 0.06), transparent 32%),
-    linear-gradient(180deg, rgba(10, 10, 16, 0.98) 0%, rgba(7, 7, 11, 1) 100%);
+  background: transparent;
 }
 
 .home-overview::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, var(--border-subtle) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.12;
-  pointer-events: none;
+  display: none;
 }
 
 .home-overview > * {
@@ -770,25 +781,15 @@ h3 {
 .section-band {
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top left, rgba(212, 168, 83, 0.07), transparent 28%),
-    linear-gradient(180deg, rgba(12, 12, 18, 0.98) 0%, rgba(9, 10, 16, 1) 100%);
+  background: transparent;
 }
 
 .section-band::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, var(--border-subtle) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.1;
-  pointer-events: none;
+  display: none;
 }
 
 .section-band--soft {
-  background:
-    radial-gradient(circle at top left, rgba(212, 168, 83, 0.05), transparent 26%),
-    linear-gradient(180deg, rgba(11, 12, 19, 0.98) 0%, rgba(12, 12, 18, 1) 100%);
+  background: transparent;
 }
 
 .section-band > * {
@@ -798,6 +799,28 @@ h3 {
 
 .page-intro--home-briefing .page-intro__description {
   max-width: 40rem;
+}
+
+.page-intro--compact-aside .page-intro__grid {
+  padding-bottom: 1.5rem;
+}
+
+.page-intro--document .page-intro__content {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+
+.page-intro--document .page-intro__title {
+  max-width: none;
+}
+
+.page-intro--document .page-intro__description {
+  max-width: none;
+}
+
+.page-intro--home-briefing .page-intro__aside {
+  align-self: center;
 }
 
 .surface-panel {
@@ -816,11 +839,30 @@ h3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.metric-grid--leader {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .metric-tile {
   border: 1px solid var(--border-subtle);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.02);
   padding: 1rem 1rem 0.95rem;
+}
+
+.metric-tile--dense {
+  border-radius: 14px;
+  padding: 0.72rem 0.75rem;
+}
+
+.metric-tile--dense .metric-tile__label {
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+}
+
+.metric-tile--dense .metric-tile__value {
+  margin-top: 0.38rem;
+  font-size: 1.25rem;
 }
 
 .metric-tile__label {
@@ -930,7 +972,11 @@ h3 {
   .page-intro__grid {
     grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 28rem);
     gap: 2.5rem;
-    align-items: end;
+    align-items: start;
+  }
+
+  .page-intro--home-briefing .page-intro__grid {
+    align-items: center;
   }
 
   .page-intro--solo .page-intro__grid {

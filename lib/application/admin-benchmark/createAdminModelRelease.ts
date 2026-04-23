@@ -6,39 +6,15 @@ import {
 } from '@/lib/db/queries';
 import type { AdminOperationResult } from '@/lib/application/admin/types';
 import { buildModelReleaseId, slugifyReleaseName } from '@/lib/application/admin-benchmark/helpers';
+import {
+  getOptionalTrimmedString,
+  getRequiredTrimmedString,
+  isNonNegativeFiniteNumber
+} from '@/lib/application/admin-benchmark/validation';
 import type {
   AdminBenchmarkReleaseSummary,
   CreateAdminModelReleaseInput
 } from '@/lib/application/admin-benchmark/types';
-
-function isNonNegativeFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
-}
-
-function getRequiredTrimmedString(
-  value: unknown,
-  label: string
-): { ok: true; value: string } | { ok: false; error: string } {
-  if (typeof value !== 'string') {
-    return { ok: false, error: `${label} is required` };
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { ok: false, error: `${label} is required` };
-  }
-
-  return { ok: true, value: trimmed };
-}
-
-function getOptionalTrimmedString(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  return trimmed || undefined;
-}
 
 export function createAdminModelReleaseRecord(
   input: CreateAdminModelReleaseInput

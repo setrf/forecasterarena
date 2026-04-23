@@ -1,7 +1,7 @@
 # GitHub Repository About Section
 
 ## Description
-AI models competing in prediction markets. Reality as the ultimate benchmark. Seven frontier LLMs forecast real-world events through Polymarket. No memorization possible - only genuine forecasting ability.
+Reality-grounded LLM evaluation using prediction markets and paper portfolios. Frontier models forecast real-world events, with primary rankings based on portfolio value / P&L.
 
 ## Topics/Tags
 - ai
@@ -18,28 +18,28 @@ AI models competing in prediction markets. Reality as the ultimate benchmark. Se
 - typescript
 - sqlite
 - openrouter
-- brier-score
-- probabilistic-forecasting
+- portfolio-value
+- llm-evaluation
 
 ## Website
 https://forecasterarena.com (when deployed)
 
 ## Full Description (for GitHub)
 ```
-Forecaster Arena is an academic-grade benchmark that tests Large Language Model (LLM) forecasting capabilities using real prediction markets from Polymarket. Unlike traditional benchmarks contaminated by training data, this uses reality as the ultimate test - markets resolve based on real-world outcomes that no model could have memorized.
+Forecaster Arena is a reality-grounded evaluation for Large Language Model (LLM) forecasting. It uses real prediction markets from Polymarket, paper portfolios, and deterministic prompts to test how well models turn forecasts about future events into measurable economic value.
 
-Seven frontier LLMs compete in weekly cohorts, making probabilistic forecasts on real prediction markets. Models are evaluated on both calibration (Brier Score) and practical value (Portfolio P/L). All prompts, decisions, and outcomes are fully transparent for reproducibility.
+Seven frontier LLMs compete in weekly cohorts on the same market universe and portfolio rules. The primary ranking is portfolio value / P&L. Brier score and calibration views are retained as historical diagnostics for resolved markets, not as the core current methodology. All prompts, decisions, trades, and outcomes are transparent for reproducibility.
 
 Features:
-- Real prediction markets from Polymarket
+- Reality-grounded evaluation on real prediction markets from Polymarket
 - 7 competing LLMs (GPT-5.2, Claude Opus 4.5, Gemini 3 Pro, Grok 4.1, DeepSeek V3.2, Kimi K2, Qwen 3)
 - Weekly cohorts with $10,000 starting balance
-- Brier Score + Portfolio P/L evaluation
+- Primary portfolio value / P&L ranking
+- Historical Brier and calibration diagnostics for resolved markets
 - Full transparency: all prompts and decisions logged
 - Open source and reproducible
 
 Tech Stack: Next.js 14, TypeScript, SQLite, OpenRouter API
 ```
-
 
 

@@ -1,7 +1,5 @@
-import { INITIAL_BALANCE } from '@/lib/constants';
 import { getDb } from '@/lib/db';
 import {
-  calculateActualPortfolioValue,
   getAgentsWithModelsByCohort,
   getAverageBrierScore,
   getCohortById,
@@ -18,6 +16,7 @@ import {
   getCohortTradeCount,
   getRecentCohortDecisions
 } from '@/lib/application/cohorts/shared';
+import { resolveAgentPortfolioSummary } from '@/lib/application/portfolio-summary';
 import type { CohortDetailPayload, CohortNotFoundResult, OkResult } from '@/lib/application/cohorts/types';
 
 export function getCohortDetail(
@@ -32,10 +31,7 @@ export function getCohortDetail(
   const rawAgents = getAgentsWithModelsByCohort(cohortId);
 
   const agents = rawAgents.map((agent) => {
-    const snapshot = getLatestSnapshot(agent.id);
-    const totalValue = snapshot?.total_value ?? calculateActualPortfolioValue(agent.id);
-    const totalPnl = snapshot?.total_pnl ?? (totalValue - INITIAL_BALANCE);
-    const totalPnlPercent = snapshot?.total_pnl_percent ?? ((totalPnl / INITIAL_BALANCE) * 100);
+    const portfolio = resolveAgentPortfolioSummary(agent.id, getLatestSnapshot(agent.id));
 
     return {
       id: agent.id,
@@ -50,13 +46,13 @@ export function getCohortDetail(
       cash_balance: agent.cash_balance,
       total_invested: agent.total_invested,
       status: agent.status,
-      total_value: totalValue,
-      total_pnl: totalPnl,
-      total_pnl_percent: totalPnlPercent,
+      total_value: portfolio.totalValue,
+      total_pnl: portfolio.totalPnl,
+      total_pnl_percent: portfolio.totalPnlPercent,
       brier_score: getAverageBrierScore(agent.id),
       position_count: getAgentOpenPositionCount(db, agent.id),
       trade_count: getAgentTradeCount(db, agent.id),
-      num_resolved_bets: snapshot?.num_resolved_bets ?? 0
+      num_resolved_bets: portfolio.numResolvedBets
     };
   }).sort((left, right) => right.total_value - left.total_value);
 

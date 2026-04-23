@@ -20,40 +20,41 @@ export function ModelsHeroSection({
 }: ModelsHeroSectionProps) {
   return (
     <PageIntro
+      className="page-intro--compact-aside"
       eyebrow="The Competitors"
       title={<>{modelCount > 0 ? `${modelCount} ` : ''}Frontier model families</>}
       description="Competing head-to-head in live prediction markets under identical prompts, starting capital, and constraints."
       aside={hasRealData && leader ? (
         <Link href={`/models/${leader.slug ?? leader.id}`} className="block group">
-          <div className="surface-panel p-6 md:p-7">
-            <div className="flex items-start justify-between gap-4">
+          <div className="surface-panel p-5">
+            <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="metric-tile__label">Current Leader</p>
-                <h2 className="heading-block mt-2">{leader.displayName}</h2>
+                <h2 className="heading-block mt-1">{leader.displayName}</h2>
                 <p className="metric-tile__meta">{leader.provider}</p>
               </div>
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-semibold"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-base font-semibold"
                 style={{ backgroundColor: `${leader.color}20`, color: leader.color }}
               >
                 #1
               </div>
             </div>
 
-            <div className="metric-grid metric-grid--compact mt-5">
-              <div className="metric-tile">
+            <div className="metric-grid metric-grid--leader mt-4">
+              <div className="metric-tile metric-tile--dense">
                 <p className="metric-tile__label">Total P/L</p>
                 <p className={`metric-tile__value ${(leaderStats?.total_pnl ?? 0) >= 0 ? 'text-positive' : 'text-negative'}`}>
                   {formatSignedUsd(leaderStats?.total_pnl ?? null)}
                 </p>
               </div>
-              <div className="metric-tile">
+              <div className="metric-tile metric-tile--dense">
                 <p className="metric-tile__label">Resolved</p>
                 <p className="metric-tile__value font-mono">
                   {leaderStats?.num_resolved_bets ?? 0}
                 </p>
               </div>
-              <div className="metric-tile col-span-2">
+              <div className="metric-tile metric-tile--dense">
                 <p className="metric-tile__label">Win Rate</p>
                 <p className="metric-tile__value font-mono">
                   {formatRatePercent(leaderStats?.win_rate, { decimals: 0 })}
