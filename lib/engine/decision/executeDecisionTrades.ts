@@ -1,4 +1,4 @@
-import { executeBets, executeSells } from '@/lib/engine/execution';
+import { executeBetsAtomically, executeSells } from '@/lib/engine/execution';
 import type { ParsedDecision } from '@/lib/openrouter/parser';
 import type { BetResult, SellResult } from '@/lib/engine/execution';
 
@@ -28,22 +28,7 @@ export function executeDecisionTrades(
 
   if (parsed.action === 'BET' && parsed.bets) {
     attemptedTrades = parsed.bets.length;
-    results = executeBets(agentId, parsed.bets, decisionId);
-
-    const failedBets = parsed.bets.filter((_, index) => !results[index]?.success);
-    if (failedBets.length > 0) {
-      const retryResults = executeBets(agentId, failedBets, decisionId);
-      let retryIndex = 0;
-      results = results.map((entry) => {
-        if (entry.success) {
-          return entry;
-        }
-
-        const retriedEntry = retryResults[retryIndex];
-        retryIndex += 1;
-        return retriedEntry ?? entry;
-      });
-    }
+    results = executeBetsAtomically(agentId, parsed.bets, decisionId);
   } else if (parsed.action === 'SELL' && parsed.sells) {
     attemptedTrades = parsed.sells.length;
     results = executeSells(agentId, parsed.sells, decisionId);

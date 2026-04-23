@@ -46,9 +46,9 @@ FOR HOLDING:
 
 RULES:
 1. Minimum bet: $${MIN_BET}
-2. Maximum bet: ${MAX_BET_PERCENT * 100}% of your current cash balance
+2. Maximum total BET allocation per decision: ${MAX_BET_PERCENT * 100}% of your current cash balance
 3. One position per market per side
-4. You can make multiple bets/sells in one decision
+4. You can make multiple bets/sells in one decision, but all BET amounts combined must stay under the maximum decision allocation
 5. Bet size is a capital-allocation decision under uncertainty
 
 SCORING:

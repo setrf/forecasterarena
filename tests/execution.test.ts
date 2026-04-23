@@ -749,6 +749,66 @@ describe('engine/execution - executeSell', () => {
     });
   });
 
+  it('rejects over-allocated atomic BET batches without creating trades', async () => {
+    await withFixture(async ({ execution, queries, agent, db }) => {
+      const market = createBinaryMarket(queries, { current_price: 0.5 });
+      const results = execution.executeBetsAtomically(agent.id, [
+        { market_id: market.id, side: 'YES', amount: 1_500 },
+        { market_id: market.id, side: 'NO', amount: 1_500 }
+      ]);
+      const agentAfter = queries.getAgentById(agent.id)!;
+      const counts = db.prepare(`
+        SELECT
+          (SELECT COUNT(*) FROM trades WHERE agent_id = ?) as trades,
+          (SELECT COUNT(*) FROM positions WHERE agent_id = ?) as positions
+      `).get(agent.id, agent.id) as { trades: number; positions: number };
+
+      expect(results).toEqual([
+        {
+          success: false,
+          error: 'BET batch failed; no trades executed: Total BET amount $3000.00 exceeds maximum decision allocation $2500.00'
+        }
+      ]);
+      expect(counts).toEqual({ trades: 0, positions: 0 });
+      expect(agentAfter.cash_balance).toBe(agent.cash_balance);
+      expect(agentAfter.total_invested).toBe(agent.total_invested);
+    });
+  });
+
+  it('rolls back atomic BET batches when a later leg fails', async () => {
+    await withFixture(async ({ execution, queries, agent, db }) => {
+      const activeMarket = createBinaryMarket(queries, {
+        current_price: 0.5,
+        status: 'active'
+      });
+      const closedMarket = createBinaryMarket(queries, {
+        current_price: 0.5,
+        status: 'closed'
+      });
+
+      const results = execution.executeBetsAtomically(agent.id, [
+        { market_id: activeMarket.id, side: 'YES', amount: 100 },
+        { market_id: closedMarket.id, side: 'NO', amount: 100 }
+      ]);
+      const agentAfter = queries.getAgentById(agent.id)!;
+      const counts = db.prepare(`
+        SELECT
+          (SELECT COUNT(*) FROM trades WHERE agent_id = ?) as trades,
+          (SELECT COUNT(*) FROM positions WHERE agent_id = ?) as positions
+      `).get(agent.id, agent.id) as { trades: number; positions: number };
+
+      expect(results).toEqual([
+        {
+          success: false,
+          error: 'BET batch failed; no trades executed: Market is closed'
+        }
+      ]);
+      expect(counts).toEqual({ trades: 0, positions: 0 });
+      expect(agentAfter.cash_balance).toBe(agent.cash_balance);
+      expect(agentAfter.total_invested).toBe(agent.total_invested);
+    });
+  });
+
   it('executes batch SELL instructions through executeSells', async () => {
     await withFixture(async ({ execution, queries, agent }) => {
       const market = createBinaryMarket(queries, { current_price: 0.5 });

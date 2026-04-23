@@ -337,7 +337,7 @@ describe('engine/decision', () => {
         })
       )
     );
-    const executeBets = vi.fn().mockReturnValue([
+    const executeBetsAtomically = vi.fn().mockReturnValue([
       { success: false, error: 'Market temporarily unavailable' }
     ]);
 
@@ -346,7 +346,7 @@ describe('engine/decision', () => {
       const actual = await vi.importActual<typeof import('@/lib/engine/execution')>('@/lib/engine/execution');
       return {
         ...actual,
-        executeBets,
+        executeBetsAtomically,
         executeSells: vi.fn(actual.executeSells)
       };
     });
@@ -375,7 +375,7 @@ describe('engine/decision', () => {
       ]);
       expect(secondRun.decisions[0].success).toBe(false);
       expect(callOpenRouterWithRetry).toHaveBeenCalledTimes(2);
-      expect(executeBets).toHaveBeenCalledTimes(4);
+      expect(executeBetsAtomically).toHaveBeenCalledTimes(2);
       expect(queries.getTotalDecisionsForCohort(cohort.id)).toBe(1);
     } finally {
       vi.doUnmock('@/lib/openrouter/client');
@@ -384,7 +384,7 @@ describe('engine/decision', () => {
     }
   });
 
-  it('retries only failed BET legs within the same decision run', async () => {
+  it('does not retry failed BET legs within the same decision run', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
     const callOpenRouterWithRetry = vi.fn().mockResolvedValue(
       response(
@@ -398,22 +398,16 @@ describe('engine/decision', () => {
         })
       )
     );
-    const executeBets = vi
-      .fn()
-      .mockReturnValueOnce([
-        { success: true, trade_id: 'trade-1', position_id: 'position-1', shares: 10 },
-        { success: false, error: 'Temporary liquidity miss' }
-      ])
-      .mockReturnValueOnce([
-        { success: true, trade_id: 'trade-2', position_id: 'position-2', shares: 12 }
-      ]);
+    const executeBetsAtomically = vi.fn().mockReturnValue([
+      { success: false, error: 'BET batch failed; no trades executed: Temporary liquidity miss' }
+    ]);
 
     vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
     vi.doMock('@/lib/engine/execution', async () => {
       const actual = await vi.importActual<typeof import('@/lib/engine/execution')>('@/lib/engine/execution');
       return {
         ...actual,
-        executeBets,
+        executeBetsAtomically,
         executeSells: vi.fn(actual.executeSells)
       };
     });
@@ -444,13 +438,13 @@ describe('engine/decision', () => {
       const decisionEngine = await import('@/lib/engine/decision');
       const result = await decisionEngine.runCohortDecisions(cohort.id);
 
-      expect(result.decisions[0].success).toBe(true);
-      expect(result.decisions[0].trades_executed).toBe(2);
-      expect(executeBets).toHaveBeenCalledTimes(2);
-      expect(executeBets.mock.calls[0]?.[1]).toHaveLength(2);
-      expect(executeBets.mock.calls[1]?.[1]).toEqual([
-        { market_id: 'market-2', side: 'NO', amount: 100 }
+      expect(result.decisions[0].success).toBe(false);
+      expect(result.decisions[0].trades_executed).toBe(0);
+      expect(result.errors).toEqual([
+        expect.stringContaining('Temporary liquidity miss')
       ]);
+      expect(executeBetsAtomically).toHaveBeenCalledTimes(1);
+      expect(executeBetsAtomically.mock.calls[0]?.[1]).toHaveLength(2);
     } finally {
       vi.doUnmock('@/lib/openrouter/client');
       vi.doUnmock('@/lib/engine/execution');

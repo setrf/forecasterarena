@@ -172,6 +172,23 @@ describe('openrouter/parser', () => {
     expect(parsed.error).toMatch(/exceeds maximum/i);
   });
 
+  it('returns ERROR when total BET allocation exceeds the decision maximum', () => {
+    const parsed = parseDecision(
+      JSON.stringify({
+        action: 'BET',
+        bets: [
+          { market_id: 'm1', side: 'YES', amount: 1_500 },
+          { market_id: 'm2', side: 'NO', amount: 1_500 }
+        ],
+        reasoning: 'Each leg is below the cap, but the batch is too large'
+      }),
+      10_000
+    );
+
+    expect(parsed.action).toBe('ERROR');
+    expect(parsed.error).toMatch(/maximum decision allocation/i);
+  });
+
   it('returns ERROR for BET missing market_id', () => {
     const parsed = parseDecision(
       JSON.stringify({

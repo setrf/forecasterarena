@@ -2,6 +2,10 @@ import { getDb } from '@/lib/db/connection';
 
 export function withTransaction<T>(fn: () => T): T {
   const database = getDb();
+  if (database.inTransaction) {
+    return fn();
+  }
+
   return database.transaction(fn)();
 }
 

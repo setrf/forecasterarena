@@ -77,7 +77,7 @@ DECISION WEEK: ${cohortWeek}
 
 YOUR PORTFOLIO:
 - Cash Balance: $${agent.cash_balance.toFixed(2)}
-- Maximum Bet Size: $${maxBet.toFixed(2)} (${MAX_BET_PERCENT * 100}% of cash)
+- Maximum Total BET Allocation This Decision: $${maxBet.toFixed(2)} (${MAX_BET_PERCENT * 100}% of cash across all bets)
 - Positions Value: $${positionsValue.toFixed(2)}
 - Total Portfolio: $${totalValue.toFixed(2)}
 - P/L: $${pnl.toFixed(2)} (${pnl >= 0 ? '+' : ''}${pnlPercent}%)

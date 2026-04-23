@@ -1,5 +1,5 @@
-import { isErrorDecision } from '@/lib/openrouter/parser/shared';
-import { parseActionItems, validateBet, validateSell } from '@/lib/openrouter/parser/validate';
+import { isErrorDecision, mkError } from '@/lib/openrouter/parser/shared';
+import { parseActionItems, validateBet, validateBetBatch, validateSell } from '@/lib/openrouter/parser/validate';
 import type { BetInstruction, ParsedDecision, SellInstruction } from '@/lib/openrouter/parser/types';
 
 export function parseBetDecision(parsed: { bets?: unknown; reasoning: string }, agentBalance: number): ParsedDecision {
@@ -18,6 +18,11 @@ export function parseBetDecision(parsed: { bets?: unknown; reasoning: string }, 
 
   if (isErrorDecision(bets)) {
     return bets;
+  }
+
+  const batchError = validateBetBatch(bets, agentBalance);
+  if (batchError) {
+    return mkError(`Invalid bet batch: ${batchError}`, parsed.reasoning);
   }
 
   return {
