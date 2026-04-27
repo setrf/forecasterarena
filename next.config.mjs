@@ -2,6 +2,7 @@
 const nextConfig = {
   // Production optimizations
   compress: true,
+  output: 'standalone',
   poweredByHeader: false,
   reactStrictMode: true,
   transpilePackages: ['geist'],
