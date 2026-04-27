@@ -11,6 +11,7 @@ CREATE INDEX IF NOT EXISTS idx_agents_family ON agents(family_id);
 CREATE INDEX IF NOT EXISTS idx_agents_release ON agents(release_id);
 CREATE INDEX IF NOT EXISTS idx_agents_config_model ON agents(benchmark_config_model_id);
 CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
+CREATE INDEX IF NOT EXISTS idx_agents_cohort_family ON agents(cohort_id, family_id);
 
 -- Positions
 CREATE INDEX IF NOT EXISTS idx_positions_agent ON positions(agent_id);
@@ -39,6 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_decisions_config_model ON decisions(benchmark_con
 CREATE INDEX IF NOT EXISTS idx_snapshots_agent ON portfolio_snapshots(agent_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON portfolio_snapshots(snapshot_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_snapshots_agent_timestamp ON portfolio_snapshots(agent_id, snapshot_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp_agent_value ON portfolio_snapshots(snapshot_timestamp DESC, agent_id, total_value);
 
 -- Markets
 CREATE INDEX IF NOT EXISTS idx_markets_status ON markets(status);

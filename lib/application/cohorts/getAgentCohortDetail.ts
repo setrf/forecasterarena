@@ -6,7 +6,7 @@ import {
   getAgentsWithModelsByCohort,
   getPositionsWithMarkets,
   resolveModelFamily,
-  getSnapshotsByAgent
+  getLatestSnapshot
 } from '@/lib/db/queries';
 import {
   getAgentDecisionsWithMarkets,
@@ -19,7 +19,7 @@ import {
   getCohortPnlStats,
   getCohortWeek
 } from '@/lib/application/cohorts/shared';
-import { getReleaseChangeEvents } from '@/lib/application/performance';
+import { getPerformanceData, performanceDataToEquityCurve } from '@/lib/application/performance';
 import { resolveAgentPortfolioSummary } from '@/lib/application/portfolio-summary';
 import type {
   AgentCohortDetailPayload,
@@ -53,11 +53,12 @@ export function getAgentCohortDetail(
   }
 
   const db = getDb();
-  const snapshots = getSnapshotsByAgent(agent.id);
-  const portfolio = resolveAgentPortfolioSummary(agent.id, snapshots);
+  const portfolio = resolveAgentPortfolioSummary(agent.id, getLatestSnapshot(agent.id));
   const rankResult = getAgentRank(db, cohortId, portfolio.totalValue);
   const winRateResult = getAgentWinRate(db, agent.id);
   const cohortStats = getCohortPnlStats(db, cohortId);
+  const chartSeriesKey = family.slug ?? family.id;
+  const performance = getPerformanceData('ALL', { cohortId, familyId: family.id });
 
   return {
     status: 'ok',
@@ -112,11 +113,11 @@ export function getAgentCohortDetail(
         cohort_best_pnl_percent: cohortStats?.best_pnl_percent ?? 0,
         cohort_worst_pnl_percent: cohortStats?.worst_pnl_percent ?? 0
       },
-      equity_curve: snapshots.map((snapshot) => ({
-        date: snapshot.snapshot_timestamp,
-        value: snapshot.total_value
-      })),
-      release_changes: getReleaseChangeEvents({ cohortId, familyId: family.id }),
+      equity_curve: performanceDataToEquityCurve(
+        performance.data,
+        chartSeriesKey
+      ),
+      release_changes: performance.release_changes,
       decisions: getAgentDecisionsWithMarkets(db, agent.id),
       positions: getPositionsWithMarkets(agent.id),
       closed_positions: getClosedPositionsWithMarkets(agent.id),

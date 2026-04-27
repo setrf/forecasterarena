@@ -7,13 +7,11 @@ import {
 } from '@/lib/db/queries';
 import {
   buildCohortPerformance,
-  buildEquityCurve,
   calculateAverageBrierScore
 } from '@/lib/application/models/helpers';
-import { getReleaseChangeEvents } from '@/lib/application/performance';
+import { getPerformanceData, performanceDataToEquityCurve } from '@/lib/application/performance';
 import {
   getAgentsWithCohorts,
-  getModelEquitySnapshots,
   getModelWinRate,
   getRecentModelDecisions
 } from '@/lib/application/models/queries';
@@ -41,6 +39,8 @@ export function getModelDetail(
   const totalPnl = cohortPerformance.reduce((sum, cohort) => sum + cohort.total_pnl, 0);
   const totalCapital = cohortPerformance.length * INITIAL_BALANCE;
   const winRateResult = getModelWinRate(db, family.id);
+  const chartSeriesKey = family.slug ?? family.id;
+  const performance = getPerformanceData('ALL', { familyId: family.id });
 
   return {
     status: 'ok',
@@ -66,8 +66,14 @@ export function getModelDetail(
         : null,
       cohort_performance: cohortPerformance,
       recent_decisions: getRecentModelDecisions(db, family.id),
-      equity_curve: buildEquityCurve(getModelEquitySnapshots(db, family.id)),
-      release_changes: getReleaseChangeEvents({ familyId: family.id }),
+      equity_curve: performanceDataToEquityCurve(
+        performance.data,
+        chartSeriesKey
+      ).map((point) => ({
+        snapshot_timestamp: point.date,
+        total_value: point.value
+      })),
+      release_changes: performance.release_changes,
       updated_at: new Date().toISOString()
     }
   };

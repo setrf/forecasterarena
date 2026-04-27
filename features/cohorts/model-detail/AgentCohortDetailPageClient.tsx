@@ -14,6 +14,7 @@ import { AgentStatsGrids } from '@/features/cohorts/model-detail/components/Agen
 import { DecisionHistoryPanel } from '@/features/cohorts/model-detail/components/DecisionHistoryPanel';
 import { DecisionReasoningModal } from '@/features/cohorts/model-detail/components/DecisionReasoningModal';
 import { TradeHistoryPanel } from '@/features/cohorts/model-detail/components/TradeHistoryPanel';
+import { useScopedPerformanceChartData } from '@/features/performance-chart/useScopedPerformanceChartData';
 import type { AgentCohortData, Decision } from '@/features/cohorts/model-detail/types';
 import { createAgentCohortChartData } from '@/features/cohorts/model-detail/utils';
 
@@ -38,7 +39,15 @@ export default function AgentCohortDetailPageClient({
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
   const chartKey = data?.model?.slug ?? data?.model?.id ?? familySlugOrLegacyId;
-  const chartData = useMemo(() => createAgentCohortChartData(data, chartKey), [data, chartKey]);
+  const initialChartData = useMemo(() => createAgentCohortChartData(data, chartKey), [data, chartKey]);
+  const chartSeries = useScopedPerformanceChartData({
+    timeRange,
+    cohortId,
+    familyId: data?.model?.family_id ?? null,
+    enabled: Boolean(data?.model?.family_id),
+    initialData: initialChartData,
+    initialReleaseChanges: data?.release_changes ?? []
+  });
   const chartModels = data?.model ? [{
     id: chartKey,
     name: data.model.display_name,
@@ -69,9 +78,9 @@ export default function AgentCohortDetailPageClient({
       <AgentCohortHeader data={data} />
       <AgentStatsGrids data={data} />
       <AgentPerformanceSection
-        chartData={chartData}
+        chartData={chartSeries.data}
         chartModels={chartModels}
-        releaseChanges={data.release_changes}
+        releaseChanges={chartSeries.releaseChanges}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
       />

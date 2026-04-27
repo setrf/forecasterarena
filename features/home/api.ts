@@ -74,7 +74,6 @@ export async function fetchHomePerformanceData(
   releaseChanges: ReleaseChangeEvent[];
 }> {
   const response = await fetch(`/api/performance-data?range=${timeRange}`, {
-    cache: 'no-store',
     signal
   });
 

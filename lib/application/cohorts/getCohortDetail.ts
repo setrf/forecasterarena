@@ -3,11 +3,10 @@ import {
   getAgentsWithModelsByCohort,
   getAverageBrierScore,
   getCohortById,
-  getLatestSnapshot,
-  getSnapshotsByAgent
+  getLatestSnapshot
 } from '@/lib/db/queries';
 import { calculateWeekNumber } from '@/lib/utils';
-import { getReleaseChangeEvents } from '@/lib/application/performance';
+import { getPerformanceData, performanceDataToEquityCurves } from '@/lib/application/performance';
 import {
   getAgentOpenPositionCount,
   getAgentTradeCount,
@@ -61,15 +60,8 @@ export function getCohortDetail(
     .filter((score): score is number => score !== null);
   const totalResolvedBets = agents.reduce((sum, agent) => sum + agent.num_resolved_bets, 0);
 
-  const equityCurves = Object.fromEntries(
-    rawAgents.map((agent) => [
-      agent.model.family_slug ?? agent.family_id ?? agent.model_id,
-      getSnapshotsByAgent(agent.id).map((snapshot) => ({
-        date: snapshot.snapshot_timestamp,
-        value: snapshot.total_value
-      }))
-    ])
-  );
+  const performance = getPerformanceData('ALL', { cohortId });
+  const equityCurves = performanceDataToEquityCurves(performance.data);
 
   return {
     status: 'ok',
@@ -90,7 +82,7 @@ export function getCohortDetail(
           : null
       },
       equity_curves: equityCurves,
-      release_changes: getReleaseChangeEvents({ cohortId }),
+      release_changes: performance.release_changes,
       recent_decisions: getRecentCohortDecisions(db, cohortId),
       updated_at: new Date().toISOString()
     }

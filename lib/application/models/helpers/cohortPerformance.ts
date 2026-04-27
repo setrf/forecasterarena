@@ -1,6 +1,6 @@
 import {
   getAverageBrierScore,
-  getSnapshotsByAgent
+  getLatestSnapshot
 } from '@/lib/db/queries';
 import { resolveAgentPortfolioSummary } from '@/lib/application/portfolio-summary';
 import type { AgentWithCohort, ModelDetailPayload } from '@/lib/application/models/types';
@@ -11,9 +11,8 @@ export function buildCohortPerformance(
   agents: AgentWithCohort[]
 ): CohortPerformance[] {
   return agents.map((agent) => {
-    const snapshots = getSnapshotsByAgent(agent.id);
     const brierScore = getAverageBrierScore(agent.id);
-    const portfolio = resolveAgentPortfolioSummary(agent.id, snapshots);
+    const portfolio = resolveAgentPortfolioSummary(agent.id, getLatestSnapshot(agent.id));
 
     return {
       cohort_id: agent.cohort_id,

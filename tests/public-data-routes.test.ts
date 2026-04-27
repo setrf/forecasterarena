@@ -44,7 +44,7 @@ describe('public data routes', () => {
     }
   });
 
-  it('marks mutable market and performance responses as no-store', async () => {
+  it('marks mutable market responses as no-store and chart responses as cacheable', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {
@@ -86,7 +86,8 @@ describe('public data routes', () => {
         new Request('http://localhost/api/performance-data?range=1D') as any
       );
       expect(performanceResponse.status).toBe(200);
-      expect(performanceResponse.headers.get('cache-control')).toBe('public, max-age=15, stale-while-revalidate=45');
+      expect(performanceResponse.headers.get('cache-control')).toBe('public, max-age=60, stale-while-revalidate=600');
+      expect(performanceResponse.headers.get('server-timing')).toContain('cache;desc=');
     } finally {
       await ctx.cleanup();
     }

@@ -34,7 +34,13 @@ export function getRecentCohortDecisions(
 ): Array<Record<string, unknown>> {
   return db.prepare(`
     SELECT
-      d.*,
+      d.id,
+      d.agent_id,
+      d.cohort_id,
+      d.decision_week,
+      d.decision_timestamp,
+      d.action,
+      d.reasoning,
       COALESCE(dbi.family_display_name, dbi.release_display_name, a.model_id) as model_display_name,
       COALESCE(dbi.color, '#94A3B8') as model_color,
       COALESCE(dbi.family_slug, dbi.family_id, dbi.legacy_model_id, a.model_id) as family_slug,
@@ -78,39 +84,45 @@ export function getCohortPnlStats(
   cohortId: string
 ): { avg_pnl_percent: number; best_pnl_percent: number; worst_pnl_percent: number } | undefined {
   return db.prepare(`
-    WITH latest_snapshots AS (
+    WITH cohort_agents AS (
+      SELECT id, cash_balance
+      FROM agents
+      WHERE cohort_id = ?
+    ),
+    latest_snapshots AS (
       SELECT
         ps.agent_id,
         ps.total_pnl_percent,
         ROW_NUMBER() OVER (PARTITION BY ps.agent_id ORDER BY ps.snapshot_timestamp DESC) as rn
       FROM portfolio_snapshots ps
+      JOIN cohort_agents ca ON ca.id = ps.agent_id
     ),
     open_position_values AS (
       SELECT
         p.agent_id,
         COALESCE(SUM(COALESCE(p.current_value, p.total_cost)), 0) as total_position_value
       FROM positions p
+      JOIN cohort_agents ca ON ca.id = p.agent_id
       WHERE p.status = 'open'
       GROUP BY p.agent_id
     ),
     current_agent_totals AS (
       SELECT
-        a.id as agent_id,
+        ca.id as agent_id,
         COALESCE(
           ls.total_pnl_percent,
-          ((a.cash_balance + COALESCE(op.total_position_value, 0) - ?) / ?) * 100
+          ((ca.cash_balance + COALESCE(op.total_position_value, 0) - ?) / ?) * 100
         ) as total_pnl_percent
-      FROM agents a
-      LEFT JOIN latest_snapshots ls ON a.id = ls.agent_id AND ls.rn = 1
-      LEFT JOIN open_position_values op ON a.id = op.agent_id
-      WHERE a.cohort_id = ?
+      FROM cohort_agents ca
+      LEFT JOIN latest_snapshots ls ON ca.id = ls.agent_id AND ls.rn = 1
+      LEFT JOIN open_position_values op ON ca.id = op.agent_id
     )
     SELECT
       AVG(total_pnl_percent) as avg_pnl_percent,
       MAX(total_pnl_percent) as best_pnl_percent,
       MIN(total_pnl_percent) as worst_pnl_percent
     FROM current_agent_totals
-  `).get(INITIAL_BALANCE, INITIAL_BALANCE, cohortId) as {
+  `).get(cohortId, INITIAL_BALANCE, INITIAL_BALANCE) as {
     avg_pnl_percent: number;
     best_pnl_percent: number;
     worst_pnl_percent: number;

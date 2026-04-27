@@ -11,6 +11,7 @@ import { ModelPerformanceSection } from '@/features/models/detail/components/Mod
 import { ModelRecentDecisionsPanel } from '@/features/models/detail/components/ModelRecentDecisionsPanel';
 import { ModelStatsGrid } from '@/features/models/detail/components/ModelStatsGrid';
 import { DecisionReasoningModal } from '@/features/models/detail/components/DecisionReasoningModal';
+import { useScopedPerformanceChartData } from '@/features/performance-chart/useScopedPerformanceChartData';
 import type { ModelDecision } from '@/features/models/detail/types';
 import type { ModelDetailData } from '@/features/models/detail/types';
 import { createModelChartData } from '@/features/models/detail/utils';
@@ -45,7 +46,14 @@ export default function ModelDetailPageClient({
 
   const canonicalModelSlug = model?.slug ?? model?.id ?? familySlugOrLegacyId;
   const chartModelId = canonicalModelSlug;
-  const chartData = useMemo(() => createModelChartData(chartModelId, data), [chartModelId, data]);
+  const initialChartData = useMemo(() => createModelChartData(chartModelId, data), [chartModelId, data]);
+  const chartSeries = useScopedPerformanceChartData({
+    timeRange,
+    familyId: model?.family_id ?? null,
+    enabled: Boolean(model?.family_id),
+    initialData: initialChartData,
+    initialReleaseChanges: data?.release_changes ?? []
+  });
   const chartModels = model ? [{
     id: chartModelId,
     name: model.displayName,
@@ -73,9 +81,9 @@ export default function ModelDetailPageClient({
         winRate={data?.win_rate ?? null}
       />
       <ModelPerformanceSection
-        chartData={chartData}
+        chartData={chartSeries.data}
         chartModels={chartModels}
-        releaseChanges={data?.release_changes ?? []}
+        releaseChanges={chartSeries.releaseChanges}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
       />

@@ -11,6 +11,7 @@ import { CohortLeaderboardTable } from '@/features/cohorts/detail/components/Coh
 import { CohortPerformanceSection } from '@/features/cohorts/detail/components/CohortPerformanceSection';
 import { CohortRecentDecisionsPanel } from '@/features/cohorts/detail/components/CohortRecentDecisionsPanel';
 import { CohortStatsGrid } from '@/features/cohorts/detail/components/CohortStatsGrid';
+import { useScopedPerformanceChartData } from '@/features/performance-chart/useScopedPerformanceChartData';
 import type { CohortDetailLoadResult } from '@/features/cohorts/detail/api';
 import { createCohortChartData, getCohortChartModels, sortAgentsByValue } from '@/features/cohorts/detail/utils';
 
@@ -31,7 +32,13 @@ export default function CohortDetailPageClient({
   const [timeRange, setTimeRange] = useState<TimeRange>('1M');
   const { cohort, agents, stats, equityCurves, releaseChanges, decisions, loading, error } = useCohortDetailData(cohortId, initialData);
 
-  const chartData = useMemo(() => createCohortChartData(equityCurves), [equityCurves]);
+  const initialChartData = useMemo(() => createCohortChartData(equityCurves), [equityCurves]);
+  const chartSeries = useScopedPerformanceChartData({
+    timeRange,
+    cohortId,
+    initialData: initialChartData,
+    initialReleaseChanges: releaseChanges
+  });
   const sortedAgents = useMemo(() => sortAgentsByValue(agents), [agents]);
   const chartModels = useMemo(() => getCohortChartModels(sortedAgents), [sortedAgents]);
 
@@ -52,9 +59,9 @@ export default function CohortDetailPageClient({
       <CohortDetailHeader cohort={cohort} />
       <CohortStatsGrid stats={stats} />
       <CohortPerformanceSection
-        chartData={chartData}
+        chartData={chartSeries.data}
         chartModels={chartModels}
-        releaseChanges={releaseChanges}
+        releaseChanges={chartSeries.releaseChanges}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
       />

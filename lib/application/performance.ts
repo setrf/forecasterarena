@@ -1,17 +1,14 @@
 import { getPublicCatalogModels } from '@/lib/catalog/public';
-import { getDb } from '@/lib/db';
+import { getDb, logSystemEvent } from '@/lib/db';
+import {
+  getReleaseChangeEvents,
+  type ReleaseChangeEvent
+} from '@/lib/application/performance-release-changes';
 
 export type PerformanceTimeRange = '10M' | '1H' | '1D' | '1W' | '1M' | '3M' | 'ALL';
-export interface ReleaseChangeEvent {
-  date: string;
-  model_id: string;
-  model_name: string;
-  previous_release_name: string;
-  release_name: string;
-  color: string;
-}
+export { getReleaseChangeEvents, type ReleaseChangeEvent };
 
-interface PerformancePayload {
+export interface PerformancePayload {
   data: Array<Record<string, number | string>>;
   models: ReturnType<typeof getPublicCatalogModels>;
   release_changes: ReleaseChangeEvent[];
@@ -19,13 +16,45 @@ interface PerformancePayload {
   updated_at: string;
 }
 
+export interface PerformanceScope {
+  cohortId?: string | null;
+  familyId?: string | null;
+}
+
+export interface PerformanceDiagnostics {
+  cache: 'memory-hit' | 'persisted-hit' | 'miss' | 'scoped';
+  query_ms: number;
+  total_ms: number;
+  points: number;
+  bytes: number;
+}
+
+export interface PerformanceResult {
+  payload: PerformancePayload;
+  diagnostics: PerformanceDiagnostics;
+}
+
+export {
+  performanceDataToEquityCurve,
+  performanceDataToEquityCurves,
+  type EquityCurvePoint
+} from '@/lib/application/performance-transforms';
+
 const VALID_RANGES = new Set<PerformanceTimeRange>(['10M', '1H', '1D', '1W', '1M', '3M', 'ALL']);
-const PERFORMANCE_CACHE_TTL_MS = 15_000;
+const MEMORY_CACHE_TTL_MS = 60_000;
+const SLOW_CHART_GENERATION_MS = 500;
 
 const performanceCache = new Map<string, {
   expiresAt: number;
   data: PerformancePayload;
+  diagnostics: Omit<PerformanceDiagnostics, 'cache' | 'total_ms' | 'bytes'>;
 }>();
+
+interface PersistedPerformanceData {
+  payload: PerformancePayload;
+  generatedAt: string;
+  legacyArrayPayload: boolean;
+}
 
 function normalizeRange(rawRange: string | null): PerformanceTimeRange {
   return VALID_RANGES.has(rawRange as PerformanceTimeRange)
@@ -80,8 +109,33 @@ function getBucketSeconds(range: PerformanceTimeRange): number {
   }
 }
 
-function buildPerformanceCacheKey(range: PerformanceTimeRange, cohortId: string | null): string {
-  return `${range}::${cohortId ?? 'all'}`;
+function normalizeScope(scopeOrCohortId?: PerformanceScope | string | null): Required<PerformanceScope> {
+  if (typeof scopeOrCohortId === 'string' || scopeOrCohortId === null) {
+    return {
+      cohortId: scopeOrCohortId ?? null,
+      familyId: null
+    };
+  }
+
+  return {
+    cohortId: scopeOrCohortId?.cohortId ?? null,
+    familyId: scopeOrCohortId?.familyId ?? null
+  };
+}
+
+function hasScopeFilters(scope: Required<PerformanceScope>): boolean {
+  return Boolean(scope.cohortId || scope.familyId);
+}
+
+function buildPerformanceCacheKey(
+  range: PerformanceTimeRange,
+  scope: Required<PerformanceScope>
+): string {
+  if (!hasScopeFilters(scope)) {
+    return `${range}::all`;
+  }
+
+  return `${range}::cohort=${scope.cohortId ?? 'all'}::family=${scope.familyId ?? 'all'}`;
 }
 
 function parseSqliteUtcTimestamp(timestamp: string): number | null {
@@ -89,12 +143,24 @@ function parseSqliteUtcTimestamp(timestamp: string): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+function isPerformancePayload(value: unknown): value is PerformancePayload {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<PerformancePayload>;
+  return Array.isArray(candidate.data) &&
+    Array.isArray(candidate.models) &&
+    Array.isArray(candidate.release_changes) &&
+    typeof candidate.range === 'string' &&
+    typeof candidate.updated_at === 'string';
+}
+
 function readPersistedPerformanceData(
   range: PerformanceTimeRange,
-  cohortId: string | null,
-  nowMs: number
-): Array<Record<string, number | string>> | null {
-  if (cohortId) {
+  scope: Required<PerformanceScope>
+): PersistedPerformanceData | null {
+  if (hasScopeFilters(scope)) {
     return null;
   }
 
@@ -104,7 +170,7 @@ function readPersistedPerformanceData(
     FROM performance_chart_cache
     WHERE cache_key = ?
     LIMIT 1
-  `).get(buildPerformanceCacheKey(range, cohortId)) as
+  `).get(buildPerformanceCacheKey(range, scope)) as
     | { payload_json: string; generated_at: string }
     | undefined;
 
@@ -112,14 +178,35 @@ function readPersistedPerformanceData(
     return null;
   }
 
-  const generatedAtMs = parseSqliteUtcTimestamp(row.generated_at);
-  if (generatedAtMs === null || nowMs - generatedAtMs > PERFORMANCE_CACHE_TTL_MS) {
-    return null;
-  }
-
   try {
     const parsed = JSON.parse(row.payload_json);
-    return Array.isArray(parsed) ? parsed as Array<Record<string, number | string>> : null;
+    if (isPerformancePayload(parsed)) {
+      return {
+        payload: {
+          ...parsed,
+          range,
+          updated_at: toIsoUtc(row.generated_at)
+        },
+        generatedAt: row.generated_at,
+        legacyArrayPayload: false
+      };
+    }
+
+    if (Array.isArray(parsed)) {
+      return {
+        payload: {
+          data: parsed as Array<Record<string, number | string>>,
+          models: getModelsForScope(scope),
+          release_changes: getReleaseChangeEvents(scope),
+          range,
+          updated_at: toIsoUtc(row.generated_at)
+        },
+        generatedAt: row.generated_at,
+        legacyArrayPayload: true
+      };
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -127,10 +214,10 @@ function readPersistedPerformanceData(
 
 function writePersistedPerformanceData(
   range: PerformanceTimeRange,
-  cohortId: string | null,
-  data: Array<Record<string, number | string>>
+  scope: Required<PerformanceScope>,
+  payload: PerformancePayload
 ): void {
-  if (cohortId) {
+  if (hasScopeFilters(scope)) {
     return;
   }
 
@@ -143,173 +230,93 @@ function writePersistedPerformanceData(
       payload_json = excluded.payload_json,
       generated_at = CURRENT_TIMESTAMP
   `).run(
-    buildPerformanceCacheKey(range, cohortId),
-    cohortId,
+    buildPerformanceCacheKey(range, scope),
+    null,
     range,
-    JSON.stringify(data)
+    JSON.stringify(payload)
   );
 }
 
-export function getReleaseChangeEvents(args?: {
-  cohortId?: string | null;
-  familyId?: string | null;
-}): ReleaseChangeEvent[] {
-  const db = getDb();
-  const params: Array<string> = [];
-  let query = `
-    SELECT
-      MIN(d.decision_timestamp) as first_decision_at,
-      COALESCE(dbi.family_slug, dbi.family_id, d.family_id) as model_id,
-      COALESCE(dbi.family_display_name, dbi.release_display_name, a.model_id) as model_name,
-      COALESCE(dbi.release_display_name, mr.release_name) as release_name,
-      COALESCE(dbi.color, '#94A3B8') as color,
-      COALESCE(dbi.release_id, d.release_id) as release_id
-    FROM decisions d
-    JOIN agents a ON a.id = d.agent_id
-    LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
-    LEFT JOIN model_releases mr ON mr.id = d.release_id
-    WHERE COALESCE(dbi.release_id, d.release_id) IS NOT NULL
-  `;
-
-  if (args?.cohortId) {
-    query += ' AND d.cohort_id = ?';
-    params.push(args.cohortId);
+function getModelsForScope(scope: Required<PerformanceScope>): ReturnType<typeof getPublicCatalogModels> {
+  const models = getPublicCatalogModels();
+  if (!scope.familyId) {
+    return models;
   }
 
-  if (args?.familyId) {
-    query += ' AND COALESCE(dbi.family_id, d.family_id) = ?';
-    params.push(args.familyId);
+  return models.filter((model) => (
+    model.family_id === scope.familyId ||
+    model.id === scope.familyId ||
+    model.slug === scope.familyId ||
+    model.legacy_model_id === scope.familyId
+  ));
+}
+
+function toIsoUtc(timestamp: string): string {
+  const parsedAt = parseSqliteUtcTimestamp(timestamp);
+  return parsedAt === null ? new Date().toISOString() : new Date(parsedAt).toISOString();
+}
+
+function getPayloadByteSize(payload: PerformancePayload): number {
+  return Buffer.byteLength(JSON.stringify(payload));
+}
+
+function logPerformanceEvent(
+  eventType: string,
+  eventData: Record<string, unknown>,
+  severity: 'info' | 'warning' | 'error' = 'info'
+): void {
+  try {
+    logSystemEvent(eventType, eventData, severity);
+  } catch (error) {
+    console.warn(`Failed to record ${eventType}`, error);
   }
-
-  query += `
-    GROUP BY
-      COALESCE(dbi.family_slug, dbi.family_id, d.family_id),
-      COALESCE(dbi.family_display_name, dbi.release_display_name, a.model_id),
-      COALESCE(dbi.release_display_name, mr.release_name),
-      COALESCE(dbi.color, '#94A3B8'),
-      COALESCE(dbi.release_id, d.release_id)
-    ORDER BY model_id ASC, first_decision_at ASC
-  `;
-
-  const rows = db.prepare(query).all(...params) as Array<{
-    first_decision_at: string;
-    model_id: string;
-    model_name: string;
-    release_name: string;
-    color: string;
-    release_id: string;
-  }>;
-
-  const latestByModel = new Map<string, string>();
-  const latestReleaseNameByModel = new Map<string, string>();
-  const events: ReleaseChangeEvent[] = [];
-
-  for (const row of rows) {
-    const previousReleaseId = latestByModel.get(row.model_id);
-    if (!previousReleaseId) {
-      latestByModel.set(row.model_id, row.release_id);
-      latestReleaseNameByModel.set(row.model_id, row.release_name);
-      continue;
-    }
-
-    if (previousReleaseId === row.release_id) {
-      continue;
-    }
-
-    latestByModel.set(row.model_id, row.release_id);
-    events.push({
-      date: row.first_decision_at,
-      model_id: row.model_id,
-      model_name: row.model_name,
-      previous_release_name: latestReleaseNameByModel.get(row.model_id) ?? row.model_name,
-      release_name: row.release_name,
-      color: row.color
-    });
-    latestReleaseNameByModel.set(row.model_id, row.release_name);
-  }
-
-  if (!args?.cohortId) {
-    let currentQuery = `
-      SELECT
-        bc.created_at as config_created_at,
-        COALESCE(mf.slug, mf.id) as model_id,
-        mf.public_display_name as model_name,
-        bcm.release_display_name_snapshot as release_name,
-        COALESCE(bcm.color_snapshot, '#94A3B8') as color,
-        bcm.release_id as release_id
-      FROM benchmark_configs bc
-      JOIN benchmark_config_models bcm ON bcm.benchmark_config_id = bc.id
-      JOIN model_families mf ON mf.id = bcm.family_id
-      WHERE bc.is_default_for_future_cohorts = 1
-    `;
-    const currentParams: Array<string> = [];
-
-    if (args?.familyId) {
-      currentQuery += ' AND bcm.family_id = ?';
-      currentParams.push(args.familyId);
-    }
-
-    const currentRows = db.prepare(currentQuery).all(...currentParams) as Array<{
-      config_created_at: string;
-      model_id: string;
-      model_name: string;
-      release_name: string;
-      color: string;
-      release_id: string;
-    }>;
-
-    for (const row of currentRows) {
-      const previousReleaseId = latestByModel.get(row.model_id);
-      if (!previousReleaseId || previousReleaseId === row.release_id) {
-        continue;
-      }
-
-      events.push({
-        date: row.config_created_at,
-        model_id: row.model_id,
-        model_name: row.model_name,
-        previous_release_name: latestReleaseNameByModel.get(row.model_id) ?? row.model_name,
-        release_name: row.release_name,
-        color: row.color
-      });
-      latestReleaseNameByModel.set(row.model_id, row.release_name);
-    }
-  }
-
-  return events.sort((left, right) => left.date.localeCompare(right.date));
 }
 
 function computePerformanceSeries(
   range: PerformanceTimeRange,
-  cohortId: string | null
+  scope: Required<PerformanceScope>
 ): Array<Record<string, number | string>> {
   const db = getDb();
   const bucketSeconds = getBucketSeconds(range);
-  const params: Array<string | number> = [bucketSeconds, bucketSeconds, bucketSeconds, getRangeStart(range, new Date())];
+  const params: Array<string | number | null> = [
+    scope.cohortId,
+    scope.cohortId,
+    scope.familyId,
+    scope.familyId,
+    bucketSeconds,
+    bucketSeconds,
+    bucketSeconds,
+    getRangeStart(range, new Date())
+  ];
 
   let query = `
-    WITH filtered_snapshots AS (
+    WITH scoped_agents AS (
+      SELECT
+        a.id,
+        COALESCE(abi.family_slug, abi.family_id, a.family_id, a.model_id) as family_slug,
+        COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
+        COALESCE(abi.color, '#94A3B8') as color
+      FROM agents a
+      LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
+      WHERE (? IS NULL OR a.cohort_id = ?)
+        AND (? IS NULL OR a.family_id = ?)
+    ),
+    filtered_snapshots AS (
       SELECT
         ps.agent_id,
         CAST(unixepoch(ps.snapshot_timestamp) / ? AS INTEGER) * ? as bucket_epoch,
-        COALESCE(abi.family_slug, abi.family_id) as family_slug,
-        COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
-        COALESCE(abi.color, '#94A3B8') as color,
+        sa.family_slug,
+        sa.display_name,
+        sa.color,
         ps.total_value,
         ROW_NUMBER() OVER (
           PARTITION BY ps.agent_id, CAST(unixepoch(ps.snapshot_timestamp) / ? AS INTEGER)
           ORDER BY ps.snapshot_timestamp DESC
         ) as rn
-      FROM portfolio_snapshots ps
-      JOIN agents a ON ps.agent_id = a.id
-      LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
+      FROM portfolio_snapshots ps INDEXED BY idx_snapshots_timestamp_agent_value
+      JOIN scoped_agents sa ON ps.agent_id = sa.id
       WHERE ps.snapshot_timestamp >= ?
   `;
-
-  if (cohortId) {
-    query += ' AND a.cohort_id = ?';
-    params.push(cohortId);
-  }
 
   query += `
     ),
@@ -380,51 +387,149 @@ function computePerformanceSeries(
 
 export function refreshPersistedPerformanceCache(): void {
   const ranges: PerformanceTimeRange[] = ['10M', '1H', '1D', '1W', '1M', '3M', 'ALL'];
-  const now = Date.now();
+  const scope = normalizeScope(null);
 
   for (const range of ranges) {
-    const series = computePerformanceSeries(range, null);
-    writePersistedPerformanceData(range, null, series);
-    performanceCache.set(buildPerformanceCacheKey(range, null), {
-      expiresAt: now + PERFORMANCE_CACHE_TTL_MS,
-      data: {
-        data: series,
-        models: getPublicCatalogModels(),
-        release_changes: getReleaseChangeEvents({ cohortId: null }),
-        range,
-        updated_at: new Date(now).toISOString()
+    const startedAt = performance.now();
+    const now = Date.now();
+    const series = computePerformanceSeries(range, scope);
+    const queryMs = performance.now() - startedAt;
+    const payload = {
+      data: series,
+      models: getModelsForScope(scope),
+      release_changes: getReleaseChangeEvents(scope),
+      range,
+      updated_at: new Date(now).toISOString()
+    };
+    writePersistedPerformanceData(range, scope, payload);
+    performanceCache.set(buildPerformanceCacheKey(range, scope), {
+      expiresAt: now + MEMORY_CACHE_TTL_MS,
+      data: payload,
+      diagnostics: {
+        query_ms: queryMs,
+        points: series.length
       }
+    });
+
+    logPerformanceEvent('performance_chart_cache_refreshed', {
+      range,
+      points: series.length,
+      duration_ms: Math.round(queryMs)
     });
   }
 }
 
-export function getPerformanceData(rawRange: string | null, cohortId: string | null): PerformancePayload {
+export function getPerformanceDataWithDiagnostics(
+  rawRange: string | null,
+  scopeOrCohortId?: PerformanceScope | string | null
+): PerformanceResult {
+  const startedAt = performance.now();
   const range = normalizeRange(rawRange);
-  const cacheKey = buildPerformanceCacheKey(range, cohortId);
+  const scope = normalizeScope(scopeOrCohortId);
+  const cacheKey = buildPerformanceCacheKey(range, scope);
   const now = new Date();
   const nowMs = now.getTime();
   const cached = performanceCache.get(cacheKey);
   if (cached && cached.expiresAt > nowMs) {
-    return cached.data;
+    const totalMs = performance.now() - startedAt;
+    const bytes = getPayloadByteSize(cached.data);
+    return {
+      payload: cached.data,
+      diagnostics: {
+        cache: 'memory-hit',
+        query_ms: cached.diagnostics.query_ms,
+        total_ms: totalMs,
+        points: cached.diagnostics.points,
+        bytes
+      }
+    };
   }
 
-  const dataPoints = readPersistedPerformanceData(range, cohortId, nowMs) ?? computePerformanceSeries(range, cohortId);
-  if (!cohortId) {
-    writePersistedPerformanceData(range, cohortId, dataPoints);
+  const persisted = readPersistedPerformanceData(range, scope);
+  if (persisted) {
+    const payload = persisted.payload;
+    const totalMs = performance.now() - startedAt;
+    const bytes = getPayloadByteSize(payload);
+
+    if (persisted.legacyArrayPayload) {
+      writePersistedPerformanceData(range, scope, payload);
+    }
+
+    performanceCache.set(cacheKey, {
+      expiresAt: nowMs + MEMORY_CACHE_TTL_MS,
+      data: payload,
+      diagnostics: {
+        query_ms: 0,
+        points: payload.data.length
+      }
+    });
+
+    return {
+      payload,
+      diagnostics: {
+        cache: 'persisted-hit',
+        query_ms: 0,
+        total_ms: totalMs,
+        points: payload.data.length,
+        bytes
+      }
+    };
   }
 
-  const data = {
+  const queryStartedAt = performance.now();
+  const dataPoints = computePerformanceSeries(range, scope);
+  const queryMs = performance.now() - queryStartedAt;
+
+  const data: PerformancePayload = {
     data: dataPoints,
-    models: getPublicCatalogModels(),
-    release_changes: getReleaseChangeEvents({ cohortId }),
+    models: getModelsForScope(scope),
+    release_changes: getReleaseChangeEvents(scope),
     range,
     updated_at: now.toISOString()
   };
 
   performanceCache.set(cacheKey, {
-    expiresAt: nowMs + PERFORMANCE_CACHE_TTL_MS,
-    data
+    expiresAt: nowMs + MEMORY_CACHE_TTL_MS,
+    data,
+    diagnostics: {
+      query_ms: queryMs,
+      points: dataPoints.length
+    }
   });
+  if (!hasScopeFilters(scope)) {
+    writePersistedPerformanceData(range, scope, data);
+  }
 
-  return data;
+  const totalMs = performance.now() - startedAt;
+  const bytes = getPayloadByteSize(data);
+  if (queryMs > SLOW_CHART_GENERATION_MS) {
+    logPerformanceEvent('performance_chart_slow', {
+      range,
+      cohort_id: scope.cohortId,
+      family_id: scope.familyId,
+      cache: hasScopeFilters(scope) ? 'scoped' : 'miss',
+      points: dataPoints.length,
+      bytes,
+      query_ms: Math.round(queryMs),
+      total_ms: Math.round(totalMs)
+    }, 'warning');
+  }
+
+  return {
+    payload: data,
+    diagnostics: {
+      cache: hasScopeFilters(scope) ? 'scoped' : 'miss',
+      query_ms: queryMs,
+      total_ms: totalMs,
+      points: dataPoints.length,
+      bytes
+    }
+  };
+}
+
+export function getPerformanceData(
+  rawRange: string | null,
+  scopeOrCohortId?: PerformanceScope | string | null
+): PerformancePayload {
+  return getPerformanceDataWithDiagnostics(rawRange, scopeOrCohortId).payload;
 }

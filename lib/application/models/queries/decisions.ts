@@ -6,7 +6,12 @@ export function getRecentModelDecisions(
 ): Array<Record<string, unknown>> {
   return db.prepare(`
     SELECT
-      d.*,
+      d.id,
+      d.cohort_id,
+      d.decision_week,
+      d.decision_timestamp,
+      d.action,
+      d.reasoning,
       c.cohort_number,
       dbi.release_id as model_release_id,
       dbi.release_display_name as model_release_name

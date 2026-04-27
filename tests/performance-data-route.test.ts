@@ -161,7 +161,39 @@ describe('performance data route', () => {
     });
   });
 
-  it('recomputes stale persisted chart cache entries instead of serving them forever', async () => {
+  it('supports cohort, family, and cohort-family scoped chart requests', async () => {
+    await withPerformanceFixture(async ({ agent, cohort, queries, route }) => {
+      queries.createPortfolioSnapshot({
+        agent_id: agent.id,
+        snapshot_timestamp: snapshotIso('2026-03-05T11:55:00.000Z'),
+        cash_balance: 10_250,
+        positions_value: 0,
+        total_value: 10_250,
+        total_pnl: 250,
+        total_pnl_percent: 2.5
+      });
+
+      const familyScoped = await route.GET(
+        new Request(`http://localhost/api/performance-data?range=1M&family_id=${agent.family_id}`) as any
+      );
+      const familyPayload = await familyScoped.json();
+      expect(familyScoped.status).toBe(200);
+      expect(familyScoped.headers.get('server-timing')).toContain('cache;desc="scoped"');
+      expect(familyPayload.data).toHaveLength(1);
+      expect(familyPayload.models).toEqual([
+        expect.objectContaining({ family_id: agent.family_id })
+      ]);
+
+      const cohortAndFamilyScoped = await route.GET(
+        new Request(`http://localhost/api/performance-data?range=1M&cohort_id=${cohort.id}&family_id=${agent.family_id}`) as any
+      );
+      const cohortAndFamilyPayload = await cohortAndFamilyScoped.json();
+      expect(cohortAndFamilyScoped.status).toBe(200);
+      expect(cohortAndFamilyPayload.data).toEqual(familyPayload.data);
+    });
+  });
+
+  it('serves persisted global chart cache entries without recomputing on user requests', async () => {
     await withPerformanceFixture(async ({ agent, queries, route }) => {
       const dbModule = await import('@/lib/db');
       const db = dbModule.getDb();
@@ -192,11 +224,8 @@ describe('performance data route', () => {
       );
       const payload = await response.json();
 
-      expect(payload.data).toEqual([
-        expect.objectContaining({
-          date: '2026-03-05 06:00:00'
-        })
-      ]);
+      expect(payload.data).toEqual([{ date: '2000-01-01 00:00:00', stale: 1 }]);
+      expect(response.headers.get('server-timing')).toContain('cache;desc="persisted-hit"');
 
       const refreshedCache = db.prepare(`
         SELECT payload_json
@@ -204,7 +233,50 @@ describe('performance data route', () => {
         WHERE cache_key = ?
       `).get('1M::all') as { payload_json: string };
 
-      expect(JSON.parse(refreshedCache.payload_json)).toEqual(payload.data);
+      expect(JSON.parse(refreshedCache.payload_json)).toMatchObject({
+        data: [{ date: '2000-01-01 00:00:00', stale: 1 }],
+        range: '1M'
+      });
+    });
+  });
+
+  it('computes and stores global chart data on persisted cache miss', async () => {
+    await withPerformanceFixture(async ({ agent, queries, route }) => {
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+
+      queries.createPortfolioSnapshot({
+        agent_id: agent.id,
+        snapshot_timestamp: snapshotIso('2026-03-05T11:55:00.000Z'),
+        cash_balance: 10_500,
+        positions_value: 0,
+        total_value: 10_500,
+        total_pnl: 500,
+        total_pnl_percent: 5
+      });
+
+      const response = await route.GET(
+        new Request('http://localhost/api/performance-data?range=1M') as any
+      );
+      const payload = await response.json();
+
+      expect(payload.data).toEqual([
+        expect.objectContaining({
+          date: '2026-03-05 06:00:00'
+        })
+      ]);
+      expect(response.headers.get('server-timing')).toContain('cache;desc="miss"');
+
+      const cached = db.prepare(`
+        SELECT payload_json
+        FROM performance_chart_cache
+        WHERE cache_key = ?
+      `).get('1M::all') as { payload_json: string };
+
+      expect(JSON.parse(cached.payload_json)).toMatchObject({
+        data: payload.data,
+        range: '1M'
+      });
     });
   });
 

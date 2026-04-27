@@ -438,7 +438,7 @@ describe('models application', () => {
       expect((result.data.recent_decisions[0] as { id: string }).id).toBe(decision2.id);
       expect(result.data.equity_curve).toEqual([
         {
-          snapshot_timestamp: '2026-03-10 00:00:00',
+          snapshot_timestamp: '2026-03-05 00:00:00',
           total_value: 10000
         }
       ]);
