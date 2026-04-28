@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { parseDecision, isValidDecision, getDefaultHoldDecision } from '@/lib/openrouter/parser';
+import { validateBetBatch } from '@/lib/openrouter/parser/validate/bet';
 
 describe('openrouter/parser', () => {
   it('parses a valid HOLD decision', () => {
@@ -187,6 +188,17 @@ describe('openrouter/parser', () => {
 
     expect(parsed.action).toBe('ERROR');
     expect(parsed.error).toMatch(/maximum decision allocation/i);
+  });
+
+  it('rejects BET batches that exceed cash even when a custom allocation cap is higher', () => {
+    expect(validateBetBatch(
+      [
+        { market_id: 'm1', side: 'YES', amount: 700 },
+        { market_id: 'm2', side: 'NO', amount: 400 }
+      ],
+      1_000,
+      2
+    )).toBe('Total BET amount exceeds cash balance');
   });
 
   it('returns ERROR for BET missing market_id', () => {
