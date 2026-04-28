@@ -2,6 +2,8 @@ export interface Cohort {
   id: string;
   cohort_number: number;
   status: string;
+  decision_eligible: boolean;
+  decision_status: 'decisioning' | 'tracking_only' | 'completed';
   started_at: string;
   completed_at: string | null;
   benchmark_config_id?: string | null;

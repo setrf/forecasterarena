@@ -65,7 +65,7 @@ describe('agent cohort detail page data helper', () => {
   it('returns agent cohort payloads and preserves API error messages', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce(mockResponse(true, {
-        cohort: { id: 'c1', cohort_number: 1, started_at: '2026-03-01T00:00:00.000Z', status: 'active' },
+        cohort: { id: 'c1', cohort_number: 1, started_at: '2026-03-01T00:00:00.000Z', status: 'active', decision_eligible: false, decision_status: 'tracking_only' },
         model: { id: 'openai-gpt', family_slug: 'openai-gpt', slug: 'openai-gpt', legacy_model_id: 'gpt-5.1', display_name: 'GPT-5.2', color: '#10B981' },
         agent: { id: 'a1', family_id: 'openai-gpt', family_slug: 'openai-gpt', legacy_model_id: 'gpt-5.1', display_name: 'GPT-5.2', status: 'active' },
         stats: { position_count: 1, trade_count: 2 },
@@ -80,7 +80,11 @@ describe('agent cohort detail page data helper', () => {
     await expect(fetchAgentCohortDetailData('c1', 'gpt-5.1')).resolves.toEqual({
       status: 'ok',
       data: expect.objectContaining({
-        cohort: expect.objectContaining({ id: 'c1' }),
+        cohort: expect.objectContaining({
+          id: 'c1',
+          decision_eligible: false,
+          decision_status: 'tracking_only'
+        }),
         model: expect.objectContaining({ id: 'openai-gpt', family_slug: 'openai-gpt', legacy_model_id: 'gpt-5.1' }),
         agent: expect.objectContaining({ family_slug: 'openai-gpt' })
       })

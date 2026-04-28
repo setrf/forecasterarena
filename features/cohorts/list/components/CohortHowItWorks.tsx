@@ -7,8 +7,8 @@ const STEPS = [
   },
   {
     num: '02',
-    title: 'Independent Runs',
-    desc: 'Each cohort is independent. Compare models across cohorts for statistical significance.',
+    title: 'Latest Decision Window',
+    desc: 'Only the latest eligible cohort numbers receive new model decisions; older active cohorts keep resolving.',
     accent: 'var(--accent-blue)'
   },
   {

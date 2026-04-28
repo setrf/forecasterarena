@@ -45,6 +45,8 @@ describe('cohort routes', () => {
 
       expect(response.status).toBe(200);
       expect(data.cohort.id).toBe(cohort.id);
+      expect(data.cohort.decision_eligible).toBe(true);
+      expect(data.cohort.decision_status).toBe('decisioning');
       expect(data.agents).toHaveLength(1);
       expect(data.equity_curves).toBeTypeOf('object');
       expect(data.updated_at).toBeTypeOf('string');
@@ -79,6 +81,8 @@ describe('cohort routes', () => {
 
       expect(response.status).toBe(200);
       expect(data.cohort.id).toBe(cohort.id);
+      expect(data.cohort.decision_eligible).toBe(true);
+      expect(data.cohort.decision_status).toBe('decisioning');
       expect(data.model.id).toBe(family.slug);
       expect(data.model.family_slug).toBe(family.slug);
       expect(data.model.legacy_model_id).toBe(legacyModelId);

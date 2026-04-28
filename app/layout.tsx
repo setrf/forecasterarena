@@ -69,7 +69,7 @@ function Footer() {
             <div className="space-y-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[var(--text-muted)]">Next Decision</span>
-                <span className="font-mono">Sunday 00:00 UTC</span>
+                <span className="font-mono">Sunday 00:05 UTC</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[var(--text-muted)]">Market Sync</span>

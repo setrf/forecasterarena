@@ -1,9 +1,11 @@
 import { getDb, logSystemEvent, withImmediateTransaction } from '@/lib/db';
+import { DECISION_COHORT_LIMIT } from '@/lib/constants';
 import { maybeStartNewCohort } from '@/lib/engine/cohort';
 import { runAllDecisions } from '@/lib/engine/decision';
 import {
   getActiveCohorts,
   getBenchmarkConfigModels,
+  getDecisionEligibleCohorts,
   getDefaultBenchmarkConfig
 } from '@/lib/db/queries';
 import { errorMessage, failure, ok, type CronAppResult } from '@/lib/application/cron/types';
@@ -21,6 +23,9 @@ type RunDecisionsSuccess = {
     cohort_number?: number;
   } | null;
   lineup_refresh: LineupRefreshSummary;
+  decision_cohort_limit: number;
+  tracking_active_cohorts: number;
+  decision_eligible_cohorts: number;
   cohorts_processed: number;
   total_agents: number;
   total_errors: number;
@@ -39,8 +44,8 @@ function decisionRunFailureMessage(args: {
   firstError?: string;
 }): string {
   const summary =
-    `Decision run failed for all ${args.totalAgents} ${pluralize(args.totalAgents, 'agent')} ` +
-    `across ${args.cohortsProcessed} ${pluralize(args.cohortsProcessed, 'cohort')} ` +
+    `Decision run failed for all ${args.totalAgents} processed ${pluralize(args.totalAgents, 'agent')} ` +
+    `across ${args.cohortsProcessed} decision ${pluralize(args.cohortsProcessed, 'cohort')} ` +
     `with ${args.totalErrors} ${pluralize(args.totalErrors, 'error')}`;
 
   return args.firstError ? `${summary}. First error: ${args.firstError}` : summary;
@@ -136,7 +141,9 @@ export async function runDecisions(): Promise<CronAppResult<RunDecisionsSuccess>
     const startTime = Date.now();
     const cohortBootstrap = maybeStartNewCohort(false);
     const lineupRefresh = refreshActiveCohortsToDefaultBenchmarkConfig();
-    const results = await runAllDecisions();
+    const trackingActiveCohorts = getActiveCohorts().length;
+    const decisionEligibleCohorts = getDecisionEligibleCohorts(DECISION_COHORT_LIMIT).length;
+    const results = await runAllDecisions(DECISION_COHORT_LIMIT);
     const duration = Date.now() - startTime;
     const totalAgents = results.reduce((sum, result) => sum + result.agents_processed, 0);
     const totalErrors = results.reduce((sum, result) => sum + result.errors.length, 0);
@@ -146,6 +153,9 @@ export async function runDecisions(): Promise<CronAppResult<RunDecisionsSuccess>
     );
     const summary = {
       cohorts_processed: results.length,
+      decision_cohort_limit: DECISION_COHORT_LIMIT,
+      tracking_active_cohorts: trackingActiveCohorts,
+      decision_eligible_cohorts: decisionEligibleCohorts,
       total_agents: totalAgents,
       total_errors: totalErrors,
       successful_agents: successfulAgents,
@@ -186,6 +196,9 @@ export async function runDecisions(): Promise<CronAppResult<RunDecisionsSuccess>
           }
         : null,
       lineup_refresh: lineupRefresh,
+      decision_cohort_limit: DECISION_COHORT_LIMIT,
+      tracking_active_cohorts: trackingActiveCohorts,
+      decision_eligible_cohorts: decisionEligibleCohorts,
       cohorts_processed: results.length,
       total_agents: totalAgents,
       total_errors: totalErrors,

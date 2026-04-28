@@ -87,6 +87,7 @@ export default function AgentCohortDetailPageClient({
       <AgentOverviewPanels cohortId={cohortId} data={data} />
       <DecisionHistoryPanel
         decisions={data.decisions}
+        decisionEligible={data.cohort.decision_eligible}
         onSelectDecision={setSelectedDecision}
       />
       <AgentPositionsSection

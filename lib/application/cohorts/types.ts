@@ -3,9 +3,15 @@ import {
   getCohortById,
   getPositionsWithMarkets
 } from '@/lib/db/queries';
+import type { CohortDecisionStatus } from '@/lib/cohort-decision-state';
+
+export interface CohortDecisionMetadata {
+  decision_eligible: boolean;
+  decision_status: CohortDecisionStatus;
+}
 
 export interface CohortDetailPayload {
-  cohort: ReturnType<typeof getCohortById>;
+  cohort: NonNullable<ReturnType<typeof getCohortById>> & CohortDecisionMetadata;
   agents: Array<{
     id: string;
     family_slug: string;
@@ -58,6 +64,8 @@ export interface AgentCohortDetailPayload {
     benchmark_config_id: string | null;
     current_week: number;
     total_markets: number;
+    decision_eligible: boolean;
+    decision_status: CohortDecisionStatus;
   };
   model: {
     id: string;

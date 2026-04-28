@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const logSystemEvent = vi.fn();
 const runAllDecisions = vi.fn();
+const getActiveCohorts = vi.fn<() => Array<{ id: string; cohort_number: number }>>(() => []);
+const getDecisionEligibleCohorts = vi.fn<() => Array<{ id: string; cohort_number: number }>>(() => []);
 
 vi.mock('@/lib/db', () => ({
   getDb: vi.fn(() => ({
@@ -15,8 +17,9 @@ vi.mock('@/lib/db', () => ({
 }));
 
 vi.mock('@/lib/db/queries', () => ({
-  getActiveCohorts: vi.fn(() => []),
+  getActiveCohorts,
   getBenchmarkConfigModels: vi.fn(() => []),
+  getDecisionEligibleCohorts,
   getDefaultBenchmarkConfig: vi.fn(() => ({ id: 'benchmark-default' }))
 }));
 
@@ -75,6 +78,8 @@ describe('application cron runDecisions', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    getActiveCohorts.mockReturnValue([]);
+    getDecisionEligibleCohorts.mockReturnValue([]);
   });
 
   it('returns a cron failure when every processed agent fails', async () => {
@@ -97,7 +102,7 @@ describe('application cron runDecisions', () => {
     expect(result).toMatchObject({
       ok: false,
       status: 502,
-      error: expect.stringContaining('Decision run failed for all 2 agents')
+      error: expect.stringContaining('Decision run failed for all 2 processed agents')
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -136,6 +141,7 @@ describe('application cron runDecisions', () => {
     if (result.ok) {
       expect(result.data).toMatchObject({
         success: true,
+        decision_cohort_limit: 5,
         cohorts_processed: 1,
         total_agents: 2,
         total_errors: 1
@@ -146,5 +152,36 @@ describe('application cron runDecisions', () => {
       expect.anything(),
       expect.anything()
     );
+  });
+
+  it('reports tracking-active and decision-eligible cohort counts separately', async () => {
+    getActiveCohorts.mockReturnValue([
+      { id: 'cohort-7', cohort_number: 7 },
+      { id: 'cohort-6', cohort_number: 6 },
+      { id: 'cohort-2', cohort_number: 2 }
+    ]);
+    getDecisionEligibleCohorts.mockReturnValue([
+      { id: 'cohort-7', cohort_number: 7 },
+      { id: 'cohort-6', cohort_number: 6 }
+    ]);
+    runAllDecisions.mockResolvedValue([
+      cohortResult({ cohortId: 'cohort-7', errors: [], successes: 1 }),
+      cohortResult({ cohortId: 'cohort-6', errors: [], successes: 1 })
+    ]);
+
+    const { runDecisions } = await import('@/lib/application/cron/runDecisions');
+    const result = await runDecisions();
+
+    expect(runAllDecisions).toHaveBeenCalledWith(5);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toMatchObject({
+        decision_cohort_limit: 5,
+        tracking_active_cohorts: 3,
+        decision_eligible_cohorts: 2,
+        cohorts_processed: 2,
+        total_agents: 2
+      });
+    }
   });
 });

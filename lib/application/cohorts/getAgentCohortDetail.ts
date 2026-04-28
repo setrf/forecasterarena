@@ -3,6 +3,7 @@ import {
   getAverageBrierScore,
   getClosedPositionsWithMarkets,
   getCohortById,
+  getCohortDecisionStateByNumber,
   getAgentsWithModelsByCohort,
   getPositionsWithMarkets,
   resolveModelFamily,
@@ -71,7 +72,8 @@ export function getAgentCohortDetail(
         completed_at: cohort.completed_at,
         benchmark_config_id: cohort.benchmark_config_id,
         current_week: getCohortWeek(db, cohortId),
-        total_markets: getCohortMarketCount(db, cohortId)
+        total_markets: getCohortMarketCount(db, cohortId),
+        ...getCohortDecisionStateByNumber(cohort)
       },
       model: {
         id: family.slug ?? family.id,

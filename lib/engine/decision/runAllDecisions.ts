@@ -1,22 +1,27 @@
 import { logSystemEvent } from '@/lib/db';
-import { getActiveCohorts } from '@/lib/db/queries';
+import { DECISION_COHORT_LIMIT } from '@/lib/constants';
+import { getDecisionEligibleCohorts } from '@/lib/db/queries';
 import { runCohortDecisions } from '@/lib/engine/decision/runCohortDecisions';
 import type { CohortDecisionResult } from '@/lib/engine/decision/types';
 
-export async function runAllDecisions(): Promise<CohortDecisionResult[]> {
+export async function runAllDecisions(
+  decisionCohortLimit: number = DECISION_COHORT_LIMIT
+): Promise<CohortDecisionResult[]> {
   console.log('Starting weekly decision run...');
 
   const results: CohortDecisionResult[] = [];
-  const activeCohorts = getActiveCohorts();
+  const decisionCohorts = getDecisionEligibleCohorts(decisionCohortLimit);
 
-  if (activeCohorts.length === 0) {
-    console.log('No active cohorts found');
+  if (decisionCohorts.length === 0) {
+    console.log('No decision-eligible cohorts found');
     return results;
   }
 
-  console.log(`Processing ${activeCohorts.length} active cohort(s)`);
+  console.log(
+    `Processing ${decisionCohorts.length} decision-eligible cohort(s) within latest ${decisionCohortLimit}`
+  );
 
-  for (const cohort of activeCohorts) {
+  for (const cohort of decisionCohorts) {
     try {
       results.push(await runCohortDecisions(cohort.id));
     } catch (error) {

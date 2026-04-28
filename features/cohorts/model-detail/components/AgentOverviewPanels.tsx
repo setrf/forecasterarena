@@ -1,5 +1,9 @@
 import { formatSignedPercent } from '@/lib/format/display';
 import type { AgentCohortData } from '@/features/cohorts/model-detail/types';
+import {
+  getCohortDecisionStatusBadge,
+  getCohortDecisionStatusLabel
+} from '@/features/cohorts/decisionStatus';
 import { formatAgentCohortDate } from '@/features/cohorts/model-detail/utils';
 
 interface AgentOverviewPanelsProps {
@@ -14,9 +18,15 @@ export function AgentOverviewPanels({ cohortId, data }: AgentOverviewPanelsProps
         <h3 className="heading-card mb-4">Cohort #{data.cohort.cohort_number} Context</h3>
         <div className="space-y-3">
           <div>
-            <p className="text-sm text-[var(--text-muted)]">Status</p>
+            <p className="text-sm text-[var(--text-muted)]">Lifecycle</p>
             <span className={`badge ${data.cohort.status === 'active' ? 'badge-active' : 'badge-completed'}`}>
               {data.cohort.status}
+            </span>
+          </div>
+          <div>
+            <p className="text-sm text-[var(--text-muted)]">Decision Status</p>
+            <span className={`badge ${getCohortDecisionStatusBadge(data.cohort.decision_status)}`}>
+              {getCohortDecisionStatusLabel(data.cohort.decision_status)}
             </span>
           </div>
           <div>

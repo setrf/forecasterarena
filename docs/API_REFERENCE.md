@@ -995,7 +995,9 @@ If the start window is not met and `force` is absent, response is:
 
 ### POST /api/cron/run-decisions
 
-Runs weekly decisions for all active cohorts.
+Runs weekly decisions for active cohorts inside the latest decision window.
+Older active cohorts remain tracking-only for snapshots, resolution, and
+leaderboard accounting.
 
 ```http
 POST /api/cron/run-decisions
@@ -1006,6 +1008,8 @@ Current behavior:
 - route budget: `maxDuration = 600`
 - model calls are sequential
 - the route ensures the current week's cohort exists before the run
+- default decision window is the newest `5` cohort numbers, configurable with `DECISION_COHORT_LIMIT`
+- all active cohorts may refresh to the default lineup, but only decision-eligible cohorts make new LLM calls
 
 Response shape:
 
@@ -1016,6 +1020,13 @@ Response shape:
     "cohort_id": "cohort-id",
     "cohort_number": 4
   },
+  "lineup_refresh": {
+    "updated_cohorts": 6,
+    "updated_agents": 42
+  },
+  "decision_cohort_limit": 5,
+  "tracking_active_cohorts": 8,
+  "decision_eligible_cohorts": 5,
   "cohorts_processed": 1,
   "total_agents": 7,
   "total_errors": 0,

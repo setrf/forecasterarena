@@ -707,12 +707,16 @@ describe('db query modules - support and reporting', () => {
       expect(summaries[0]).toMatchObject({
         id: cohortTwo.id,
         cohort_number: 2,
+        decision_eligible: true,
+        decision_status: 'decisioning',
         num_agents: models.getActiveModels().length,
         total_markets_traded: 1
       });
       expect(summaries[1]).toMatchObject({
         id: cohortOne.id,
         cohort_number: 1,
+        decision_eligible: true,
+        decision_status: 'decisioning',
         num_agents: cohortOneAgents.length,
         total_markets_traded: 0
       });

@@ -22,6 +22,7 @@ describe('db query modules - core operations', () => {
       expect(cohorts.getCohortForCurrentWeek()?.id).toBe(cohortTwo.id);
       expect(cohorts.getAllCohorts(1).map(cohort => cohort.id)).toEqual([cohortTwo.id]);
       expect(cohorts.getActiveCohorts().map(cohort => cohort.id)).toEqual([cohortTwo.id, cohortOne.id]);
+      expect(cohorts.getDecisionEligibleCohorts(1).map(cohort => cohort.id)).toEqual([cohortTwo.id]);
 
       const cohortOneAgents = agents.createAgentsForCohort(cohortOne.id);
       const agent = cohortOneAgents[0]!;
@@ -49,6 +50,43 @@ describe('db query modules - core operations', () => {
       expect(completed.status).toBe('completed');
       expect(completed.completed_at).toBeTruthy();
       expect(cohorts.getActiveCohorts().map(cohort => cohort.id)).toEqual([cohortTwo.id]);
+    });
+  });
+
+  it('selects only the latest cohort numbers for decision eligibility', async () => {
+    await withDbQueryModules(({ cohorts, db }) => {
+      const created = Array.from({ length: 7 }, (_, index) => {
+        const cohort = cohorts.createCohort();
+        const startedAt = new Date(Date.UTC(2026, 0, 4 + index * 7)).toISOString();
+        db.prepare('UPDATE cohorts SET started_at = ? WHERE id = ?').run(
+          startedAt,
+          cohort.id
+        );
+        return cohorts.getCohortById(cohort.id)!;
+      });
+
+      expect(cohorts.getActiveCohorts()).toHaveLength(7);
+      expect(cohorts.getDecisionEligibleCohorts(5).map((cohort) => cohort.cohort_number))
+        .toEqual([7, 6, 5, 4, 3]);
+      expect(cohorts.getCohortDecisionStateByNumber(created[1]!)).toEqual({
+        decision_eligible: false,
+        decision_status: 'tracking_only'
+      });
+      expect(cohorts.getCohortDecisionStateByNumber(created[6]!)).toEqual({
+        decision_eligible: true,
+        decision_status: 'decisioning'
+      });
+
+      cohorts.completeCohort(created[6]!.id);
+
+      expect(cohorts.getDecisionEligibleCohorts(5).map((cohort) => cohort.cohort_number))
+        .toEqual([6, 5, 4, 3]);
+      expect(cohorts.getCohortDecisionStateByNumber(cohorts.getCohortById(created[6]!.id)!)).toEqual({
+        decision_eligible: false,
+        decision_status: 'completed'
+      });
+      expect(cohorts.getActiveCohorts().map((cohort) => cohort.cohort_number))
+        .toContain(2);
     });
   });
 

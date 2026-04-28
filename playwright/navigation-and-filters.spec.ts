@@ -5,7 +5,7 @@ test('market filters and footer navigation stay usable', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: /Prediction Markets/i })).toBeVisible();
 
   await page.getByLabel('Filter markets by category').selectOption('Macro');
-  await page.getByLabel('Only show current cohort markets').check();
+  await page.getByLabel('Only show markets with open positions in active cohorts').check();
   await page.getByLabel('Sort markets').selectOption('close_date');
   await expect(page.locator('a').filter({ hasText: 'seeded e2e market' }).first()).toBeVisible();
 

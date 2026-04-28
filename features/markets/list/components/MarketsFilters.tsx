@@ -50,10 +50,10 @@ export function MarketsFilters({
               type="checkbox"
               checked={cohortBets}
               onChange={(event) => onCohortBetsChange(event.target.checked)}
-              aria-label="Only show current cohort markets"
+              aria-label="Only show markets with open positions in active cohorts"
               className="w-4 h-4 rounded border-[var(--border-subtle)] text-[var(--accent-gold)] focus:ring-[var(--accent-gold)] focus:ring-offset-0"
             />
-            <span>Current Cohort</span>
+            <span>Active Positions</span>
           </label>
 
           <select

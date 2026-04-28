@@ -69,6 +69,7 @@ Optional variables:
 DATABASE_PATH=/opt/forecasterarena-state/data/forecaster.db
 BACKUP_PATH=/opt/forecasterarena-state/backups
 BACKUP_RETENTION_COUNT=7
+DECISION_COHORT_LIMIT=5
 ```
 
 Notes:
@@ -406,6 +407,9 @@ If the problem is database corruption rather than code:
   window on the VPS and move longer-term backups off-box
 - Because OpenRouter billing failures produce decision rows with `ERROR`,
   verify account credit before the Sunday decision window
+- Because old cohorts can stay unresolved for months, `run-decisions` only
+  spends LLM calls on the latest decision-eligible cohort window; snapshots and
+  resolution checks still cover all active cohorts
 - Because decision runs are sequential, provider latency spikes can still affect
   Sunday completion time even with the current timeout budget
 - Because cron is the scheduler, host timezone drift or missing jobs will show

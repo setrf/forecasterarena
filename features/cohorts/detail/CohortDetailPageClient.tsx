@@ -70,7 +70,10 @@ export default function CohortDetailPageClient({
         agents={sortedAgents}
         onNavigate={router.push}
       />
-      <CohortRecentDecisionsPanel decisions={decisions} />
+      <CohortRecentDecisionsPanel
+        decisions={decisions}
+        decisionEligible={cohort.decision_eligible}
+      />
 
       <div className="mt-8 text-center text-sm text-[var(--text-muted)]">
         Started {formatDisplayDate(cohort.started_at)}

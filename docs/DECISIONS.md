@@ -20,7 +20,7 @@ As of March 7, 2026, the production codebase currently implements:
 - Weekly cohort creation at Sunday 00:00 UTC
 - One frozen benchmark slot per active family per cohort
 - Top-500 market selection by Polymarket volume
-- Sequential decision execution per cohort to reduce provider contention
+- Sequential decision execution per decision-eligible cohort to reduce provider contention
 - Timestamped portfolio snapshots (10-minute cadence)
 - Public, redacted health reporting
 - Admin-only bounded CSV+ZIP exports
@@ -405,6 +405,34 @@ Implementation notes:
 - The home page no longer hardcodes synced-market counts in empty states.
 - The models page still renders all seven competitors even before the first live
   leaderboard exists.
+
+---
+
+### D020: Latest-N Decision Cohort Window
+
+- Status: Active
+- Decision: Weekly LLM decision execution is limited to active cohorts inside
+  the newest cohort-number window. The production default is the latest five
+  cohort numbers, configurable with `DECISION_COHORT_LIMIT`.
+
+Rationale:
+
+- Letting every unresolved cohort call every model every week creates
+  unbounded cost and latency as old markets take months to resolve.
+- Older cohorts still need to remain live for portfolio snapshots,
+  resolution checks, leaderboards, drilldowns, and audit history.
+- Deriving eligibility from cohort numbers avoids rewriting historical rows or
+  introducing a second persisted lifecycle state.
+
+Implementation notes:
+
+- `status = active` still means the cohort is live for tracking and resolution.
+- `decision_eligible` and `decision_status` are derived API/read-model fields.
+- Completed cohorts are never decision-eligible.
+- Older active cohorts outside the latest window never backfill into decision
+  eligibility when a newer cohort completes.
+- The Sunday lineup refresh can still touch all active cohorts, but only
+  decision-eligible cohorts receive new LLM calls.
 
 ---
 

@@ -9,7 +9,7 @@ export function CohortsHero({ nextSundayLabel }: CohortsHeroProps) {
     <PageIntro
       eyebrow="Competitions"
       title={<>Weekly Cohorts</>}
-      description="Each cohort is an independent competition with fresh balance, shared constraints, and release-aware lineage tracking."
+      description="Each cohort is an independent competition. The latest decision window makes new decisions; older active cohorts keep tracking portfolio value until reality resolves."
       aside={(
         <div className="surface-panel p-5">
           <div className="flex items-center gap-4">

@@ -42,6 +42,7 @@ Production should define all of the following:
 - `ADMIN_PASSWORD`
 - `DATABASE_PATH=/opt/forecasterarena-state/data/forecaster.db`
 - `BACKUP_PATH=/opt/forecasterarena-state/backups`
+- `DECISION_COHORT_LIMIT=5` (optional; defaults to `5`)
 - `NEXT_PUBLIC_SITE_URL` (recommended)
 - `NEXT_PUBLIC_GITHUB_URL` (optional)
 
@@ -87,6 +88,7 @@ The code does not contain its own scheduler. The currently intended cadence is:
 Why this schedule matters:
 
 - `run-decisions` assumes `start-cohort` has already executed or that the weekly cohort can still be bootstrapped.
+- `run-decisions` only spends LLM calls on active cohorts inside the latest decision window; older active cohorts remain tracking-only.
 - `check-resolutions` only processes markets that are locally `closed`.
 - `take-snapshots` is most useful when run regularly; the database schema is timestamp-based, not day-based.
 
@@ -206,6 +208,7 @@ Operational rule:
 - register new releases and promote future configs through the admin benchmark control plane
 - do not mutate old `models` rows expecting historical cohorts to follow along safely
 - active cohorts refresh to the promoted default lineup before Sunday decision runs
+- only decision-eligible active cohorts receive new LLM calls after that refresh
 - historical decisions, trades, and brier scores keep their frozen release lineage even after active cohorts refresh
 
 Recommended release-rotation workflow:
@@ -254,7 +257,8 @@ sqlite3 /opt/forecasterarena-state/data/forecaster.db "
 
 Expected:
 
-- one decision row per active agent for the run,
+- one decision row per active agent in each decision-eligible cohort for the run,
+- no new decision rows for older active cohorts outside the decision window,
 - no duplicate rows for the same `(agent_id, cohort_id, decision_week)`.
 
 Because the application now claims a single canonical decision row per agent/week, reruns should overwrite or reuse that row rather than add another one.

@@ -90,7 +90,7 @@ Core product semantics:
 |---|---|---|---|
 | Sync Polymarket markets | [`POST /api/cron/sync-markets`](../app/api/cron/sync-markets/route.ts) | Polymarket fetch + market upsert | [`lib/application/cron/syncMarkets.ts`](../lib/application/cron/syncMarkets.ts), [`lib/engine/market/syncMarkets.ts`](../lib/engine/market/syncMarkets.ts), [`lib/polymarket`](../lib/polymarket) |
 | Start cohort | [`POST /api/cron/start-cohort`](../app/api/cron/start-cohort/route.ts) | benchmark config + cohort/agent creation | [`lib/application/cron/startCohort.ts`](../lib/application/cron/startCohort.ts), [`lib/engine/cohort/start.ts`](../lib/engine/cohort/start.ts), [`lib/db/queries/cohorts.ts`](../lib/db/queries/cohorts.ts) |
-| Run weekly decisions | [`POST /api/cron/run-decisions`](../app/api/cron/run-decisions/route.ts) | active cohorts + top markets + OpenRouter | [`lib/application/cron/runDecisions.ts`](../lib/application/cron/runDecisions.ts), [`lib/engine/decision`](../lib/engine/decision), [`lib/openrouter`](../lib/openrouter) |
+| Run weekly decisions | [`POST /api/cron/run-decisions`](../app/api/cron/run-decisions/route.ts) | decision-eligible latest active cohorts + top markets + OpenRouter | [`lib/application/cron/runDecisions.ts`](../lib/application/cron/runDecisions.ts), [`lib/engine/decision`](../lib/engine/decision), [`lib/openrouter`](../lib/openrouter) |
 | Check resolutions | [`POST /api/cron/check-resolutions`](../app/api/cron/check-resolutions/route.ts) | locally closed markets + Polymarket resolution status | [`lib/application/cron/checkResolutions.ts`](../lib/application/cron/checkResolutions.ts), [`lib/engine/resolution`](../lib/engine/resolution) |
 | Take portfolio snapshots | [`POST /api/cron/take-snapshots`](../app/api/cron/take-snapshots/route.ts) | active cohorts + positions + pricing fallback | [`lib/application/cron/takeSnapshots.ts`](../lib/application/cron/takeSnapshots.ts), [`lib/application/cron/snapshotPricing.ts`](../lib/application/cron/snapshotPricing.ts), [`lib/scoring/pnl`](../lib/scoring/pnl) |
 | Database backup | [`POST /api/cron/backup`](../app/api/cron/backup/route.ts) | SQLite backup path | [`lib/application/cron/backup.ts`](../lib/application/cron/backup.ts), [`lib/db/backup.ts`](../lib/db/backup.ts) |
@@ -181,6 +181,7 @@ Flow:
 Key property:
 
 - Historical records stay stable because decisions, trades, and Brier diagnostic rows snapshot lineage at write time even if an active cohort later rolls forward to a new release.
+- The refresh can still touch all active cohorts, but only decision-eligible cohorts use the refreshed releases for new LLM decisions.
 
 ### 4. Decision pipeline
 
@@ -188,7 +189,7 @@ Flow:
 
 1. [`POST /api/cron/run-decisions`](../app/api/cron/run-decisions/route.ts)
 2. [`lib/application/cron/runDecisions.ts`](../lib/application/cron/runDecisions.ts)
-3. [`lib/engine/decision/runAllDecisions.ts`](../lib/engine/decision/runAllDecisions.ts) iterates active cohorts.
+3. [`lib/engine/decision/runAllDecisions.ts`](../lib/engine/decision/runAllDecisions.ts) iterates decision-eligible active cohorts returned by `getDecisionEligibleCohorts()`.
 4. [`lib/engine/decision/runCohortDecisions.ts`](../lib/engine/decision/runCohortDecisions.ts) loads agents and top markets, then processes agents sequentially.
 5. [`lib/engine/decision/processAgentDecision/execute.ts`](../lib/engine/decision/processAgentDecision/execute.ts) performs the per-agent state machine:
    - claim canonical decision row through [`lib/engine/decision/processAgentDecision/claim.ts`](../lib/engine/decision/processAgentDecision/claim.ts)
@@ -229,7 +230,7 @@ Flow:
 
 1. [`POST /api/cron/take-snapshots`](../app/api/cron/take-snapshots/route.ts)
 2. [`lib/application/cron/takeSnapshots.ts`](../lib/application/cron/takeSnapshots.ts)
-3. Load all active cohorts and agents.
+3. Load all active cohorts and agents, including cohorts outside the decision window.
 4. For each agent, read all open positions, derive snapshot pricing through [`lib/application/cron/snapshotPricing.ts`](../lib/application/cron/snapshotPricing.ts), update mark-to-market fields on positions, and create a portfolio snapshot row.
 5. Refresh persisted performance cache through [`lib/application/performance.ts`](../lib/application/performance.ts).
 

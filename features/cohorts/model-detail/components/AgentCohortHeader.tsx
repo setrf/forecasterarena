@@ -1,4 +1,8 @@
 import type { AgentCohortData } from '@/features/cohorts/model-detail/types';
+import {
+  getCohortDecisionStatusBadge,
+  getCohortDecisionStatusLabel
+} from '@/features/cohorts/decisionStatus';
 
 interface AgentCohortHeaderProps {
   data: AgentCohortData;
@@ -24,6 +28,9 @@ export function AgentCohortHeader({ data }: AgentCohortHeaderProps) {
             )}
             <span className={`badge ${data.agent.status === 'active' ? 'badge-active' : 'badge-pending'}`}>
               {data.agent.status}
+            </span>
+            <span className={`badge ${getCohortDecisionStatusBadge(data.cohort.decision_status)}`}>
+              {getCohortDecisionStatusLabel(data.cohort.decision_status)}
             </span>
             <span className="badge">Week {data.cohort.current_week}</span>
           </div>

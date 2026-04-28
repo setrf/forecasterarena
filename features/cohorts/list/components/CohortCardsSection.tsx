@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import { formatDisplayDate } from '@/lib/utils';
+import {
+  getCohortDecisionStatusBadge,
+  getCohortDecisionStatusLabel
+} from '@/features/cohorts/decisionStatus';
 import type { CohortSummary } from '@/features/cohorts/list/types';
 
 interface CohortCardsSectionProps {
@@ -8,7 +12,7 @@ interface CohortCardsSectionProps {
   loading: boolean;
   emptyTitle: string;
   emptyDescription: string;
-  variant: 'active' | 'completed';
+  variant: 'decisioning' | 'resolving' | 'completed';
 }
 
 export function CohortCardsSection({
@@ -19,11 +23,12 @@ export function CohortCardsSection({
   emptyDescription,
   variant
 }: CohortCardsSectionProps) {
-  const isActive = variant === 'active';
+  const isDecisioning = variant === 'decisioning';
+  const isCompleted = variant === 'completed';
 
   return (
     <div className="mb-16">
-      {isActive ? (
+      {isDecisioning ? (
         <div className="flex items-center gap-3 mb-6">
           <span className="w-2 h-2 rounded-full bg-[var(--color-positive)] animate-pulse" />
           <h2 className="heading-block">{title}</h2>
@@ -40,7 +45,7 @@ export function CohortCardsSection({
         <div className="card p-12 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--bg-tertiary)] flex items-center justify-center">
             <svg className="w-8 h-8 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={isActive
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={!isCompleted
                 ? 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
                 : 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4'
               } />
@@ -51,7 +56,7 @@ export function CohortCardsSection({
             {emptyDescription}
           </p>
         </div>
-      ) : isActive ? (
+      ) : !isCompleted ? (
         <div className="grid md:grid-cols-2 gap-6">
           {cohorts.map((cohort) => (
             <Link
@@ -61,7 +66,9 @@ export function CohortCardsSection({
             >
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <span className="badge badge-active mb-3">Live</span>
+                  <span className={`badge ${getCohortDecisionStatusBadge(cohort.decision_status)} mb-3`}>
+                    {getCohortDecisionStatusLabel(cohort.decision_status)}
+                  </span>
                   <h3 className="heading-block group-hover:text-[var(--accent-gold)] transition-colors">
                     Cohort #{cohort.cohort_number}
                   </h3>

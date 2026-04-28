@@ -3,6 +3,7 @@ import {
   getAgentsWithModelsByCohort,
   getAverageBrierScore,
   getCohortById,
+  getCohortDecisionStateByNumber,
   getLatestSnapshot
 } from '@/lib/db/queries';
 import { calculateWeekNumber } from '@/lib/utils';
@@ -68,7 +69,8 @@ export function getCohortDetail(
     data: {
       cohort: {
         ...cohort,
-        benchmark_config_id: cohort.benchmark_config_id
+        benchmark_config_id: cohort.benchmark_config_id,
+        ...getCohortDecisionStateByNumber(cohort)
       },
       agents,
       stats: {

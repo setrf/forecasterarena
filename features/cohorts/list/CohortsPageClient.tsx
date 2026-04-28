@@ -57,8 +57,12 @@ export default function CohortsPageClient() {
     };
   }, []);
 
-  const activeCohorts = useMemo(
-    () => cohorts.filter((cohort) => cohort.status === 'active'),
+  const decisionCohorts = useMemo(
+    () => cohorts.filter((cohort) => cohort.decision_status === 'decisioning'),
+    [cohorts]
+  );
+  const resolvingCohorts = useMemo(
+    () => cohorts.filter((cohort) => cohort.decision_status === 'tracking_only'),
     [cohorts]
   );
   const completedCohorts = useMemo(
@@ -79,12 +83,21 @@ export default function CohortsPageClient() {
         )}
 
         <CohortCardsSection
-          title="Active Cohorts"
-          cohorts={activeCohorts}
+          title="Decision Cohorts"
+          cohorts={decisionCohorts}
           loading={loading}
-          emptyTitle="No Active Cohort"
-          emptyDescription={`Next cohort starts ${nextSundayLabel} at 00:00 UTC`}
-          variant="active"
+          emptyTitle="No Decision Cohorts"
+          emptyDescription={`Next cohort starts ${nextSundayLabel}; decisions begin at 00:05 UTC`}
+          variant="decisioning"
+        />
+
+        <CohortCardsSection
+          title="Resolving Cohorts"
+          cohorts={resolvingCohorts}
+          loading={loading}
+          emptyTitle="No Resolving Cohorts"
+          emptyDescription="Older active cohorts will appear here after they leave the latest decision window"
+          variant="resolving"
         />
 
         <CohortCardsSection

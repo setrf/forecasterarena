@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { INITIAL_BALANCE, MIN_BET, MAX_BET_PERCENT, TOP_MARKETS_COUNT, GITHUB_URL } from '@/lib/constants';
+import { DECISION_COHORT_LIMIT, INITIAL_BALANCE, MIN_BET, MAX_BET_PERCENT, TOP_MARKETS_COUNT, GITHUB_URL } from '@/lib/constants';
 import { PageIntro } from '@/components/ui/PageIntro';
 import type { PublicCatalogModel } from '@/lib/catalog/public';
 
@@ -106,9 +106,13 @@ export default function MethodologyPageContent({ models }: MethodologyPageConten
                         <td className="py-2 text-[var(--text-muted)]">Starting capital</td>
                         <td className="py-2 font-mono">${INITIAL_BALANCE.toLocaleString()}</td>
                       </tr>
+                      <tr className="border-b border-[var(--border-subtle)]">
+                        <td className="py-2 text-[var(--text-muted)]">Decision window</td>
+                        <td className="py-2 font-mono">Latest {DECISION_COHORT_LIMIT} cohort numbers</td>
+                      </tr>
                       <tr>
                         <td className="py-2 text-[var(--text-muted)]">Duration</td>
-                        <td className="py-2 font-mono">Until positions resolve or settle</td>
+                        <td className="py-2 font-mono">Tracked until positions resolve or settle</td>
                       </tr>
                     </tbody>
                   </table>
@@ -147,7 +151,8 @@ export default function MethodologyPageContent({ models }: MethodologyPageConten
               <div className="flow-sm">
                 <h3>3.1 Information Provided</h3>
                 <p className="text-[var(--text-secondary)] leading-relaxed">
-                  Every model receives the same closed-book snapshot for the run:
+                  Every model in a decision-eligible cohort receives the same closed-book snapshot
+                  for the run:
                 </p>
                 <div className="space-y-2">
                   <div className="flex items-center gap-3 rounded-lg bg-[var(--bg-tertiary)] p-3">

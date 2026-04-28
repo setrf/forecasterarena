@@ -1,6 +1,7 @@
 import type {
   Agent,
   BenchmarkConfigModel,
+  CohortDecisionStatus,
   Market,
   Model,
   ModelFamily,
@@ -65,4 +66,6 @@ export interface CohortSummary {
   num_agents: number;
   total_markets_traded: number;
   methodology_version: string;
+  decision_eligible: boolean;
+  decision_status: CohortDecisionStatus;
 }

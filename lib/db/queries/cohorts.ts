@@ -1,5 +1,9 @@
 import { generateId, getDb, withImmediateTransaction } from '../index';
-import { METHODOLOGY_VERSION } from '../../constants';
+import { DECISION_COHORT_LIMIT, METHODOLOGY_VERSION } from '../../constants';
+import {
+  getCohortDecisionState,
+  getDecisionEligibilityThreshold
+} from '@/lib/cohort-decision-state';
 import type { Cohort } from '../../types';
 import { getDefaultBenchmarkConfig } from '@/lib/db/queries/benchmark-configs';
 
@@ -29,6 +33,18 @@ export function getActiveCohorts(): Cohort[] {
   `).all() as Cohort[];
 }
 
+export function getDecisionEligibleCohorts(limit: number = DECISION_COHORT_LIMIT): Cohort[] {
+  const db = getDb();
+  const threshold = getDecisionEligibilityThreshold(getLatestCohortNumber(), limit);
+
+  return db.prepare(`
+    SELECT * FROM cohorts
+    WHERE status = 'active'
+      AND cohort_number >= ?
+    ORDER BY cohort_number DESC
+  `).all(threshold) as Cohort[];
+}
+
 export function getCohortById(id: string): Cohort | undefined {
   const db = getDb();
   return db.prepare('SELECT * FROM cohorts WHERE id = ?').get(id) as Cohort | undefined;
@@ -55,6 +71,13 @@ export function getLatestCohortNumber(): number {
   const db = getDb();
   const result = db.prepare('SELECT MAX(cohort_number) as max FROM cohorts').get() as { max: number | null };
   return result.max || 0;
+}
+
+export function getCohortDecisionStateByNumber(
+  cohort: Pick<Cohort, 'cohort_number' | 'status'>,
+  limit: number = DECISION_COHORT_LIMIT
+) {
+  return getCohortDecisionState(cohort, getLatestCohortNumber(), limit);
 }
 
 export function createCohort(benchmarkConfigId?: string | null): Cohort {

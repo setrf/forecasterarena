@@ -1,5 +1,6 @@
 import { getDb } from '../index';
 import { INITIAL_BALANCE } from '../../constants';
+import { getCohortDecisionState } from '@/lib/cohort-decision-state';
 import type { CohortSummary, LeaderboardEntry } from '../../types';
 
 export function getAggregateLeaderboard(): LeaderboardEntry[] {
@@ -126,7 +127,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
 
 export function getCohortSummaries(): CohortSummary[] {
   const db = getDb();
-  return db.prepare(`
+  const rows = db.prepare(`
     SELECT
       c.id,
       c.cohort_number,
@@ -140,5 +141,15 @@ export function getCohortSummaries(): CohortSummary[] {
     LEFT JOIN trades t ON a.id = t.agent_id
     GROUP BY c.id
     ORDER BY c.started_at DESC
-  `).all() as CohortSummary[];
+  `).all() as Array<Omit<CohortSummary, 'decision_eligible' | 'decision_status'>>;
+
+  const latestCohortNumber = rows.reduce(
+    (max, cohort) => Math.max(max, cohort.cohort_number),
+    0
+  );
+
+  return rows.map((cohort) => ({
+    ...cohort,
+    ...getCohortDecisionState(cohort, latestCohortNumber)
+  }));
 }

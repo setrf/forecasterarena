@@ -57,6 +57,8 @@ describe('cohorts list page data helper', () => {
             cohort_number: 1,
             started_at: '2026-03-01T00:00:00.000Z',
             status: 'active',
+            decision_eligible: true,
+            decision_status: 'decisioning',
             num_agents: 7,
             total_markets_traded: 3,
             methodology_version: 'v1'
@@ -67,7 +69,14 @@ describe('cohorts list page data helper', () => {
 
     await expect(fetchCohortsPageData()).resolves.toEqual({
       status: 'ok',
-      data: [expect.objectContaining({ id: 'cohort-1', status: 'active' })]
+      data: [
+        expect.objectContaining({
+          id: 'cohort-1',
+          status: 'active',
+          decision_eligible: true,
+          decision_status: 'decisioning'
+        })
+      ]
     });
 
     await expect(fetchCohortsPageData()).resolves.toEqual({

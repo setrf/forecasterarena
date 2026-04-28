@@ -1,7 +1,7 @@
 /**
  * Run Decisions Cron Endpoint
  * 
- * Runs weekly LLM decisions for all active cohorts.
+ * Runs weekly LLM decisions for decision-eligible active cohorts.
  * Schedule: Every Sunday at 00:05 UTC (after start-cohort)
  * 
  * @route POST /api/cron/run-decisions

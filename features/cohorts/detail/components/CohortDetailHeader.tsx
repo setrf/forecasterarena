@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import type { Cohort } from '@/features/cohorts/detail/types';
+import {
+  getCohortDecisionStatusBadge,
+  getCohortDecisionStatusLabel
+} from '@/features/cohorts/decisionStatus';
 
 interface CohortDetailHeaderProps {
   cohort: Cohort;
@@ -22,6 +26,9 @@ export function CohortDetailHeader({ cohort }: CohortDetailHeaderProps) {
             <h1 className="detail-header__title">Cohort #{cohort.cohort_number}</h1>
             <span className={`badge ${cohort.status === 'active' ? 'badge-active' : 'badge-completed'}`}>
               {cohort.status}
+            </span>
+            <span className={`badge ${getCohortDecisionStatusBadge(cohort.decision_status)}`}>
+              {getCohortDecisionStatusLabel(cohort.decision_status)}
             </span>
           </div>
           <p className="detail-header__meta">{cohort.methodology_version}</p>

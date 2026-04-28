@@ -21,7 +21,7 @@ export function ModelRecentDecisionsPanel({
       ) : decisions.length === 0 ? (
         <div className="text-center py-12 text-[var(--text-muted)]">
           <p>No decisions yet</p>
-          <p className="text-sm mt-2">Decisions are made every Sunday at 00:00 UTC</p>
+          <p className="text-sm mt-2">Latest eligible cohorts receive decisions every Sunday at 00:05 UTC</p>
         </div>
       ) : (
         <div className="space-y-3">

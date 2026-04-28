@@ -10,7 +10,15 @@ describe('public data routes', () => {
   it('adapts leaderboard application data into a no-store response', async () => {
     const payload = {
       leaderboard: [{ family_slug: 'family-1', total_pnl: 123 }],
-      cohorts: [{ id: 'cohort-1', cohort_number: 1 }],
+      models: [],
+      cohorts: [
+        {
+          id: 'cohort-1',
+          cohort_number: 1,
+          decision_eligible: true,
+          decision_status: 'decisioning'
+        }
+      ],
       updated_at: '2026-03-06T00:00:00.000Z'
     };
 
@@ -37,8 +45,13 @@ describe('public data routes', () => {
       queries.createAgentsForCohort(cohort.id);
 
       const response = await route.GET();
+      const body = await response.json();
       expect(response.status).toBe(200);
       expect(response.headers.get('cache-control')).toBe('public, max-age=15, stale-while-revalidate=45');
+      expect(body.cohorts[0]).toMatchObject({
+        decision_eligible: true,
+        decision_status: 'decisioning'
+      });
     } finally {
       await ctx.cleanup();
     }

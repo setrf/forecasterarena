@@ -90,6 +90,14 @@ describe('cron routes', () => {
         data: {
           success: true,
           cohort_bootstrap: { cohort_id: 'cohort-2', cohort_number: 2 },
+          lineup_refresh: {
+            default_config_id: 'benchmark-default',
+            cohorts_updated: 2,
+            agents_updated: 14
+          },
+          decision_cohort_limit: 5,
+          tracking_active_cohorts: 8,
+          decision_eligible_cohorts: 5,
           cohorts_processed: 1,
           total_agents: 6,
           total_errors: 0,
@@ -107,6 +115,9 @@ describe('cron routes', () => {
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({
         success: true,
+        decision_cohort_limit: 5,
+        tracking_active_cohorts: 8,
+        decision_eligible_cohorts: 5,
         cohorts_processed: 1,
         total_agents: 6,
         total_errors: 0

@@ -49,6 +49,8 @@ Within a cohort:
 
 This keeps the comparison about model behavior, not about unequal access, changing rules, or retroactive scoring.
 
+To keep the live evaluation operationally sustainable, only the latest decision window receives new weekly LLM calls. The production default is the newest five cohort numbers. Older active cohorts do not re-enter decision eligibility, but they remain live for portfolio snapshots, resolution checks, leaderboards, drilldowns, and audit history until their markets settle.
+
 ## Market Universe: Top-Volume Polymarket Markets
 
 The v2 market universe remains the top-volume Polymarket markets used by the benchmark.
@@ -64,6 +66,8 @@ At each decision run, a model chooses one valid action:
 - `HOLD`: leave the portfolio unchanged
 
 The prompt includes the current market snapshot, the model's paper portfolio state, and the rules governing valid actions. The model response is parsed into a deterministic action record. Invalid or unparseable actions are logged rather than silently rewritten into better decisions.
+
+Decision runs apply only to active cohorts inside the latest decision window. Tracking-only cohorts keep their existing positions and continue to be scored as reality resolves.
 
 ## Portfolio Accounting and Ranking
 

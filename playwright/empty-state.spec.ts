@@ -10,7 +10,8 @@ test('public pages render the empty benchmark state intentionally', async ({ pag
   await expect(page.getByText('Pending')).toBeVisible();
 
   await page.goto('/cohorts');
-  await expect(page.getByText('No Active Cohort')).toBeVisible();
+  await expect(page.getByText('No Decision Cohorts')).toBeVisible();
+  await expect(page.getByText('No Resolving Cohorts')).toBeVisible();
   await expect(page.getByText('No Completed Cohorts')).toBeVisible();
 
   await page.goto('/markets');

@@ -242,6 +242,7 @@ Operational note:
 - current and future cohorts may point at the promoted default config
 - legacy cohorts backfilled during migration can receive cohort-specific `benchmark-config-backfill-<cohort_id>` configs so historical assignments are frozen without rewriting the shared future default
 - active cohorts may also be rolled to the promoted default config through explicit admin rollover or the Sunday decision-refresh path
+- decision eligibility is derived at runtime from the latest cohort-number window; no schema column stores whether an active cohort is decisioning or tracking-only
 
 ---
 
