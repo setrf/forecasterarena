@@ -6,7 +6,6 @@ import type {
 } from '@/components/charts/performance/types';
 import {
   calculatePerformanceYDomain,
-  filterPerformanceData,
   filterReleaseChanges,
   getPerformanceSummary,
   getSundayMarkers
@@ -32,8 +31,8 @@ export function buildPerformanceChartViewModel(args: {
   timeRange: TimeRange;
   isolatedModel: string | null;
 }): PerformanceChartViewModel {
-  const filteredData = filterPerformanceData(args.data, args.timeRange);
-  const visibleReleaseChanges = filterReleaseChanges(args.releaseChanges, args.timeRange)
+  const filteredData = args.data;
+  const visibleReleaseChanges = filterReleaseChanges(args.releaseChanges, filteredData)
     .filter((event) => !args.isolatedModel || event.model_id === args.isolatedModel);
   const { leaderId, latestValues, previousValues } = getPerformanceSummary(filteredData, args.models);
 

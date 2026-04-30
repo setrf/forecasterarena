@@ -7,9 +7,7 @@ interface TimeRangeSelectorProps {
   onChange: (range: TimeRange) => void;
 }
 
-const ranges: { value: TimeRange; label: string }[] = [
-  { value: '10M', label: '10M' },
-  { value: '1H', label: '1H' },
+export const VISIBLE_TIME_RANGES: { value: TimeRange; label: string }[] = [
   { value: '1D', label: '1D' },
   { value: '1W', label: '1W' },
   { value: '1M', label: '1M' },
@@ -20,7 +18,7 @@ const ranges: { value: TimeRange; label: string }[] = [
 export default function TimeRangeSelector({ selected, onChange }: TimeRangeSelectorProps) {
   return (
     <div className="flex items-center gap-1 bg-[var(--bg-tertiary)] rounded-lg p-1">
-      {ranges.map((range) => (
+      {VISIBLE_TIME_RANGES.map((range) => (
         <button
           key={range.value}
           onClick={() => onChange(range.value)}

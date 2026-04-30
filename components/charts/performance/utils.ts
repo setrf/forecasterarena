@@ -3,46 +3,8 @@ import { BASELINE } from '@/components/charts/performance/constants';
 import type {
   ModelConfig,
   PerformanceDataPoint,
-  ReleaseChangeEvent,
-  TimeRange
+  ReleaseChangeEvent
 } from '@/components/charts/performance/types';
-
-export function filterPerformanceData(
-  data: PerformanceDataPoint[],
-  timeRange: TimeRange
-): PerformanceDataPoint[] {
-  if (timeRange === 'ALL' || data.length === 0) {
-    return data;
-  }
-
-  const now = new Date();
-  const cutoffDate = new Date();
-
-  switch (timeRange) {
-    case '10M':
-      cutoffDate.setMinutes(now.getMinutes() - 10);
-      break;
-    case '1H':
-      cutoffDate.setHours(now.getHours() - 1);
-      break;
-    case '1D':
-      cutoffDate.setDate(now.getDate() - 1);
-      break;
-    case '1W':
-      cutoffDate.setDate(now.getDate() - 7);
-      break;
-    case '1M':
-      cutoffDate.setMonth(now.getMonth() - 1);
-      break;
-    case '3M':
-      cutoffDate.setMonth(now.getMonth() - 3);
-      break;
-    default:
-      break;
-  }
-
-  return data.filter((point) => parseUTCTimestamp(point.date) >= cutoffDate);
-}
 
 export function getPerformanceSummary(
   filteredData: PerformanceDataPoint[],
@@ -148,39 +110,19 @@ export function getSundayMarkers(filteredData: PerformanceDataPoint[]): string[]
 
 export function filterReleaseChanges(
   releaseChanges: ReleaseChangeEvent[] | undefined,
-  timeRange: TimeRange
+  data: PerformanceDataPoint[]
 ): ReleaseChangeEvent[] {
   const changes = releaseChanges ?? [];
 
-  if (timeRange === 'ALL' || changes.length === 0) {
-    return changes;
+  if (changes.length === 0 || data.length === 0) {
+    return [];
   }
 
-  const now = new Date();
-  const cutoffDate = new Date();
+  const firstPointDate = parseUTCTimestamp(data[0].date);
+  const lastPointDate = parseUTCTimestamp(data[data.length - 1].date);
 
-  switch (timeRange) {
-    case '10M':
-      cutoffDate.setMinutes(now.getMinutes() - 10);
-      break;
-    case '1H':
-      cutoffDate.setHours(now.getHours() - 1);
-      break;
-    case '1D':
-      cutoffDate.setDate(now.getDate() - 1);
-      break;
-    case '1W':
-      cutoffDate.setDate(now.getDate() - 7);
-      break;
-    case '1M':
-      cutoffDate.setMonth(now.getMonth() - 1);
-      break;
-    case '3M':
-      cutoffDate.setMonth(now.getMonth() - 3);
-      break;
-    default:
-      break;
-  }
-
-  return changes.filter((event) => parseUTCTimestamp(event.date) >= cutoffDate);
+  return changes.filter((event) => {
+    const eventDate = parseUTCTimestamp(event.date);
+    return eventDate >= firstPointDate && eventDate <= lastPointDate;
+  });
 }

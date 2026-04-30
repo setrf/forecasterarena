@@ -27,8 +27,8 @@ async function withPerformanceFixture(
   }
 }
 
-function snapshotIso(iso: string): string {
-  return new Date(iso).toISOString();
+function snapshotTimestamp(iso: string): string {
+  return new Date(iso).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
 }
 
 describe('performance data route', () => {
@@ -56,7 +56,7 @@ describe('performance data route', () => {
       snapshots.forEach((timestamp, index) => {
         queries.createPortfolioSnapshot({
           agent_id: agent.id,
-          snapshot_timestamp: snapshotIso(timestamp),
+          snapshot_timestamp: snapshotTimestamp(timestamp),
           cash_balance: 10_000 + index,
           positions_value: 0,
           total_value: 10_000 + index,
@@ -95,6 +95,41 @@ describe('performance data route', () => {
     });
   });
 
+  it('anchors ranges to the latest available snapshot instead of wall-clock time', async () => {
+    vi.setSystemTime(new Date('2026-03-10T12:00:00.000Z'));
+
+    await withPerformanceFixture(async ({ agent, queries, route }) => {
+      const snapshots = [
+        '2026-03-05T11:55:00.000Z',
+        '2026-03-05T10:00:00.000Z',
+        '2026-03-04T11:30:00.000Z'
+      ];
+
+      snapshots.forEach((timestamp, index) => {
+        queries.createPortfolioSnapshot({
+          agent_id: agent.id,
+          snapshot_timestamp: snapshotTimestamp(timestamp),
+          cash_balance: 10_000 + index,
+          positions_value: 0,
+          total_value: 10_000 + index,
+          total_pnl: index,
+          total_pnl_percent: index / 100
+        });
+      });
+
+      const response = await route.GET(
+        new Request('http://localhost/api/performance-data?range=1D') as any
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.data.map((row: { date: string }) => row.date)).toEqual([
+        '2026-03-05 10:00:00',
+        '2026-03-05 11:50:00'
+      ]);
+    });
+  });
+
   it('returns the correct windows for weekly, monthly, quarterly, and all-time ranges', async () => {
     await withPerformanceFixture(async ({ agent, cohort, queries, route }) => {
       const snapshots = [
@@ -108,7 +143,7 @@ describe('performance data route', () => {
       snapshots.forEach((timestamp, index) => {
         queries.createPortfolioSnapshot({
           agent_id: agent.id,
-          snapshot_timestamp: snapshotIso(timestamp),
+          snapshot_timestamp: snapshotTimestamp(timestamp),
           cash_balance: 10_100 + index,
           positions_value: 0,
           total_value: 10_100 + index,
@@ -165,7 +200,7 @@ describe('performance data route', () => {
     await withPerformanceFixture(async ({ agent, cohort, queries, route }) => {
       queries.createPortfolioSnapshot({
         agent_id: agent.id,
-        snapshot_timestamp: snapshotIso('2026-03-05T11:55:00.000Z'),
+        snapshot_timestamp: snapshotTimestamp('2026-03-05T11:55:00.000Z'),
         cash_balance: 10_250,
         positions_value: 0,
         total_value: 10_250,
@@ -200,7 +235,7 @@ describe('performance data route', () => {
 
       queries.createPortfolioSnapshot({
         agent_id: agent.id,
-        snapshot_timestamp: snapshotIso('2026-03-05T11:55:00.000Z'),
+        snapshot_timestamp: snapshotTimestamp('2026-03-05T11:55:00.000Z'),
         cash_balance: 10_500,
         positions_value: 0,
         total_value: 10_500,
@@ -247,7 +282,7 @@ describe('performance data route', () => {
 
       queries.createPortfolioSnapshot({
         agent_id: agent.id,
-        snapshot_timestamp: snapshotIso('2026-03-05T11:55:00.000Z'),
+        snapshot_timestamp: snapshotTimestamp('2026-03-05T11:55:00.000Z'),
         cash_balance: 10_500,
         positions_value: 0,
         total_value: 10_500,

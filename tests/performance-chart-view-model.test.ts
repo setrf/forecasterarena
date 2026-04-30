@@ -18,7 +18,7 @@ describe('performance chart view model', () => {
     expect(getIsolatedModelName(models, null)).toBeNull();
   });
 
-  it('builds derived chart state from filtered data', () => {
+  it('builds derived chart state from API-windowed data without extra browser-time filtering', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-07T12:00:00.000Z'));
 
@@ -36,6 +36,7 @@ describe('performance chart view model', () => {
       });
 
       expect(viewModel.filteredData).toEqual([
+        { date: '2026-01-15T00:00:00.000Z', alpha: 9800, beta: 10200 },
         { date: '2026-03-02T00:00:00.000Z', alpha: 10100, beta: 10300 },
         { date: '2026-03-07T00:00:00.000Z', alpha: 10500, beta: 10400 }
       ]);

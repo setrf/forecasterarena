@@ -4,6 +4,7 @@ import {
   getReleaseChangeEvents,
   type ReleaseChangeEvent
 } from '@/lib/application/performance-release-changes';
+import { getRangeStartForLatestSnapshot } from '@/lib/application/performance-range';
 
 export type PerformanceTimeRange = '10M' | '1H' | '1D' | '1W' | '1M' | '3M' | 'ALL';
 export { getReleaseChangeEvents, type ReleaseChangeEvent };
@@ -60,36 +61,6 @@ function normalizeRange(rawRange: string | null): PerformanceTimeRange {
   return VALID_RANGES.has(rawRange as PerformanceTimeRange)
     ? rawRange as PerformanceTimeRange
     : '1M';
-}
-
-function getRangeStart(range: PerformanceTimeRange, now: Date): string {
-  const start = new Date(now);
-
-  switch (range) {
-    case '10M':
-      start.setMinutes(start.getMinutes() - 10);
-      break;
-    case '1H':
-      start.setHours(start.getHours() - 1);
-      break;
-    case '1D':
-      start.setDate(start.getDate() - 1);
-      break;
-    case '1W':
-      start.setDate(start.getDate() - 7);
-      break;
-    case '1M':
-      start.setMonth(start.getMonth() - 1);
-      break;
-    case '3M':
-      start.setMonth(start.getMonth() - 3);
-      break;
-    case 'ALL':
-      start.setFullYear(start.getFullYear() - 10);
-      break;
-  }
-
-  return start.toISOString();
 }
 
 function getBucketSeconds(range: PerformanceTimeRange): number {
@@ -286,7 +257,7 @@ function computePerformanceSeries(
     bucketSeconds,
     bucketSeconds,
     bucketSeconds,
-    getRangeStart(range, new Date())
+    getRangeStartForLatestSnapshot(range, scope)
   ];
 
   let query = `
