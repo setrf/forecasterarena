@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  approveAdminModelLineupReview,
+  checkAdminModelLineup,
   createAdminBenchmarkConfig,
   createAdminBenchmarkRelease,
+  dismissAdminModelLineupReview,
   fetchAdminBenchmarkOverview,
   promoteAdminBenchmarkConfig
 } from '@/features/admin/benchmark/api';
@@ -81,6 +84,32 @@ describe('admin benchmark page api helpers', () => {
     await expect(promoteAdminBenchmarkConfig('config-1')).resolves.toEqual({
       type: 'success',
       message: 'lineup-v2 promoted as the default lineup'
+    });
+  });
+
+  it('normalizes lineup review check, approval, and dismissal messages', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(mockResponse(true, { status: 'open', candidate_count: 2 }))
+      .mockResolvedValueOnce(mockResponse(true, { status: 'no_changes', candidate_count: 0 }))
+      .mockResolvedValueOnce(mockResponse(true, { version_name: 'lineup-20260501-openrouter-review-abc123' }))
+      .mockResolvedValueOnce(mockResponse(true, { success: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(checkAdminModelLineup()).resolves.toEqual({
+      type: 'success',
+      message: 'OpenRouter lineup review found 2 item(s) for operator review'
+    });
+    await expect(checkAdminModelLineup()).resolves.toEqual({
+      type: 'success',
+      message: 'OpenRouter lineup review found no newer general-purpose candidates'
+    });
+    await expect(approveAdminModelLineupReview('review-1')).resolves.toEqual({
+      type: 'success',
+      message: 'lineup-20260501-openrouter-review-abc123 approved for future cohorts; existing active cohorts remain frozen'
+    });
+    await expect(dismissAdminModelLineupReview('review-1')).resolves.toEqual({
+      type: 'success',
+      message: 'OpenRouter lineup review dismissed'
     });
   });
 });

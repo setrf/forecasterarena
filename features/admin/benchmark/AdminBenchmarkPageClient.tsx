@@ -3,6 +3,7 @@
 import { AdminBenchmarkConfigBuilder } from '@/features/admin/benchmark/components/AdminBenchmarkConfigBuilder';
 import { AdminBenchmarkConfigsTable } from '@/features/admin/benchmark/components/AdminBenchmarkConfigsTable';
 import { AdminBenchmarkCurrentLineup } from '@/features/admin/benchmark/components/AdminBenchmarkCurrentLineup';
+import { AdminBenchmarkLineupReviewPanel } from '@/features/admin/benchmark/components/AdminBenchmarkLineupReviewPanel';
 import { AdminBenchmarkReleaseForm } from '@/features/admin/benchmark/components/AdminBenchmarkReleaseForm';
 import { AdminBenchmarkRolloverPreview } from '@/features/admin/benchmark/components/AdminBenchmarkRolloverPreview';
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell';
@@ -23,6 +24,9 @@ export default function AdminBenchmarkPageClient() {
     configLoading,
     promotingConfigId,
     previewingConfigId,
+    checkingLineup,
+    approvingReviewId,
+    dismissingReviewId,
     applyingRollover,
     rolloverPreview,
     releaseState,
@@ -39,6 +43,9 @@ export default function AdminBenchmarkPageClient() {
     handlePromoteConfig,
     handlePreviewRollover,
     handleApplyRollover,
+    handleCheckLineup,
+    handleApproveLineupReview,
+    handleDismissLineupReview,
     dismissRolloverPreview
   } = useAdminBenchmarkController();
 
@@ -100,6 +107,15 @@ export default function AdminBenchmarkPageClient() {
     >
       <AdminResultBanner result={result} />
       <AdminBenchmarkCurrentLineup overview={overview} />
+      <AdminBenchmarkLineupReviewPanel
+        review={overview.latest_review}
+        checking={checkingLineup}
+        approvingReviewId={approvingReviewId}
+        dismissingReviewId={dismissingReviewId}
+        onCheck={handleCheckLineup}
+        onApprove={handleApproveLineupReview}
+        onDismiss={handleDismissLineupReview}
+      />
       {rolloverPreview && (
         <AdminBenchmarkRolloverPreview
           preview={rolloverPreview}

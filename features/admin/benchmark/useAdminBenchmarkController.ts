@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import {
+  approveAdminModelLineupReview,
   applyAdminBenchmarkRollover,
+  checkAdminModelLineup,
   createAdminBenchmarkConfig,
   createAdminBenchmarkRelease,
+  dismissAdminModelLineupReview,
   fetchAdminBenchmarkOverview,
   previewAdminBenchmarkRollover,
   promoteAdminBenchmarkConfig
@@ -34,11 +37,13 @@ export function useAdminBenchmarkController() {
   const [configLoading, setConfigLoading] = useState(false);
   const [promotingConfigId, setPromotingConfigId] = useState<string | null>(null);
   const [previewingConfigId, setPreviewingConfigId] = useState<string | null>(null);
+  const [checkingLineup, setCheckingLineup] = useState(false);
+  const [approvingReviewId, setApprovingReviewId] = useState<string | null>(null);
+  const [dismissingReviewId, setDismissingReviewId] = useState<string | null>(null);
   const [applyingRollover, setApplyingRollover] = useState(false);
   const [rolloverPreview, setRolloverPreview] = useState<BenchmarkRolloverPreview | null>(null);
   const [releaseState, setReleaseState] = useState<ReleaseFormState>(buildReleaseFormState(null));
   const [configState, setConfigState] = useState<ConfigFormState | null>(null);
-
   async function loadOverview(preserveDrafts: boolean = true) {
     const nextOverview = await fetchAdminBenchmarkOverview();
     if (!nextOverview) {
@@ -67,7 +72,6 @@ export function useAdminBenchmarkController() {
     setConfigState((current) => buildConfigFormState(nextOverview, preserveDrafts ? current : null));
     return nextOverview;
   }
-
   useEffect(() => {
     let cancelled = false;
 
@@ -99,7 +103,6 @@ export function useAdminBenchmarkController() {
       cancelled = true;
     };
   }, []);
-
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
@@ -121,7 +124,6 @@ export function useAdminBenchmarkController() {
       setLoading(false);
     }
   }
-
   async function handleLogout() {
     await logoutAdmin();
     setIsAuthenticated(false);
@@ -131,7 +133,6 @@ export function useAdminBenchmarkController() {
     setReleaseState(buildReleaseFormState(null));
     setConfigState(null);
   }
-
   function updateReleaseFamily(familyId: string) {
     setReleaseState((current) => {
       const family = overview?.families.find((item) => item.id === familyId);
@@ -143,7 +144,6 @@ export function useAdminBenchmarkController() {
       };
     });
   }
-
   function updateConfigAssignment(
     familyId: string,
     updater: (assignment: NonNullable<ConfigFormState>['assignments'][number]) => NonNullable<ConfigFormState>['assignments'][number]
@@ -161,7 +161,6 @@ export function useAdminBenchmarkController() {
       };
     });
   }
-
   async function handleCreateRelease(event: React.FormEvent) {
     event.preventDefault();
     setReleaseLoading(true);
@@ -183,7 +182,6 @@ export function useAdminBenchmarkController() {
       setReleaseLoading(false);
     }
   }
-
   async function handleCreateConfig(event: React.FormEvent) {
     event.preventDefault();
     if (!configState) {
@@ -209,7 +207,6 @@ export function useAdminBenchmarkController() {
       setConfigLoading(false);
     }
   }
-
   async function handlePromoteConfig(configId: string) {
     setPromotingConfigId(configId);
     setResult(null);
@@ -227,7 +224,6 @@ export function useAdminBenchmarkController() {
       setPromotingConfigId(null);
     }
   }
-
   async function handlePreviewRollover(configId: string) {
     setPreviewingConfigId(configId);
     setResult(null);
@@ -241,7 +237,6 @@ export function useAdminBenchmarkController() {
       setPreviewingConfigId(null);
     }
   }
-
   async function handleApplyRollover() {
     if (!rolloverPreview) {
       return;
@@ -264,7 +259,52 @@ export function useAdminBenchmarkController() {
       setApplyingRollover(false);
     }
   }
+  async function handleCheckLineup() {
+    setCheckingLineup(true);
+    setResult(null);
 
+    try {
+      const nextResult = await checkAdminModelLineup();
+      setResult(nextResult);
+      await loadOverview(true);
+    } catch {
+      setResult({ type: 'error', message: 'OpenRouter lineup check failed' });
+    } finally {
+      setCheckingLineup(false);
+    }
+  }
+  async function handleApproveLineupReview(reviewId: string) {
+    setApprovingReviewId(reviewId);
+    setResult(null);
+
+    try {
+      const nextResult = await approveAdminModelLineupReview(reviewId);
+      setResult(nextResult);
+      if (nextResult.type === 'success') {
+        await loadOverview(false);
+      } else {
+        await loadOverview(true);
+      }
+    } catch {
+      setResult({ type: 'error', message: 'Lineup review approval failed' });
+    } finally {
+      setApprovingReviewId(null);
+    }
+  }
+  async function handleDismissLineupReview(reviewId: string) {
+    setDismissingReviewId(reviewId);
+    setResult(null);
+
+    try {
+      const nextResult = await dismissAdminModelLineupReview(reviewId);
+      setResult(nextResult);
+      await loadOverview(true);
+    } catch {
+      setResult({ type: 'error', message: 'Lineup review dismissal failed' });
+    } finally {
+      setDismissingReviewId(null);
+    }
+  }
   return {
     password,
     isAuthenticated,
@@ -277,6 +317,9 @@ export function useAdminBenchmarkController() {
     configLoading,
     promotingConfigId,
     previewingConfigId,
+    checkingLineup,
+    approvingReviewId,
+    dismissingReviewId,
     applyingRollover,
     rolloverPreview,
     releaseState,
@@ -293,6 +336,9 @@ export function useAdminBenchmarkController() {
     handlePromoteConfig,
     handlePreviewRollover,
     handleApplyRollover,
+    handleCheckLineup,
+    handleApproveLineupReview,
+    handleDismissLineupReview,
     dismissRolloverPreview: () => setRolloverPreview(null)
   };
 }

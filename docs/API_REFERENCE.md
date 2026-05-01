@@ -714,6 +714,26 @@ Response shape:
 ```json
 {
   "default_config_id": "lineup-2026-05-latest-exact",
+  "latest_review": {
+    "id": "review-id",
+    "status": "open",
+    "checked_at": "2026-05-04T09:00:00.000Z",
+    "candidate_count": 1,
+    "target_config_id": null,
+    "candidates": [
+      {
+        "family_id": "openai-gpt",
+        "current_release_id": "openai-gpt--gpt-5.5",
+        "current_openrouter_id": "openai/gpt-5.5",
+        "candidate_openrouter_id": "openai/gpt-5.6",
+        "candidate_name": "GPT-5.6",
+        "input_price_per_million": 6,
+        "output_price_per_million": 18,
+        "decision": "upgrade",
+        "reason": "Newer general-purpose OpenRouter release matched the family rules"
+      }
+    ]
+  },
   "families": [
     {
       "id": "openai-gpt",
@@ -799,6 +819,22 @@ Body:
   "config_id": "lineup-config-id"
 }
 ```
+
+### POST /api/admin/benchmark/reviews/check
+
+Runs a read-only OpenRouter catalog scan and stores a lineup review row. This
+does not create releases, promote configs, or roll active cohorts.
+
+### POST /api/admin/benchmark/reviews/:id/approve
+
+Approves selected upgrade candidates from an open review. The server creates
+missing `model_releases`, creates a complete `benchmark_config`, and promotes
+that config for future cohorts only.
+
+### POST /api/admin/benchmark/reviews/:id/dismiss
+
+Marks an open, failed, or no-change lineup review as dismissed without changing
+the default config.
 
 ### GET /api/admin/costs
 
@@ -1109,6 +1145,21 @@ Creates a SQLite backup.
   "success": true,
   "backup_path": "backups/forecaster-2026-03-06T17-00-00-000Z.db",
   "duration_ms": 140
+}
+```
+
+### POST /api/cron/check-model-lineup
+
+Runs the same read-only OpenRouter lineup review as the admin check action.
+This route only writes a review row and never calls paid model completions.
+
+```json
+{
+  "success": true,
+  "review_id": "review-id",
+  "status": "open",
+  "candidate_count": 1,
+  "checked_at": "2026-05-04T09:00:00.000Z"
 }
 ```
 

@@ -88,6 +88,7 @@ sqlite3 /path/to/forecaster.db "SELECT COUNT(*) FROM decisions;"
 - [ ] `run-decisions` cron is installed
 - [ ] `check-resolutions` cron is installed
 - [ ] `take-snapshots` cron is installed
+- [ ] `check-model-lineup` weekly cron is installed
 - [ ] `backup` cron is installed
 - [ ] host timezone and schedule assumptions are understood
 

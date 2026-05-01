@@ -152,3 +152,63 @@ export async function applyAdminBenchmarkRollover(
     message: `${payload.version_name} applied to ${payload.impacted_cohorts} active cohort(s) and ${payload.impacted_agents} agent slot(s)`
   };
 }
+
+export async function checkAdminModelLineup(): Promise<BenchmarkResultMessage> {
+  const response = await fetch('/api/admin/benchmark/reviews/check', { method: 'POST' });
+
+  if (!response.ok) {
+    return {
+      type: 'error',
+      message: await readErrorMessage(response, 'OpenRouter lineup check failed')
+    };
+  }
+
+  const payload = await response.json() as { status?: string; candidate_count?: number; error_message?: string | null };
+  if (payload.status === 'failed') {
+    return {
+      type: 'error',
+      message: payload.error_message || 'OpenRouter lineup check failed'
+    };
+  }
+
+  const candidateCount = payload.candidate_count ?? 0;
+  return {
+    type: 'success',
+    message: candidateCount > 0
+      ? `OpenRouter lineup review found ${candidateCount} item(s) for operator review`
+      : 'OpenRouter lineup review found no newer general-purpose candidates'
+  };
+}
+
+export async function approveAdminModelLineupReview(reviewId: string): Promise<BenchmarkResultMessage> {
+  const response = await fetch(`/api/admin/benchmark/reviews/${reviewId}/approve`, { method: 'POST' });
+
+  if (!response.ok) {
+    return {
+      type: 'error',
+      message: await readErrorMessage(response, 'Lineup review approval failed')
+    };
+  }
+
+  const payload = await response.json() as { version_name?: string };
+  return {
+    type: 'success',
+    message: `${payload.version_name || 'Lineup review'} approved for future cohorts; existing active cohorts remain frozen`
+  };
+}
+
+export async function dismissAdminModelLineupReview(reviewId: string): Promise<BenchmarkResultMessage> {
+  const response = await fetch(`/api/admin/benchmark/reviews/${reviewId}/dismiss`, { method: 'POST' });
+
+  if (!response.ok) {
+    return {
+      type: 'error',
+      message: await readErrorMessage(response, 'Lineup review dismissal failed')
+    };
+  }
+
+  return {
+    type: 'success',
+    message: 'OpenRouter lineup review dismissed'
+  };
+}

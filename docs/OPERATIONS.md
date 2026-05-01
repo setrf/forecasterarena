@@ -80,6 +80,10 @@ The code does not contain its own scheduler. The currently intended cadence is:
 */10 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/take-snapshots \
   -H "Authorization: Bearer $CRON_SECRET"
 
+# Check OpenRouter for newer general-purpose model releases
+0 9 * * 1 curl -s -X POST http://127.0.0.1:3010/api/cron/check-model-lineup \
+  -H "Authorization: Bearer $CRON_SECRET"
+
 # Create a database backup before the next weekly cycle
 0 23 * * 6 curl -s -X POST http://127.0.0.1:3010/api/cron/backup \
   -H "Authorization: Bearer $CRON_SECRET"
@@ -90,6 +94,7 @@ Why this schedule matters:
 - `run-decisions` assumes `start-cohort` has already executed or that the weekly cohort can still be bootstrapped.
 - `run-decisions` only spends LLM calls on unarchived active cohorts inside the latest decision window; older current v2 cohorts remain tracking-only.
 - `check-resolutions` only processes markets that are locally `closed`.
+- `check-model-lineup` only reads the public OpenRouter catalog and creates an admin review. It never promotes releases or rolls cohorts without operator approval.
 - `take-snapshots` is most useful when run regularly; the database schema is timestamp-based, not day-based, and archived v1 cohorts are intentionally excluded from routine snapshots.
 
 ---

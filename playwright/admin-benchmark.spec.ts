@@ -9,6 +9,8 @@ test('admin benchmark control registers a release and promotes the default lineu
 
   await expect(page.getByRole('heading', { level: 1, name: 'Benchmark Control' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Current Default Lineup' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'OpenRouter Lineup Review' })).toBeVisible();
+  await expect(page.getByText('Approval never rolls active cohorts')).toBeVisible();
   await expectAuthenticatedAdminShell(page);
   await expect(page.getByText('e2e-default').first()).toBeVisible();
 

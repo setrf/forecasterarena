@@ -148,6 +148,7 @@ Authenticated by `Authorization: Bearer <CRON_SECRET>`:
 - `POST /api/cron/sync-markets`
 - `POST /api/cron/check-resolutions`
 - `POST /api/cron/take-snapshots`
+- `POST /api/cron/check-model-lineup`
 - `POST /api/cron/backup`
 
 The code does not embed a scheduler. Cron timing is an operational concern and is documented in `docs/OPERATIONS.md`.

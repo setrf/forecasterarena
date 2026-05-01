@@ -11,6 +11,7 @@ import { brierTradeUniquenessMigration } from '@/lib/db/migrations/009_brier_tra
 import { snapshotChartIndexesMigration } from '@/lib/db/migrations/010_snapshot_chart_indexes';
 import { archiveV1CohortsMigration } from '@/lib/db/migrations/011_archive_v1_cohorts';
 import { latestModelLineupMigration } from '@/lib/db/migrations/012_latest_model_lineup';
+import { modelLineupReviewsMigration } from '@/lib/db/migrations/013_model_lineup_reviews';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
 const MIGRATIONS: DbMigration[] = [
@@ -24,7 +25,8 @@ const MIGRATIONS: DbMigration[] = [
   brierTradeUniquenessMigration,
   snapshotChartIndexesMigration,
   archiveV1CohortsMigration,
-  latestModelLineupMigration
+  latestModelLineupMigration,
+  modelLineupReviewsMigration
 ];
 
 export function runMigrations(db: Database.Database): void {

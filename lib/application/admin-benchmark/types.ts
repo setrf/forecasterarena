@@ -31,10 +31,39 @@ export interface AdminBenchmarkConfigSummary extends BenchmarkConfig {
   models: BenchmarkConfigModelAssignment[];
 }
 
+export type ModelLineupReviewStatus = 'open' | 'no_changes' | 'approved' | 'dismissed' | 'failed';
+export type ModelLineupReviewDecision = 'upgrade' | 'unchanged' | 'needs_review' | 'missing';
+
+export interface ModelLineupReviewCandidate {
+  family_id: string;
+  family_name: string;
+  current_release_id: string | null;
+  current_release_name: string | null;
+  current_openrouter_id: string | null;
+  candidate_openrouter_id: string | null;
+  candidate_name: string | null;
+  input_price_per_million: number | null;
+  output_price_per_million: number | null;
+  decision: ModelLineupReviewDecision;
+  reason: string;
+}
+
+export interface AdminModelLineupReviewSummary {
+  id: string;
+  status: ModelLineupReviewStatus;
+  checked_at: string;
+  reviewed_at: string | null;
+  candidate_count: number;
+  target_config_id: string | null;
+  error_message: string | null;
+  candidates: ModelLineupReviewCandidate[];
+}
+
 export interface AdminBenchmarkOverview {
   default_config_id: string | null;
   active_cohort_count: number;
   active_agent_count: number;
+  latest_review: AdminModelLineupReviewSummary | null;
   families: AdminBenchmarkFamilySummary[];
   configs: AdminBenchmarkConfigSummary[];
   updated_at: string;

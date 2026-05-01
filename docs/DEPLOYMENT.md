@@ -221,6 +221,7 @@ The codebase exposes the following internal cron routes:
 - `/api/cron/run-decisions`
 - `/api/cron/check-resolutions`
 - `/api/cron/take-snapshots`
+- `/api/cron/check-model-lineup`
 - `/api/cron/backup`
 
 All require:
@@ -252,6 +253,10 @@ Recommended schedule:
 */10 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/take-snapshots \
   -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/snapshots.log 2>&1
 
+# Check OpenRouter for newer general-purpose benchmark candidates every Monday
+0 9 * * 1 curl -s -X POST http://127.0.0.1:3010/api/cron/check-model-lineup \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/model-lineup.log 2>&1
+
 # Create a daily database backup
 0 2 * * * curl -s -X POST http://127.0.0.1:3010/api/cron/backup \
   -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/backup.log 2>&1
@@ -263,6 +268,7 @@ Why this schedule works with the current code:
 - start-cohort and run-decisions are ordered
 - decision execution is sequential, so giving it a dedicated weekly slot matters
 - snapshots are timestamp-based and intended for 10-minute cadence
+- model-lineup checks are read-only catalog scans; admins approve future defaults separately
 - backup retention must be enforced externally or in code so daily SQLite
   backups do not fill the root filesystem
 

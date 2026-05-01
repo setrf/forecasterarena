@@ -8,6 +8,7 @@ import {
   getModelReleasesByFamily
 } from '@/lib/db/queries';
 import { getReleasePricingDefaults, parseAdminReleaseMetadata } from '@/lib/application/admin-benchmark/helpers';
+import { getLatestModelLineupReviewSummary } from '@/lib/application/admin-benchmark/modelLineupReview';
 import type {
   AdminBenchmarkConfigSummary,
   AdminBenchmarkFamilySummary,
@@ -61,6 +62,7 @@ export function getAdminBenchmarkOverview(): AdminBenchmarkOverview {
     default_config_id: defaultConfig?.id ?? null,
     active_cohort_count: activeCohorts.length,
     active_agent_count: activeCohorts.reduce((sum, cohort) => sum + getAgentsByCohort(cohort.id).length, 0),
+    latest_review: getLatestModelLineupReviewSummary(),
     families: familySummaries,
     configs,
     updated_at: new Date().toISOString()

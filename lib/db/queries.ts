@@ -20,3 +20,4 @@ export * from './queries/brier-scores';
 export * from './queries/costs';
 export * from './queries/leaderboard';
 export * from './queries/logs';
+export * from './queries/model-lineup-reviews';

@@ -60,6 +60,7 @@ Why this matters:
 - public continuity pages use the **family**
 - active and historical cohorts keep the exact **release** they started with
 - legacy IDs are compatibility aliases only; lineage tables, canonical family slugs, and frozen agent/config assignments are the source of truth for historical identity
+- newer OpenRouter releases are discovered through operator-approved lineup reviews; approval creates a future default config and never rolls active cohorts
 
 ---
 
@@ -290,6 +291,7 @@ These are the schedules implied by the current code comments and runtime expecta
 | Run decisions | `/api/cron/run-decisions` | Sunday 00:05 UTC |
 | Check resolutions | `/api/cron/check-resolutions` | Hourly |
 | Take snapshots | `/api/cron/take-snapshots` | Every 10 minutes |
+| Check model lineup | `/api/cron/check-model-lineup` | Monday 09:00 UTC |
 | Create backup | `/api/cron/backup` | Saturday 23:00 UTC or another low-traffic window |
 
 All cron routes require:
@@ -304,6 +306,9 @@ in snapshots, resolution checks, leaderboards, drilldowns, and audit history.
 Archived v1 cohorts are settle-only: they remain linkable and can receive
 settlement updates, but they are excluded from current v2 scoring, graphs,
 recent decisions, lineup refreshes, and routine snapshots.
+`check-model-lineup` only reads the public OpenRouter model catalog and writes
+an admin review row; it does not call paid model completions or change the
+future default lineup until an admin approves the review.
 
 ---
 

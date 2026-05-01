@@ -1,4 +1,5 @@
 export { createDatabaseBackup } from '@/lib/application/cron/backup';
+export { checkModelLineup } from '@/lib/application/cron/checkModelLineup';
 export { checkResolutions } from '@/lib/application/cron/checkResolutions';
 export { runDecisions } from '@/lib/application/cron/runDecisions';
 export { fallbackYesPriceFromPosition, resolveSnapshotYesPrice } from '@/lib/application/cron/snapshotPricing';

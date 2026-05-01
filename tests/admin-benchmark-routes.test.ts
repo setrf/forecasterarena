@@ -103,6 +103,9 @@ describe('admin benchmark routes', () => {
     const releaseRoute = await import('@/app/api/admin/benchmark/releases/route');
     const configRoute = await import('@/app/api/admin/benchmark/configs/route');
     const defaultRoute = await import('@/app/api/admin/benchmark/default/route');
+    const checkReviewRoute = await import('@/app/api/admin/benchmark/reviews/check/route');
+    const approveReviewRoute = await import('@/app/api/admin/benchmark/reviews/[id]/approve/route');
+    const dismissReviewRoute = await import('@/app/api/admin/benchmark/reviews/[id]/dismiss/route');
 
     const overviewResponse = await overviewRoute.GET();
     const releaseResponse = await releaseRoute.POST(new Request('http://localhost/api/admin/benchmark/releases', {
@@ -120,11 +123,92 @@ describe('admin benchmark routes', () => {
       headers: { 'content-type': 'application/json' },
       body: '{}'
     }) as any);
+    const checkReviewResponse = await checkReviewRoute.POST();
+    const approveReviewResponse = await approveReviewRoute.POST(
+      new Request('http://localhost/api/admin/benchmark/reviews/review-1/approve', { method: 'POST' }) as any,
+      { params: { id: 'review-1' } }
+    );
+    const dismissReviewResponse = await dismissReviewRoute.POST(
+      new Request('http://localhost/api/admin/benchmark/reviews/review-1/dismiss', { method: 'POST' }) as any,
+      { params: { id: 'review-1' } }
+    );
 
-    for (const response of [overviewResponse, releaseResponse, configResponse, defaultResponse]) {
+    for (const response of [
+      overviewResponse,
+      releaseResponse,
+      configResponse,
+      defaultResponse,
+      checkReviewResponse,
+      approveReviewResponse,
+      dismissReviewResponse
+    ]) {
       expect(response.status).toBe(401);
       expect(await response.json()).toEqual({ error: 'Unauthorized' });
     }
+  });
+
+  it('adapts lineup review check, approval, and dismissal mutations', async () => {
+    vi.doMock('@/lib/api/admin-route', () => ({
+      ensureAdminAuthenticated: () => null,
+      adminSafeErrorJson: (error: unknown) => Response.json({ error: String(error) }, { status: 500 })
+    }));
+    vi.doMock('@/lib/application/admin-benchmark', () => ({
+      checkModelLineupReview: vi.fn(async () => ({
+        id: 'review-1',
+        status: 'open',
+        checked_at: '2026-05-01T00:00:00.000Z',
+        reviewed_at: null,
+        candidate_count: 1,
+        target_config_id: null,
+        error_message: null,
+        candidates: []
+      })),
+      approveModelLineupReviewRecord: vi.fn(() => ({
+        ok: true as const,
+        data: {
+          success: true,
+          config_id: 'config-1',
+          version_name: 'lineup-review',
+          review: { id: 'review-1' }
+        }
+      })),
+      dismissModelLineupReviewRecord: vi.fn(() => ({
+        ok: false as const,
+        status: 400,
+        error: 'Lineup review is approved and cannot be dismissed'
+      }))
+    }));
+
+    const checkReviewRoute = await import('@/app/api/admin/benchmark/reviews/check/route');
+    const approveReviewRoute = await import('@/app/api/admin/benchmark/reviews/[id]/approve/route');
+    const dismissReviewRoute = await import('@/app/api/admin/benchmark/reviews/[id]/dismiss/route');
+
+    const checkResponse = await checkReviewRoute.POST();
+    expect(checkResponse.status).toBe(200);
+    expect(await checkResponse.json()).toMatchObject({
+      id: 'review-1',
+      status: 'open',
+      candidate_count: 1
+    });
+
+    const approveResponse = await approveReviewRoute.POST(
+      new Request('http://localhost/api/admin/benchmark/reviews/review-1/approve', { method: 'POST' }) as any,
+      { params: { id: 'review-1' } }
+    );
+    expect(approveResponse.status).toBe(200);
+    expect(await approveResponse.json()).toMatchObject({
+      success: true,
+      config_id: 'config-1'
+    });
+
+    const dismissResponse = await dismissReviewRoute.POST(
+      new Request('http://localhost/api/admin/benchmark/reviews/review-1/dismiss', { method: 'POST' }) as any,
+      { params: { id: 'review-1' } }
+    );
+    expect(dismissResponse.status).toBe(400);
+    expect(await dismissResponse.json()).toEqual({
+      error: 'Lineup review is approved and cannot be dismissed'
+    });
   });
 
   it('returns 400 instead of 500 for malformed benchmark mutation payloads', async () => {
