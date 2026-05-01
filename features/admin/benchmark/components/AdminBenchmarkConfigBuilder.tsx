@@ -117,7 +117,7 @@ export function AdminBenchmarkConfigBuilder({
                         aria-label={`${family.public_display_name} input price`}
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="any"
                         value={assignment.inputPricePerMillion}
                         onChange={(event) => onAssignmentChange(assignment.familyId, (current) => ({ ...current, inputPricePerMillion: event.target.value }))}
                         className="w-28 ml-auto px-3 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none text-right"
@@ -128,7 +128,7 @@ export function AdminBenchmarkConfigBuilder({
                         aria-label={`${family.public_display_name} output price`}
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="any"
                         value={assignment.outputPricePerMillion}
                         onChange={(event) => onAssignmentChange(assignment.familyId, (current) => ({ ...current, outputPricePerMillion: event.target.value }))}
                         className="w-28 ml-auto px-3 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none text-right"

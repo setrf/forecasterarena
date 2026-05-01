@@ -97,7 +97,8 @@ The current active family lineup is:
 Important note:
 
 - Historical internal IDs are intentionally stable and may lag display-name
-  updates. For example, `gpt-5.1` currently maps to display name `GPT-5.2`.
+  updates. For example, `gpt-5.1` mapped to display name `GPT-5.2` during
+  the v1 lineage period.
 - Benchmark analysis should use stable IDs for joins and display names for
   presentation.
 

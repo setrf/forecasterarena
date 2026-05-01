@@ -159,7 +159,7 @@ Response shape:
       "family_slug": "openai-gpt",
       "family_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
-      "display_name": "GPT-5.2",
+      "display_name": "GPT-5.5",
       "provider": "OpenAI",
       "color": "#10B981",
       "total_pnl": 0,
@@ -233,7 +233,7 @@ Response shape:
       "id": "openai-gpt",
       "slug": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
-      "displayName": "GPT-5.2",
+      "displayName": "GPT-5.5",
       "color": "#10B981"
     }
   ],
@@ -343,7 +343,7 @@ Response shape:
       "family_slug": "openai-gpt",
       "family_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
-      "model_display_name": "GPT-5.2",
+      "model_display_name": "GPT-5.5",
       "model_color": "#10B981",
       "side": "YES",
       "shares": 10,
@@ -390,11 +390,11 @@ Response shape:
     "family_id": "openai-gpt",
     "slug": "openai-gpt",
     "legacy_model_id": "gpt-5.1",
-    "display_name": "GPT-5.2",
+    "display_name": "GPT-5.5",
     "provider": "OpenAI",
     "color": "#10B981",
-    "current_release_id": "openai-gpt--gpt-5-2",
-    "current_release_name": "GPT-5.2"
+    "current_release_id": "openai-gpt--gpt-5.5",
+    "current_release_name": "GPT-5.5"
   },
   "num_cohorts": 3,
   "total_pnl": 420.5,
@@ -451,7 +451,7 @@ Response shape:
       "family_slug": "openai-gpt",
       "family_id": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
-      "model_display_name": "GPT-5.2",
+      "model_display_name": "GPT-5.5",
       "model_color": "#10B981",
       "cash_balance": 9400,
       "total_invested": 600,
@@ -512,7 +512,7 @@ Response shape:
     "family_slug": "openai-gpt",
     "slug": "openai-gpt",
     "legacy_model_id": "gpt-5.1",
-    "display_name": "GPT-5.2",
+    "display_name": "GPT-5.5",
     "provider": "OpenAI",
     "color": "#10B981"
   },
@@ -576,7 +576,7 @@ Response shape:
       "decision_timestamp": "2026-03-06T17:00:00.000Z",
       "action": "HOLD",
       "reasoning": "No trade",
-      "model_display_name": "GPT-5.2",
+      "model_display_name": "GPT-5.5",
       "model_color": "#10B981",
       "cohort_number": 4
     }
@@ -615,13 +615,13 @@ Response shape:
     "api_cost_usd": 0.01,
     "response_time_ms": 2400,
     "error_message": null,
-    "model_name": "GPT-5.2",
+    "model_name": "GPT-5.5",
     "model_color": "#10B981",
     "model_provider": "OpenAI",
     "family_slug": "openai-gpt",
     "model_family_id": "openai-gpt",
     "legacy_model_id": "gpt-5.1",
-    "model_release_name": "GPT-5.2"
+    "model_release_name": "GPT-5.5"
   },
   "trades": [
     {
@@ -713,34 +713,34 @@ Response shape:
 
 ```json
 {
-  "default_config_id": "benchmark-config-bootstrap-default",
+  "default_config_id": "lineup-2026-05-latest-exact",
   "families": [
     {
       "id": "openai-gpt",
       "public_display_name": "GPT",
-      "current_release_id": "openai-gpt--gpt-5.2",
-      "current_release_name": "GPT-5.2",
+      "current_release_id": "openai-gpt--gpt-5.5",
+      "current_release_name": "GPT-5.5",
       "releases": [
         {
-          "id": "openai-gpt--gpt-5.2",
-          "release_name": "GPT-5.2",
-          "openrouter_id": "openai/gpt-5.2",
+          "id": "openai-gpt--gpt-5.5",
+          "release_name": "GPT-5.5",
+          "openrouter_id": "openai/gpt-5.5",
           "default_input_price_per_million": 5,
-          "default_output_price_per_million": 15
+          "default_output_price_per_million": 30
         }
       ]
     }
   ],
   "configs": [
     {
-      "id": "benchmark-config-bootstrap-default",
-      "version_name": "bootstrap-default-lineup",
+      "id": "lineup-2026-05-latest-exact",
+      "version_name": "lineup-2026-05-latest-exact",
       "is_default_for_future_cohorts": 1,
       "models": [
         {
           "family_id": "openai-gpt",
-          "release_id": "openai-gpt--gpt-5.2",
-          "release_display_name_snapshot": "GPT-5.2"
+          "release_id": "openai-gpt--gpt-5.5",
+          "release_display_name_snapshot": "GPT-5.5"
         }
       ]
     }
@@ -811,7 +811,7 @@ Returns cost data aggregated by model family and overall summary.
       "family_id": "openai-gpt",
       "family_slug": "openai-gpt",
       "legacy_model_id": "gpt-5.1",
-      "model_name": "GPT-5.2",
+      "model_name": "GPT-5.5",
       "color": "#10B981",
       "total_cost": 0.25,
       "total_input_tokens": 12000,
@@ -1125,13 +1125,13 @@ Canonical public routes are family-based:
 
 | Family Slug | Display Name | Example Current Release |
 |-------------|--------------|-------------------------|
-| `openai-gpt` | GPT | GPT-5.2 |
-| `google-gemini` | Gemini | Gemini 3 Pro |
-| `xai-grok` | Grok | Grok 4.1 |
-| `anthropic-claude-opus` | Claude Opus | Claude Opus 4.5 |
-| `deepseek-v3` | DeepSeek | DeepSeek V3.2 |
-| `moonshot-kimi` | Kimi | Kimi K2 |
-| `alibaba-qwen` | Qwen | Qwen 3 |
+| `openai-gpt` | GPT | GPT-5.5 |
+| `google-gemini` | Gemini | Gemini 3.1 Pro Preview |
+| `xai-grok` | Grok | Grok 4.3 |
+| `anthropic-claude-opus` | Claude Opus | Claude Opus 4.7 |
+| `deepseek-v3` | DeepSeek | DeepSeek V4 Pro |
+| `moonshot-kimi` | Kimi | Kimi K2.6 |
+| `alibaba-qwen` | Qwen | Qwen 3.6 Max Preview |
 
 Canonical examples:
 

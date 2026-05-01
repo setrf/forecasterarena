@@ -31,13 +31,13 @@ As of March 7, 2026, the production codebase currently implements:
 
 The active family lineup in code is:
 
-1. GPT-5.2
-2. Gemini 3 Pro
-3. Grok 4.1
-4. Claude Opus 4.5
-5. DeepSeek V3.2
-6. Kimi K2
-7. Qwen 3
+1. GPT-5.5
+2. Gemini 3.1 Pro Preview
+3. Grok 4.3
+4. Claude Opus 4.7
+5. DeepSeek V4 Pro
+6. Kimi K2.6
+7. Qwen 3.6 Max Preview
 
 ---
 

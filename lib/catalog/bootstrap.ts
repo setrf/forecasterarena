@@ -26,11 +26,11 @@ export const MODEL_FAMILY_BOOTSTRAP: ModelFamilyBootstrap[] = [
     provider: 'OpenAI',
     color: '#10B981',
     sortOrder: 1,
-    initialReleaseName: 'GPT-5.2',
-    initialReleaseSlug: 'gpt-5.2',
-    initialOpenrouterId: 'openai/gpt-5.2',
+    initialReleaseName: 'GPT-5.5',
+    initialReleaseSlug: 'gpt-5.5',
+    initialOpenrouterId: 'openai/gpt-5.5',
     inputPricePerMillion: 5,
-    outputPricePerMillion: 15
+    outputPricePerMillion: 30
   },
   {
     familyId: 'google-gemini',
@@ -42,11 +42,11 @@ export const MODEL_FAMILY_BOOTSTRAP: ModelFamilyBootstrap[] = [
     provider: 'Google',
     color: '#3B82F6',
     sortOrder: 2,
-    initialReleaseName: 'Gemini 3 Pro',
-    initialReleaseSlug: 'gemini-3-pro',
-    initialOpenrouterId: 'google/gemini-3-pro-preview',
-    inputPricePerMillion: 2.5,
-    outputPricePerMillion: 10
+    initialReleaseName: 'Gemini 3.1 Pro Preview',
+    initialReleaseSlug: 'gemini-3.1-pro-preview',
+    initialOpenrouterId: 'google/gemini-3.1-pro-preview',
+    inputPricePerMillion: 2,
+    outputPricePerMillion: 12
   },
   {
     familyId: 'xai-grok',
@@ -58,11 +58,11 @@ export const MODEL_FAMILY_BOOTSTRAP: ModelFamilyBootstrap[] = [
     provider: 'xAI',
     color: '#8B5CF6',
     sortOrder: 3,
-    initialReleaseName: 'Grok 4.1',
-    initialReleaseSlug: 'grok-4.1',
-    initialOpenrouterId: 'x-ai/grok-4.1-fast',
-    inputPricePerMillion: 5,
-    outputPricePerMillion: 15
+    initialReleaseName: 'Grok 4.3',
+    initialReleaseSlug: 'grok-4.3',
+    initialOpenrouterId: 'x-ai/grok-4.3',
+    inputPricePerMillion: 1.25,
+    outputPricePerMillion: 2.5
   },
   {
     familyId: 'anthropic-claude-opus',
@@ -74,11 +74,11 @@ export const MODEL_FAMILY_BOOTSTRAP: ModelFamilyBootstrap[] = [
     provider: 'Anthropic',
     color: '#F59E0B',
     sortOrder: 4,
-    initialReleaseName: 'Claude Opus 4.5',
-    initialReleaseSlug: 'claude-opus-4.5',
-    initialOpenrouterId: 'anthropic/claude-opus-4.5',
-    inputPricePerMillion: 15,
-    outputPricePerMillion: 75
+    initialReleaseName: 'Claude Opus 4.7',
+    initialReleaseSlug: 'claude-opus-4.7',
+    initialOpenrouterId: 'anthropic/claude-opus-4.7',
+    inputPricePerMillion: 5,
+    outputPricePerMillion: 25
   },
   {
     familyId: 'deepseek-v3',
@@ -90,11 +90,11 @@ export const MODEL_FAMILY_BOOTSTRAP: ModelFamilyBootstrap[] = [
     provider: 'DeepSeek',
     color: '#EF4444',
     sortOrder: 5,
-    initialReleaseName: 'DeepSeek V3.2',
-    initialReleaseSlug: 'deepseek-v3.2',
-    initialOpenrouterId: 'deepseek/deepseek-v3.2',
-    inputPricePerMillion: 0.5,
-    outputPricePerMillion: 2
+    initialReleaseName: 'DeepSeek V4 Pro',
+    initialReleaseSlug: 'deepseek-v4-pro',
+    initialOpenrouterId: 'deepseek/deepseek-v4-pro',
+    inputPricePerMillion: 0.435,
+    outputPricePerMillion: 0.87
   },
   {
     familyId: 'moonshot-kimi',
@@ -106,11 +106,11 @@ export const MODEL_FAMILY_BOOTSTRAP: ModelFamilyBootstrap[] = [
     provider: 'Moonshot AI',
     color: '#EC4899',
     sortOrder: 6,
-    initialReleaseName: 'Kimi K2',
-    initialReleaseSlug: 'kimi-k2',
-    initialOpenrouterId: 'moonshotai/kimi-k2-thinking',
-    inputPricePerMillion: 1,
-    outputPricePerMillion: 4
+    initialReleaseName: 'Kimi K2.6',
+    initialReleaseSlug: 'kimi-k2.6',
+    initialOpenrouterId: 'moonshotai/kimi-k2.6',
+    inputPricePerMillion: 0.74,
+    outputPricePerMillion: 3.49
   },
   {
     familyId: 'alibaba-qwen',
@@ -122,11 +122,11 @@ export const MODEL_FAMILY_BOOTSTRAP: ModelFamilyBootstrap[] = [
     provider: 'Alibaba',
     color: '#06B6D4',
     sortOrder: 7,
-    initialReleaseName: 'Qwen 3',
-    initialReleaseSlug: 'qwen-3',
-    initialOpenrouterId: 'qwen/qwen3-235b-a22b-2507',
-    inputPricePerMillion: 1,
-    outputPricePerMillion: 4
+    initialReleaseName: 'Qwen 3.6 Max Preview',
+    initialReleaseSlug: 'qwen3.6-max-preview',
+    initialOpenrouterId: 'qwen/qwen3.6-max-preview',
+    inputPricePerMillion: 1.04,
+    outputPricePerMillion: 6.24
   }
 ];
 

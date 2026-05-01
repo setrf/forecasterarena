@@ -146,13 +146,13 @@ Current seeded legacy compatibility IDs in code:
 
 | `id` | `display_name` |
 |------|----------------|
-| `gpt-5.1` | `GPT-5.2` |
-| `gemini-2.5-flash` | `Gemini 3 Pro` |
-| `grok-4` | `Grok 4.1` |
-| `claude-opus-4.5` | `Claude Opus 4.5` |
-| `deepseek-v3.1` | `DeepSeek V3.2` |
-| `kimi-k2` | `Kimi K2` |
-| `qwen-3-next` | `Qwen 3` |
+| `gpt-5.1` | `GPT-5.5` |
+| `gemini-2.5-flash` | `Gemini 3.1 Pro Preview` |
+| `grok-4` | `Grok 4.3` |
+| `claude-opus-4.5` | `Claude Opus 4.7` |
+| `deepseek-v3.1` | `DeepSeek V4 Pro` |
+| `kimi-k2` | `Kimi K2.6` |
+| `qwen-3-next` | `Qwen 3.6 Max Preview` |
 
 Important note:
 

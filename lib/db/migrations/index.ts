@@ -10,6 +10,7 @@ import { performanceChartCacheMigration } from '@/lib/db/migrations/008_performa
 import { brierTradeUniquenessMigration } from '@/lib/db/migrations/009_brier_trade_uniqueness';
 import { snapshotChartIndexesMigration } from '@/lib/db/migrations/010_snapshot_chart_indexes';
 import { archiveV1CohortsMigration } from '@/lib/db/migrations/011_archive_v1_cohorts';
+import { latestModelLineupMigration } from '@/lib/db/migrations/012_latest_model_lineup';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
 const MIGRATIONS: DbMigration[] = [
@@ -22,7 +23,8 @@ const MIGRATIONS: DbMigration[] = [
   performanceChartCacheMigration,
   brierTradeUniquenessMigration,
   snapshotChartIndexesMigration,
-  archiveV1CohortsMigration
+  archiveV1CohortsMigration,
+  latestModelLineupMigration
 ];
 
 export function runMigrations(db: Database.Database): void {

@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "next lint",
     "check:architecture": "node scripts/check-architecture.mjs",
+    "check:openrouter-lineup": "node scripts/check-openrouter-lineup.mjs",
     "check:queries": "node scripts/check-query-structure.mjs",
     "check:standalone-assets": "node scripts/prepare-standalone-assets.mjs --check",
     "prepare:standalone-assets": "node scripts/prepare-standalone-assets.mjs",

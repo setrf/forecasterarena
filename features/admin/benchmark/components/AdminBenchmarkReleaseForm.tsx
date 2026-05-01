@@ -77,7 +77,7 @@ export function AdminBenchmarkReleaseForm({
               id="benchmark-input-price"
               type="number"
               min="0"
-              step="0.01"
+              step="any"
               value={releaseState.inputPricePerMillion}
               onChange={(event) => onStateChange((state) => ({ ...state, inputPricePerMillion: event.target.value }))}
               className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none"
@@ -90,7 +90,7 @@ export function AdminBenchmarkReleaseForm({
               id="benchmark-output-price"
               type="number"
               min="0"
-              step="0.01"
+              step="any"
               value={releaseState.outputPricePerMillion}
               onChange={(event) => onStateChange((state) => ({ ...state, outputPricePerMillion: event.target.value }))}
               className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--accent-blue)] focus:outline-none"

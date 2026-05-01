@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { latestModelLineupMigration } from '@/lib/db/migrations/012_latest_model_lineup';
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
 describe('schema seeds and idempotency behavior', () => {
@@ -79,6 +80,101 @@ describe('schema seeds and idempotency behavior', () => {
       expect(row.openrouter_id).toBe('openai/gpt-legacy');
       expect(row.display_name).toBe('GPT Legacy');
     } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('promotes the latest exact lineup without rewriting existing active cohort lineage', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-04-19T00:05:00.000Z'));
+
+      const queries = await import('@/lib/db/queries');
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+      const families = queries.getActiveModelFamilies();
+
+      const oldConfig = queries.createBenchmarkConfig({
+        version_name: 'pre-012-test-lineup',
+        methodology_version: 'v2',
+        created_by: 'vitest',
+        is_default_for_future_cohorts: true
+      });
+
+      for (const family of families) {
+        const oldRelease = queries.createModelRelease({
+          id: `${family.id}--pre-012-test`,
+          family_id: family.id,
+          release_name: `${family.public_display_name} Pre-012 Test`,
+          release_slug: 'pre-012-test',
+          openrouter_id: `${family.slug}/pre-012-test`,
+          provider: family.provider
+        });
+
+        queries.createBenchmarkConfigModel({
+          benchmark_config_id: oldConfig.id,
+          family_id: family.id,
+          release_id: oldRelease.id,
+          slot_order: family.sort_order,
+          family_display_name_snapshot: family.public_display_name,
+          short_display_name_snapshot: family.short_display_name,
+          release_display_name_snapshot: oldRelease.release_name,
+          provider_snapshot: oldRelease.provider,
+          color_snapshot: family.color,
+          openrouter_id_snapshot: oldRelease.openrouter_id,
+          input_price_per_million_snapshot: 1,
+          output_price_per_million_snapshot: 2
+        });
+      }
+
+      const oldCohort = queries.createCohort(oldConfig.id);
+      const oldAgents = queries.createAgentsForCohort(oldCohort.id, oldConfig.id);
+      const oldAgentLineage = oldAgents.map((agent) => ({
+        id: agent.id,
+        release_id: agent.release_id,
+        benchmark_config_model_id: agent.benchmark_config_model_id
+      }));
+
+      db.prepare(`
+        INSERT INTO performance_chart_cache (cache_key, range_key, payload_json)
+        VALUES ('test-cache', 'ALL', '{}')
+      `).run();
+
+      latestModelLineupMigration.apply(db);
+      latestModelLineupMigration.apply(db);
+
+      expect(queries.getDefaultBenchmarkConfig()?.id).toBe('lineup-2026-05-latest-exact');
+      expect(db.prepare('SELECT COUNT(*) as count FROM performance_chart_cache').get()).toEqual({ count: 0 });
+
+      const reloadedOldCohort = queries.getCohortById(oldCohort.id)!;
+      expect(reloadedOldCohort.benchmark_config_id).toBe(oldConfig.id);
+
+      const reloadedOldAgentLineage = queries.getAgentsByCohort(oldCohort.id).map((agent) => ({
+        id: agent.id,
+        release_id: agent.release_id,
+        benchmark_config_model_id: agent.benchmark_config_model_id
+      }));
+      expect(reloadedOldAgentLineage).toEqual(oldAgentLineage);
+
+      vi.setSystemTime(new Date('2026-04-26T00:05:00.000Z'));
+      const newCohort = queries.createCohort();
+      queries.createAgentsForCohort(newCohort.id, newCohort.benchmark_config_id);
+      const newAgents = queries.getAgentsWithModelsByCohort(newCohort.id);
+
+      expect(newCohort.benchmark_config_id).toBe('lineup-2026-05-latest-exact');
+      expect(newAgents.map((agent) => agent.model.openrouter_id).sort()).toEqual([
+        'anthropic/claude-opus-4.7',
+        'deepseek/deepseek-v4-pro',
+        'google/gemini-3.1-pro-preview',
+        'moonshotai/kimi-k2.6',
+        'openai/gpt-5.5',
+        'qwen/qwen3.6-max-preview',
+        'x-ai/grok-4.3'
+      ]);
+    } finally {
+      vi.useRealTimers();
       await ctx.cleanup();
     }
   });

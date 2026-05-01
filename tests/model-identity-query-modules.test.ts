@@ -40,7 +40,7 @@ describe('model identity query modules', () => {
       expect(seededDefault).toBeTruthy();
 
       const currentRelease = modelReleases.getCurrentReleaseForFamily(family!.id);
-      expect(currentRelease?.release_name).toBe('Gemini 3 Pro');
+      expect(currentRelease?.release_name).toBe('Gemini 3.1 Pro Preview');
 
       const releaseWithDefaults = modelReleases.createModelRelease({
         id: 'google-gemini--gemini-3.1-ultra',

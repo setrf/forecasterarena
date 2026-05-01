@@ -47,13 +47,13 @@ The codebase now separates **legacy model IDs**, **stable benchmark families**, 
 
 | Family | Legacy ID | Current Release | Provider | OpenRouter ID |
 |--------|-----------|-----------------|----------|---------------|
-| `openai-gpt` | `gpt-5.1` | GPT-5.2 | OpenAI | `openai/gpt-5.2` |
-| `google-gemini` | `gemini-2.5-flash` | Gemini 3 Pro | Google | `google/gemini-3-pro-preview` |
-| `xai-grok` | `grok-4` | Grok 4.1 | xAI | `x-ai/grok-4.1-fast` |
-| `anthropic-claude-opus` | `claude-opus-4.5` | Claude Opus 4.5 | Anthropic | `anthropic/claude-opus-4.5` |
-| `deepseek-v3` | `deepseek-v3.1` | DeepSeek V3.2 | DeepSeek | `deepseek/deepseek-v3.2` |
-| `moonshot-kimi` | `kimi-k2` | Kimi K2 | Moonshot AI | `moonshotai/kimi-k2-thinking` |
-| `alibaba-qwen` | `qwen-3-next` | Qwen 3 | Alibaba | `qwen/qwen3-235b-a22b-2507` |
+| `openai-gpt` | `gpt-5.1` | GPT-5.5 | OpenAI | `openai/gpt-5.5` |
+| `google-gemini` | `gemini-2.5-flash` | Gemini 3.1 Pro Preview | Google | `google/gemini-3.1-pro-preview` |
+| `xai-grok` | `grok-4` | Grok 4.3 | xAI | `x-ai/grok-4.3` |
+| `anthropic-claude-opus` | `claude-opus-4.5` | Claude Opus 4.7 | Anthropic | `anthropic/claude-opus-4.7` |
+| `deepseek-v3` | `deepseek-v3.1` | DeepSeek V4 Pro | DeepSeek | `deepseek/deepseek-v4-pro` |
+| `moonshot-kimi` | `kimi-k2` | Kimi K2.6 | Moonshot AI | `moonshotai/kimi-k2.6` |
+| `alibaba-qwen` | `qwen-3-next` | Qwen 3.6 Max Preview | Alibaba | `qwen/qwen3.6-max-preview` |
 
 Why this matters:
 
