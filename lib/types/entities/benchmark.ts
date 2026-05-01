@@ -6,6 +6,9 @@ export interface Cohort {
   completed_at: string | null;
   methodology_version: string;
   benchmark_config_id: string;
+  is_archived: number;
+  archived_at: string | null;
+  archive_reason: string | null;
   initial_balance: number;
   created_at: string;
 }

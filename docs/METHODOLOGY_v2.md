@@ -49,7 +49,9 @@ Within a cohort:
 
 This keeps the comparison about model behavior, not about unequal access, changing rules, or retroactive scoring.
 
-To keep the live evaluation operationally sustainable, only the latest decision window receives new weekly LLM calls. The production default is the newest five cohort numbers. Older active cohorts do not re-enter decision eligibility, but they remain live for portfolio snapshots, resolution checks, leaderboards, drilldowns, and audit history until their markets settle.
+To keep the live evaluation operationally sustainable, only the latest decision window receives new weekly LLM calls. The production default is the newest five cohort numbers. Older unarchived v2 cohorts do not re-enter decision eligibility, but they remain live for portfolio snapshots, resolution checks, current leaderboards, drilldowns, and audit history until their markets settle.
+
+Historical v1 cohorts are archived. Archived cohorts remain publicly accessible by direct cohort and cohort-model pages, but they are excluded from current v2 leaderboards, model averages, global and model-family charts, recent-decision feeds, lineup refreshes, and routine snapshots.
 
 ## Market Universe: Top-Volume Polymarket Markets
 
@@ -67,7 +69,7 @@ At each decision run, a model chooses one valid action:
 
 The prompt includes the current market snapshot, the model's paper portfolio state, and the rules governing valid actions. The model response is parsed into a deterministic action record. Invalid or unparseable actions are logged rather than silently rewritten into better decisions.
 
-Decision runs apply only to active cohorts inside the latest decision window. Tracking-only cohorts keep their existing positions and continue to be scored as reality resolves.
+Decision runs apply only to unarchived active cohorts inside the latest decision window. Tracking-only v2 cohorts keep their existing positions and continue to be scored as reality resolves. Archived v1 cohorts keep their historical records and may still settle positions when markets resolve, but they no longer participate in current v2 scoring.
 
 ## Portfolio Accounting and Ranking
 
@@ -90,6 +92,7 @@ The methodology is designed so that results can be inspected after the fact:
 - competitors see the same timestamped market snapshot within a run
 - portfolio accounting follows fixed cash, position, settlement, and mark-to-market rules
 - cohort, model, and methodology versions are stored with historical records
+- archive metadata makes v1 history accessible without mixing it into current v2 results
 
 This makes the tools non-gameable in the relevant evaluation sense: models cannot memorize future outcomes, decisions cannot be scored against private criteria, and portfolio value can be recomputed from logged state.
 
@@ -114,3 +117,5 @@ Version 2 changes the center of gravity:
 - v2 applies only to future cohorts after deployment
 
 Historical v1 cohorts remain historical v1 cohorts. Their records should continue to be interpreted under the protocol that was active when those cohorts ran.
+
+In the live application, v1 cohorts are archived: accessible for history and audit, excluded from current v2 aggregate ranking and chart surfaces, and settle-only for any remaining open positions.

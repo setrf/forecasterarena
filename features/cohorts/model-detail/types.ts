@@ -4,6 +4,10 @@ export interface Cohort {
   status: string;
   decision_eligible: boolean;
   decision_status: 'decisioning' | 'tracking_only' | 'completed';
+  is_archived: boolean;
+  archived_at: string | null;
+  archive_reason: string | null;
+  scoring_status: 'current' | 'archived';
   started_at: string;
   completed_at: string | null;
   benchmark_config_id?: string | null;

@@ -1,11 +1,16 @@
 import { getDb } from '@/lib/db';
 import {
+  getBrierScoresByAgent,
   getAgentsWithModelsByCohort,
   getAverageBrierScore,
   getCohortById,
   getCohortDecisionStateByNumber,
   getLatestSnapshot
 } from '@/lib/db/queries';
+import {
+  getCohortScoringStatus,
+  isCohortArchived
+} from '@/lib/cohort-decision-state';
 import { calculateWeekNumber } from '@/lib/utils';
 import { getPerformanceData, performanceDataToEquityCurves } from '@/lib/application/performance';
 import {
@@ -29,9 +34,14 @@ export function getCohortDetail(
 
   const db = getDb();
   const rawAgents = getAgentsWithModelsByCohort(cohortId);
+  const archived = isCohortArchived(cohort);
 
   const agents = rawAgents.map((agent) => {
-    const portfolio = resolveAgentPortfolioSummary(agent.id, getLatestSnapshot(agent.id));
+    const latestSnapshot = archived ? null : getLatestSnapshot(agent.id);
+    const portfolio = resolveAgentPortfolioSummary(agent.id, latestSnapshot);
+    const resolvedBetCount = archived
+      ? getBrierScoresByAgent(agent.id).length
+      : portfolio.numResolvedBets;
 
     return {
       id: agent.id,
@@ -52,7 +62,7 @@ export function getCohortDetail(
       brier_score: getAverageBrierScore(agent.id),
       position_count: getAgentOpenPositionCount(db, agent.id),
       trade_count: getAgentTradeCount(db, agent.id),
-      num_resolved_bets: portfolio.numResolvedBets
+      num_resolved_bets: resolvedBetCount
     };
   }).sort((left, right) => right.total_value - left.total_value);
 
@@ -69,6 +79,10 @@ export function getCohortDetail(
     data: {
       cohort: {
         ...cohort,
+        is_archived: archived,
+        archived_at: cohort.archived_at,
+        archive_reason: cohort.archive_reason,
+        scoring_status: getCohortScoringStatus(cohort),
         benchmark_config_id: cohort.benchmark_config_id,
         ...getCohortDecisionStateByNumber(cohort)
       },

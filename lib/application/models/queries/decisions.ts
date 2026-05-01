@@ -20,6 +20,7 @@ export function getRecentModelDecisions(
     JOIN cohorts c ON d.cohort_id = c.id
     LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
     WHERE COALESCE(dbi.family_id, a.family_id) = ?
+      AND COALESCE(c.is_archived, 0) = 0
     ORDER BY d.decision_timestamp DESC
     LIMIT 20
   `).all(familyId) as Array<Record<string, unknown>>;

@@ -3,8 +3,10 @@ import { SEEDED_BENCHMARK_CONFIG_ID, SEEDED_MODELS } from '../models.mjs';
 export function seedScenarioMetadata(db, description) {
   db.prepare(`
     INSERT INTO methodology_versions (version, title, description, effective_from_cohort)
-    VALUES ('v1', 'Forecaster Arena Methodology v1', ?, 1)
-  `).run(description);
+    VALUES
+      ('v1', 'Forecaster Arena Methodology v1', ?, 1),
+      ('v2', 'Forecaster Arena Methodology v2', ?, 1)
+  `).run(description, description);
 
   const insertModel = db.prepare(`
     INSERT INTO models (id, openrouter_id, display_name, provider, color)
@@ -25,7 +27,7 @@ export function seedScenarioMetadata(db, description) {
   const insertConfig = db.prepare(`
     INSERT INTO benchmark_configs (
       id, version_name, methodology_version, notes, created_by, is_default_for_future_cohorts
-    ) VALUES (?, 'e2e-default', 'v1', ?, 'prepare-e2e-db', 1)
+    ) VALUES (?, 'e2e-default', 'v2', ?, 'prepare-e2e-db', 1)
   `);
   const insertConfigModel = db.prepare(`
     INSERT INTO benchmark_config_models (

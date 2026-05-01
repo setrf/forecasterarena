@@ -1,7 +1,9 @@
 import type { AgentCohortData } from '@/features/cohorts/model-detail/types';
 import {
   getCohortDecisionStatusBadge,
-  getCohortDecisionStatusLabel
+  getCohortDecisionStatusLabel,
+  getCohortScoringStatusBadge,
+  getCohortScoringStatusLabel
 } from '@/features/cohorts/decisionStatus';
 
 interface AgentCohortHeaderProps {
@@ -32,10 +34,14 @@ export function AgentCohortHeader({ data }: AgentCohortHeaderProps) {
             <span className={`badge ${getCohortDecisionStatusBadge(data.cohort.decision_status)}`}>
               {getCohortDecisionStatusLabel(data.cohort.decision_status)}
             </span>
+            <span className={`badge ${getCohortScoringStatusBadge(data.cohort.scoring_status)}`}>
+              {getCohortScoringStatusLabel(data.cohort.scoring_status)}
+            </span>
             <span className="badge">Week {data.cohort.current_week}</span>
           </div>
           <p className="detail-header__meta">
             {data.model.provider} • in Cohort #{data.cohort.cohort_number}
+            {data.cohort.is_archived ? ' • historical archive' : ''}
           </p>
         </div>
       </div>

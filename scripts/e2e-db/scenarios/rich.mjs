@@ -28,7 +28,7 @@ export function seedRichScenario(db) {
 
   db.prepare(`
     INSERT INTO cohorts (id, cohort_number, started_at, status, methodology_version, benchmark_config_id, initial_balance)
-    VALUES (?, 1, ?, 'active', 'v1', ?, 10000.00)
+    VALUES (?, 1, ?, 'active', 'v2', ?, 10000.00)
   `).run(SEEDED_COHORT_ID, SNAPSHOT_START, SEEDED_BENCHMARK_CONFIG_ID);
 
   const insertAgent = db.prepare(`

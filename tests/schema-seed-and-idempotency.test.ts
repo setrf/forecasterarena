@@ -131,6 +131,56 @@ describe('schema seeds and idempotency behavior', () => {
     }
   });
 
+  it('archives existing v1 cohorts while leaving v2 and new cohorts current', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const dbModule = await import('@/lib/db');
+      const queries = await import('@/lib/db/queries');
+      const { archiveV1CohortsMigration } = await import('@/lib/db/migrations/011_archive_v1_cohorts');
+      const db = dbModule.getDb();
+      const config = db.prepare(`
+        SELECT id
+        FROM benchmark_configs
+        WHERE is_default_for_future_cohorts = 1
+        LIMIT 1
+      `).get() as { id: string };
+
+      db.prepare(`
+        INSERT INTO cohorts (
+          id, cohort_number, started_at, methodology_version, benchmark_config_id
+        ) VALUES (?, ?, ?, ?, ?)
+      `).run('legacy-v1-cohort', 1, '2026-01-04T00:00:00.000Z', 'v1', config.id);
+      db.prepare(`
+        INSERT INTO cohorts (
+          id, cohort_number, started_at, methodology_version, benchmark_config_id
+        ) VALUES (?, ?, ?, ?, ?)
+      `).run('current-v2-cohort', 2, '2026-01-11T00:00:00.000Z', 'v2', config.id);
+      db.prepare(`
+        INSERT INTO performance_chart_cache (
+          cache_key, cohort_id, range_key, payload_json
+        ) VALUES (?, NULL, ?, ?)
+      `).run('1M::all', '1M', JSON.stringify([{ date: 'stale' }]));
+
+      archiveV1CohortsMigration.apply(db);
+
+      const legacy = queries.getCohortById('legacy-v1-cohort')!;
+      const current = queries.getCohortById('current-v2-cohort')!;
+      expect(legacy.is_archived).toBe(1);
+      expect(legacy.archived_at).toBeTruthy();
+      expect(legacy.archive_reason).toMatch(/historical v1/i);
+      expect(current.is_archived).toBe(0);
+      expect(current.archived_at).toBeNull();
+      expect(current.archive_reason).toBeNull();
+      expect(db.prepare('SELECT COUNT(*) as count FROM performance_chart_cache').get()).toEqual({ count: 0 });
+
+      const newCohort = queries.createCohort(config.id);
+      expect(queries.getCohortById(newCohort.id)?.is_archived).toBe(0);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('deduplicates brier score creation by trade_id', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 

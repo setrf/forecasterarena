@@ -3,8 +3,29 @@ import type { Db } from '@/lib/application/cohorts/shared/types';
 export function getAgentRank(
   db: Db,
   cohortId: string,
-  totalValue: number
+  totalValue: number,
+  options: { useSnapshots?: boolean } = {}
 ): { rank: number; total_agents: number } {
+  if (options.useSnapshots === false) {
+    return db.prepare(`
+      WITH open_position_values AS (
+        SELECT
+          agent_id,
+          COALESCE(SUM(COALESCE(current_value, total_cost)), 0) as total_position_value
+        FROM positions
+        WHERE status = 'open'
+        GROUP BY agent_id
+      )
+      SELECT
+        COUNT(*) + 1 as rank,
+        (SELECT COUNT(*) FROM agents WHERE cohort_id = ?) as total_agents
+      FROM agents a1
+      LEFT JOIN open_position_values p1 ON a1.id = p1.agent_id
+      WHERE a1.cohort_id = ?
+        AND (a1.cash_balance + COALESCE(p1.total_position_value, 0)) > ?
+    `).get(cohortId, cohortId, totalValue) as { rank: number; total_agents: number };
+  }
+
   return db.prepare(`
     SELECT
       COUNT(*) + 1 as rank,

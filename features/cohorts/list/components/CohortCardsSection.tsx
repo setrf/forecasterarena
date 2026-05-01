@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { formatDisplayDate } from '@/lib/utils';
 import {
   getCohortDecisionStatusBadge,
-  getCohortDecisionStatusLabel
+  getCohortDecisionStatusLabel,
+  getCohortScoringStatusBadge,
+  getCohortScoringStatusLabel
 } from '@/features/cohorts/decisionStatus';
 import type { CohortSummary } from '@/features/cohorts/list/types';
 
@@ -12,7 +14,7 @@ interface CohortCardsSectionProps {
   loading: boolean;
   emptyTitle: string;
   emptyDescription: string;
-  variant: 'decisioning' | 'resolving' | 'completed';
+  variant: 'decisioning' | 'resolving' | 'completed' | 'archived';
 }
 
 export function CohortCardsSection({
@@ -25,6 +27,7 @@ export function CohortCardsSection({
 }: CohortCardsSectionProps) {
   const isDecisioning = variant === 'decisioning';
   const isCompleted = variant === 'completed';
+  const isArchived = variant === 'archived';
 
   return (
     <div className="mb-16">
@@ -56,7 +59,7 @@ export function CohortCardsSection({
             {emptyDescription}
           </p>
         </div>
-      ) : !isCompleted ? (
+      ) : !isCompleted && !isArchived ? (
         <div className="grid md:grid-cols-2 gap-6">
           {cohorts.map((cohort) => (
             <Link
@@ -107,7 +110,9 @@ export function CohortCardsSection({
                 <h3 className="heading-card group-hover:text-[var(--accent-gold)] transition-colors">
                   Cohort #{cohort.cohort_number}
                 </h3>
-                <span className="badge badge-completed">Completed</span>
+                <span className={`badge ${isArchived ? getCohortScoringStatusBadge(cohort.scoring_status) : 'badge-completed'}`}>
+                  {isArchived ? getCohortScoringStatusLabel(cohort.scoring_status) : 'Completed'}
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -119,6 +124,11 @@ export function CohortCardsSection({
                   <p>{cohort.total_markets_traded}</p>
                 </div>
               </div>
+              {isArchived && (
+                <p className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-sm text-[var(--text-muted)]">
+                  Excluded from current v2 rankings and graphs.
+                </p>
+              )}
             </Link>
           ))}
         </div>

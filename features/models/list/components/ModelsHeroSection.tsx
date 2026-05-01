@@ -23,13 +23,13 @@ export function ModelsHeroSection({
       className="page-intro--compact-aside"
       eyebrow="The Competitors"
       title={<>{modelCount > 0 ? `${modelCount} ` : ''}Frontier model families</>}
-      description="Competing head-to-head in live prediction markets under identical prompts, starting capital, and constraints."
+      description="Competing head-to-head in current v2 prediction-market cohorts under identical prompts, starting capital, and constraints."
       aside={hasRealData && leader ? (
         <Link href={`/models/${leader.slug ?? leader.id}`} className="block group">
           <div className="surface-panel p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="metric-tile__label">Current Leader</p>
+                <p className="metric-tile__label">Current v2 Leader</p>
                 <h2 className="heading-block mt-1">{leader.displayName}</h2>
                 <p className="metric-tile__meta">{leader.provider}</p>
               </div>

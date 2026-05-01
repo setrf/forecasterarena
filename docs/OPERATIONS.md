@@ -76,7 +76,7 @@ The code does not contain its own scheduler. The currently intended cadence is:
 0 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/check-resolutions \
   -H "Authorization: Bearer $CRON_SECRET"
 
-# Mark to market all active cohorts
+# Mark to market unarchived active cohorts
 */10 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/take-snapshots \
   -H "Authorization: Bearer $CRON_SECRET"
 
@@ -88,9 +88,9 @@ The code does not contain its own scheduler. The currently intended cadence is:
 Why this schedule matters:
 
 - `run-decisions` assumes `start-cohort` has already executed or that the weekly cohort can still be bootstrapped.
-- `run-decisions` only spends LLM calls on active cohorts inside the latest decision window; older active cohorts remain tracking-only.
+- `run-decisions` only spends LLM calls on unarchived active cohorts inside the latest decision window; older current v2 cohorts remain tracking-only.
 - `check-resolutions` only processes markets that are locally `closed`.
-- `take-snapshots` is most useful when run regularly; the database schema is timestamp-based, not day-based.
+- `take-snapshots` is most useful when run regularly; the database schema is timestamp-based, not day-based, and archived v1 cohorts are intentionally excluded from routine snapshots.
 
 ---
 
@@ -207,8 +207,9 @@ Operational rule:
 
 - register new releases and promote future configs through the admin benchmark control plane
 - do not mutate old `models` rows expecting historical cohorts to follow along safely
-- active cohorts refresh to the promoted default lineup before Sunday decision runs
+- unarchived active cohorts refresh to the promoted default lineup before Sunday decision runs
 - only decision-eligible active cohorts receive new LLM calls after that refresh
+- archived v1 cohorts skip lineup refreshes, new decisions, and routine snapshots while remaining available for settlement and historical drilldowns
 - historical decisions, trades, and brier scores keep their frozen release lineage even after active cohorts refresh
 
 Recommended release-rotation workflow:
@@ -257,7 +258,7 @@ sqlite3 /opt/forecasterarena-state/data/forecaster.db "
 
 Expected:
 
-- one decision row per active agent in each decision-eligible cohort for the run,
+- one decision row per active agent in each decision-eligible unarchived cohort for the run,
 - no new decision rows for older active cohorts outside the decision window,
 - no duplicate rows for the same `(agent_id, cohort_id, decision_week)`.
 

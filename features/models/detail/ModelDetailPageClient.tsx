@@ -93,6 +93,8 @@ export default function ModelDetailPageClient({
           cohorts={data?.cohort_performance ?? []}
           loading={loading}
           familySlug={canonicalModelSlug}
+          title="Current v2 Cohorts"
+          emptyTitle="No current v2 cohort data yet"
         />
         <ModelRecentDecisionsPanel
           decisions={data?.recent_decisions ?? []}
@@ -100,6 +102,19 @@ export default function ModelDetailPageClient({
           onSelectDecision={setSelectedDecision}
         />
       </div>
+
+      {(loading || (data?.archived_cohort_performance.length ?? 0) > 0) && (
+        <div className="mt-8">
+          <ModelCohortPerformancePanel
+            cohorts={data?.archived_cohort_performance ?? []}
+            loading={loading}
+            familySlug={canonicalModelSlug}
+            title="Archived v1 History"
+            emptyTitle="No archived v1 history"
+            description="Historical v1 cohorts remain accessible but are excluded from current v2 averages, graphs, and rankings."
+          />
+        </div>
+      )}
 
       <DecisionReasoningModal
         decision={selectedDecision}

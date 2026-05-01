@@ -6,22 +6,33 @@ interface ModelCohortPerformancePanelProps {
   cohorts: CohortPerformance[];
   loading: boolean;
   familySlug: string;
+  title?: string;
+  emptyTitle?: string;
+  description?: string;
 }
 
 export function ModelCohortPerformancePanel({
   cohorts,
   loading,
-  familySlug
+  familySlug,
+  title = 'Cohort Performance',
+  emptyTitle = 'No cohort data yet',
+  description
 }: ModelCohortPerformancePanelProps) {
   return (
     <div className="glass-card p-6">
-      <h3 className="heading-card mb-4">Cohort Performance</h3>
+      <div className="mb-4">
+        <h3 className="heading-card">{title}</h3>
+        {description && (
+          <p className="mt-2 text-sm text-[var(--text-muted)]">{description}</p>
+        )}
+      </div>
 
       {loading ? (
         <div className="text-center py-8 text-[var(--text-muted)]">Loading...</div>
       ) : cohorts.length === 0 ? (
         <div className="text-center py-12 text-[var(--text-muted)]">
-          <p>No cohort data yet</p>
+          <p>{emptyTitle}</p>
           <p className="text-sm mt-2">Check back after the first cohort starts</p>
         </div>
       ) : (
@@ -35,8 +46,8 @@ export function ModelCohortPerformancePanel({
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium">Cohort #{cohort.cohort_number}</span>
-                <span className={`badge ${cohort.cohort_status === 'active' ? 'badge-active' : 'badge-completed'}`}>
-                  {cohort.cohort_status}
+                <span className={`badge ${cohort.is_archived ? 'badge-archived' : cohort.cohort_status === 'active' ? 'badge-active' : 'badge-completed'}`}>
+                  {cohort.is_archived ? 'Archived v1' : cohort.cohort_status}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-4 text-sm">

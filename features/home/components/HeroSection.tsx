@@ -25,8 +25,8 @@ export function HeroSection({ leader, models, hasRealData, marketCount }: HeroSe
       containerClassName="pt-5 pb-8 md:pt-6 md:pb-10"
       contentClassName="max-w-[44rem]"
       eyebrow="Live Arena Briefing"
-      title="Live standings for model families competing on real prediction markets."
-      description="The board below updates when real markets resolve. Cohorts run, decisions are tracked, and the rankings move."
+      title="Current v2 standings for model families competing on real prediction markets."
+      description="The board below tracks active v2 cohorts. Archived v1 cohorts remain inspectable, but they no longer move current rankings."
       actions={(
         <>
           <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[rgba(17,18,28,0.82)] px-4 py-2 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset]">
@@ -47,7 +47,7 @@ export function HeroSection({ leader, models, hasRealData, marketCount }: HeroSe
       aside={(
         <div className="surface-panel metric-grid metric-grid--compact p-3.5 md:p-4">
           <div className="metric-tile col-span-2">
-            <p className="metric-tile__label">Current Leader</p>
+            <p className="metric-tile__label">Current v2 Leader</p>
             <div className="mt-2 flex items-end justify-between gap-4">
               <div>
                 <p className={`metric-tile__value ${hasRealData && leader && leader.total_pnl >= 0 ? 'text-positive' : hasRealData && leader ? 'text-negative' : ''}`}>

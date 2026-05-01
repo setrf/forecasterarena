@@ -1,4 +1,5 @@
 export type CohortDecisionStatus = 'decisioning' | 'tracking_only' | 'completed';
+export type CohortScoringStatus = 'current' | 'archived';
 
 export function getCohortDecisionStatusLabel(status: CohortDecisionStatus): string {
   switch (status) {
@@ -20,4 +21,12 @@ export function getCohortDecisionStatusBadge(status: CohortDecisionStatus): stri
     case 'completed':
       return 'badge-completed';
   }
+}
+
+export function getCohortScoringStatusLabel(status: CohortScoringStatus): string {
+  return status === 'archived' ? 'Archived v1' : 'Current';
+}
+
+export function getCohortScoringStatusBadge(status: CohortScoringStatus): string {
+  return status === 'archived' ? 'badge-archived' : 'badge-active';
 }

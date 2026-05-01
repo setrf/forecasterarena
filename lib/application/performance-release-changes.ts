@@ -25,6 +25,7 @@ export function getReleaseChangeEvents(args?: {
       COALESCE(dbi.release_id, d.release_id) as release_id
     FROM decisions d
     JOIN agents a ON a.id = d.agent_id
+    JOIN cohorts c ON c.id = d.cohort_id
     LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
     LEFT JOIN model_releases mr ON mr.id = d.release_id
     WHERE COALESCE(dbi.release_id, d.release_id) IS NOT NULL
@@ -38,6 +39,10 @@ export function getReleaseChangeEvents(args?: {
   if (args?.familyId) {
     query += ' AND COALESCE(dbi.family_id, d.family_id) = ?';
     params.push(args.familyId);
+  }
+
+  if (!args?.cohortId) {
+    query += ' AND COALESCE(c.is_archived, 0) = 0';
   }
 
   query += `

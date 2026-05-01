@@ -39,6 +39,7 @@ export function listRecentDecisions(limit: number) {
       LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
       JOIN cohorts c ON d.cohort_id = c.id
       WHERE d.action != 'ERROR'
+        AND COALESCE(c.is_archived, 0) = 0
       ORDER BY d.decision_timestamp DESC
       LIMIT ?
     `).all(limit) as Array<Record<string, unknown>>,

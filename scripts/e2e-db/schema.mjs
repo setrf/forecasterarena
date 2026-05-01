@@ -19,9 +19,11 @@ export function createSchema(db) {
     methodology_version TEXT NOT NULL DEFAULT 'v1',
     benchmark_config_id TEXT NOT NULL,
     initial_balance REAL NOT NULL DEFAULT 10000.00,
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    archived_at TEXT,
+    archive_reason TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
-
   CREATE TABLE models (
     id TEXT PRIMARY KEY,
     openrouter_id TEXT NOT NULL UNIQUE,

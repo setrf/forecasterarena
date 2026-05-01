@@ -419,20 +419,50 @@ Rationale:
 
 - Letting every unresolved cohort call every model every week creates
   unbounded cost and latency as old markets take months to resolve.
-- Older cohorts still need to remain live for portfolio snapshots,
+- Older current v2 cohorts still need to remain live for portfolio snapshots,
   resolution checks, leaderboards, drilldowns, and audit history.
 - Deriving eligibility from cohort numbers avoids rewriting historical rows or
   introducing a second persisted lifecycle state.
 
 Implementation notes:
 
-- `status = active` still means the cohort is live for tracking and resolution.
+- `status = active` still means the cohort is live for tracking and resolution
+  when it is not archived.
 - `decision_eligible` and `decision_status` are derived API/read-model fields.
 - Completed cohorts are never decision-eligible.
 - Older active cohorts outside the latest window never backfill into decision
   eligibility when a newer cohort completes.
-- The Sunday lineup refresh can still touch all active cohorts, but only
-  decision-eligible cohorts receive new LLM calls.
+- The Sunday lineup refresh can still touch all unarchived active cohorts, but
+  only decision-eligible cohorts receive new LLM calls.
+
+---
+
+### D021: Archive v1 Cohorts for Current v2 Scoring
+
+- Status: Active
+- Decision: Cohorts with `methodology_version = 'v1'` are archived with
+  explicit metadata. They remain publicly accessible as history, but are
+  excluded from current v2 leaderboards, model averages, global/model-family
+  graphs, recent-decision feeds, lineup refreshes, and routine snapshots.
+
+Rationale:
+
+- v1 used a different methodology framing, so mixing it into moving current
+  v2 aggregates makes the product less legible.
+- Historical auditability still matters; direct cohort and cohort-model pages
+  must continue to work.
+- Archived positions may still settle when markets resolve, so archival is not
+  data deletion.
+
+Implementation notes:
+
+- `cohorts.status` remains `active` or `completed`; archive state is stored as
+  `is_archived`, `archived_at`, and `archive_reason`.
+- Public read models expose `scoring_status = current | archived`.
+- Direct archived cohort pages compute live portfolio value from cash,
+  positions, and settlement state instead of relying on routine snapshots.
+- Resolution settlement remains market-wide so archived positions can still
+  settle safely.
 
 ---
 

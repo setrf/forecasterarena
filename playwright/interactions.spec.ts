@@ -17,7 +17,7 @@ test('home chart controls work against the seeded performance data', async ({ pa
   await expect(page.getByText('Showing only Kimi')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'ALL' }).click();
-  await expect(page.getByRole('heading', { level: 2, name: 'Current Standings' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Current v2 Standings' })).toBeVisible();
 });
 
 test('model detail recent decisions open and close the reasoning modal', async ({ page }) => {

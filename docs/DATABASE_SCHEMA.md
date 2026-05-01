@@ -105,6 +105,9 @@ Represents one weekly benchmark competition instance.
 | `methodology_version` | `TEXT` | Not null, default `v1` |
 | `benchmark_config_id` | `TEXT` | Not null frozen lineup/config reference |
 | `initial_balance` | `REAL` | Not null, default `10000.00` |
+| `is_archived` | `INTEGER` | Not null, default `0`; archived cohorts are excluded from current scoring/snapshots |
+| `archived_at` | `TEXT` | Nullable archive timestamp |
+| `archive_reason` | `TEXT` | Nullable human-readable archive reason |
 | `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
 
 Foreign keys:
@@ -618,6 +621,7 @@ ones are:
 - `idx_trades_decision`
 - `idx_decisions_agent_week`
 - `idx_snapshots_agent_timestamp`
+- `idx_cohorts_archived_status`
 - `idx_logs_created`
 
 Why these matter:
@@ -650,6 +654,9 @@ passes can safely retry the same market.
 `/api/performance-data` groups `portfolio_snapshots` by timestamp and averages
 portfolio values across cohorts when needed. It also emits `release_changes`
 so charts can annotate where family release upgrades occurred.
+
+Global and family-scoped curves exclude archived cohorts. Direct cohort-scoped
+requests may include an archived cohort so historical pages remain accessible.
 
 The snapshot cron now also refreshes a persisted `performance_chart_cache`
 table for the global time ranges. This lets cold app starts serve the main

@@ -181,7 +181,7 @@ Flow:
 Key property:
 
 - Historical records stay stable because decisions, trades, and Brier diagnostic rows snapshot lineage at write time even if an active cohort later rolls forward to a new release.
-- The refresh can still touch all active cohorts, but only decision-eligible cohorts use the refreshed releases for new LLM decisions.
+- The refresh can still touch all unarchived active cohorts, but only decision-eligible cohorts use the refreshed releases for new LLM decisions. Archived v1 cohorts retain their frozen historical lineup.
 
 ### 4. Decision pipeline
 
@@ -230,7 +230,7 @@ Flow:
 
 1. [`POST /api/cron/take-snapshots`](../app/api/cron/take-snapshots/route.ts)
 2. [`lib/application/cron/takeSnapshots.ts`](../lib/application/cron/takeSnapshots.ts)
-3. Load all active cohorts and agents, including cohorts outside the decision window.
+3. Load all unarchived active cohorts and agents, including current v2 cohorts outside the decision window.
 4. For each agent, read all open positions, derive snapshot pricing through [`lib/application/cron/snapshotPricing.ts`](../lib/application/cron/snapshotPricing.ts), update mark-to-market fields on positions, and create a portfolio snapshot row.
 5. Refresh persisted performance cache through [`lib/application/performance.ts`](../lib/application/performance.ts).
 

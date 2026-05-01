@@ -8,7 +8,7 @@ vi.mock('@/lib/application/performance', () => ({
 }));
 
 describe('takeSnapshots decision window behavior', () => {
-  it('snapshots all active cohorts, including cohorts outside the decision window', async () => {
+  it('snapshots active current cohorts outside the decision window but skips archived cohorts', async () => {
     await withDbQueryModules(async ({ agents, cohorts, db, snapshots }) => {
       const created = Array.from({ length: 3 }, (_, index) => {
         const cohort = cohorts.createCohort();
@@ -19,6 +19,8 @@ describe('takeSnapshots decision window behavior', () => {
         agents.createAgentsForCohort(cohort.id);
         return cohorts.getCohortById(cohort.id)!;
       });
+      db.prepare('UPDATE cohorts SET is_archived = 1, archive_reason = ? WHERE id = ?')
+        .run('test archive', created[0]!.id);
 
       expect(cohorts.getDecisionEligibleCohorts(2).map((cohort) => cohort.id))
         .not.toContain(created[0]!.id);
@@ -27,7 +29,7 @@ describe('takeSnapshots decision window behavior', () => {
       const result = await takeSnapshots();
 
       const expectedSnapshots = created.reduce(
-        (sum, cohort) => sum + agents.getAgentsByCohort(cohort.id).length,
+        (sum, cohort) => sum + (cohort.id === created[0]!.id ? 0 : agents.getAgentsByCohort(cohort.id).length),
         0
       );
 
@@ -38,7 +40,11 @@ describe('takeSnapshots decision window behavior', () => {
 
       for (const cohort of created) {
         for (const agent of agents.getAgentsByCohort(cohort.id)) {
-          expect(snapshots.getLatestSnapshot(agent.id)).toBeTruthy();
+          if (cohort.id === created[0]!.id) {
+            expect(snapshots.getLatestSnapshot(agent.id)).toBeUndefined();
+          } else {
+            expect(snapshots.getLatestSnapshot(agent.id)).toBeTruthy();
+          }
         }
       }
       expect(refreshPersistedPerformanceCache).toHaveBeenCalledOnce();

@@ -58,15 +58,19 @@ export default function CohortsPageClient() {
   }, []);
 
   const decisionCohorts = useMemo(
-    () => cohorts.filter((cohort) => cohort.decision_status === 'decisioning'),
+    () => cohorts.filter((cohort) => !cohort.is_archived && cohort.decision_status === 'decisioning'),
     [cohorts]
   );
   const resolvingCohorts = useMemo(
-    () => cohorts.filter((cohort) => cohort.decision_status === 'tracking_only'),
+    () => cohorts.filter((cohort) => !cohort.is_archived && cohort.decision_status === 'tracking_only'),
     [cohorts]
   );
   const completedCohorts = useMemo(
-    () => cohorts.filter((cohort) => cohort.status === 'completed'),
+    () => cohorts.filter((cohort) => !cohort.is_archived && cohort.status === 'completed'),
+    [cohorts]
+  );
+  const archivedCohorts = useMemo(
+    () => cohorts.filter((cohort) => cohort.is_archived),
     [cohorts]
   );
   const nextSundayLabel = useMemo(() => getNextSundayLabel(), []);
@@ -107,6 +111,15 @@ export default function CohortsPageClient() {
           emptyTitle="No Completed Cohorts"
           emptyDescription="Past cohorts will appear here after all bets resolve"
           variant="completed"
+        />
+
+        <CohortCardsSection
+          title="Archived v1"
+          cohorts={archivedCohorts}
+          loading={loading}
+          emptyTitle="No Archived Cohorts"
+          emptyDescription="Historical v1 cohorts will appear here after archival"
+          variant="archived"
         />
 
         <CohortHowItWorks />

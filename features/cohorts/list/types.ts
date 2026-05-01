@@ -5,6 +5,10 @@ export interface CohortSummary {
   status: string;
   decision_eligible: boolean;
   decision_status: 'decisioning' | 'tracking_only' | 'completed';
+  is_archived: boolean;
+  archived_at: string | null;
+  archive_reason: string | null;
+  scoring_status: 'current' | 'archived';
   num_agents: number;
   total_markets_traded: number;
   methodology_version: string;

@@ -3,15 +3,24 @@ import {
   getCohortById,
   getPositionsWithMarkets
 } from '@/lib/db/queries';
-import type { CohortDecisionStatus } from '@/lib/cohort-decision-state';
+import type { CohortDecisionStatus, CohortScoringStatus } from '@/lib/cohort-decision-state';
 
 export interface CohortDecisionMetadata {
   decision_eligible: boolean;
   decision_status: CohortDecisionStatus;
+  is_archived: boolean;
+  archived_at: string | null;
+  archive_reason: string | null;
+  scoring_status: CohortScoringStatus;
 }
 
+type CohortReadModel = Omit<
+  NonNullable<ReturnType<typeof getCohortById>>,
+  'is_archived'
+> & CohortDecisionMetadata;
+
 export interface CohortDetailPayload {
-  cohort: NonNullable<ReturnType<typeof getCohortById>> & CohortDecisionMetadata;
+  cohort: CohortReadModel;
   agents: Array<{
     id: string;
     family_slug: string;
@@ -66,6 +75,10 @@ export interface AgentCohortDetailPayload {
     total_markets: number;
     decision_eligible: boolean;
     decision_status: CohortDecisionStatus;
+    is_archived: boolean;
+    archived_at: string | null;
+    archive_reason: string | null;
+    scoring_status: CohortScoringStatus;
   };
   model: {
     id: string;

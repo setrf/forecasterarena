@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS cohorts (
   completed_at TEXT,                             -- When all bets resolved
   methodology_version TEXT NOT NULL DEFAULT 'v1',-- Version used
   benchmark_config_id TEXT NOT NULL,             -- Frozen lineup/config used
+  is_archived INTEGER NOT NULL DEFAULT 0,         -- 1=historical, excluded from current scoring
+  archived_at TEXT,                              -- When this cohort was archived
+  archive_reason TEXT,                           -- Why this cohort was archived
   initial_balance REAL NOT NULL DEFAULT 10000.00,-- Starting balance
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (methodology_version) REFERENCES methodology_versions(version),

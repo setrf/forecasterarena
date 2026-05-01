@@ -2,7 +2,9 @@ import Link from 'next/link';
 import type { Cohort } from '@/features/cohorts/detail/types';
 import {
   getCohortDecisionStatusBadge,
-  getCohortDecisionStatusLabel
+  getCohortDecisionStatusLabel,
+  getCohortScoringStatusBadge,
+  getCohortScoringStatusLabel
 } from '@/features/cohorts/decisionStatus';
 
 interface CohortDetailHeaderProps {
@@ -30,13 +32,22 @@ export function CohortDetailHeader({ cohort }: CohortDetailHeaderProps) {
             <span className={`badge ${getCohortDecisionStatusBadge(cohort.decision_status)}`}>
               {getCohortDecisionStatusLabel(cohort.decision_status)}
             </span>
+            <span className={`badge ${getCohortScoringStatusBadge(cohort.scoring_status)}`}>
+              {getCohortScoringStatusLabel(cohort.scoring_status)}
+            </span>
           </div>
-          <p className="detail-header__meta">{cohort.methodology_version}</p>
+          <p className="detail-header__meta">
+            {cohort.methodology_version}
+            {cohort.is_archived ? ' · Historical archive, excluded from current v2 scoring' : ''}
+          </p>
         </div>
 
         <div className="metric-tile">
           <p className="metric-tile__label">Methodology</p>
           <p className="metric-tile__value text-xl">{cohort.methodology_version}</p>
+          {cohort.is_archived && (
+            <p className="metric-tile__meta">Historical archive</p>
+          )}
         </div>
       </div>
     </>

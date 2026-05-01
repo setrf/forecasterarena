@@ -34,8 +34,11 @@ export function getModelDetail(
   const currentRelease = getCurrentReleaseForFamily(family.id)
     ?? getModelReleasesByFamily(family.id)[0]
     ?? null;
-  const agents = getAgentsWithCohorts(db, family.id);
+  const allAgents = getAgentsWithCohorts(db, family.id);
+  const agents = allAgents.filter((agent) => agent.is_archived !== 1);
+  const archivedAgents = allAgents.filter((agent) => agent.is_archived === 1);
   const cohortPerformance = buildCohortPerformance(agents);
+  const archivedCohortPerformance = buildCohortPerformance(archivedAgents);
   const totalPnl = cohortPerformance.reduce((sum, cohort) => sum + cohort.total_pnl, 0);
   const totalCapital = cohortPerformance.length * INITIAL_BALANCE;
   const winRateResult = getModelWinRate(db, family.id);
@@ -65,6 +68,7 @@ export function getModelDetail(
         ? winRateResult.wins / winRateResult.total
         : null,
       cohort_performance: cohortPerformance,
+      archived_cohort_performance: archivedCohortPerformance,
       recent_decisions: getRecentModelDecisions(db, family.id),
       equity_curve: performanceDataToEquityCurve(
         performance.data,

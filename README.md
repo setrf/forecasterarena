@@ -16,7 +16,7 @@
 
 </div>
 
-> Documentation status: updated for the current codebase on March 7, 2026.
+> Documentation status: updated for the current codebase on April 30, 2026.
 
 ---
 
@@ -25,6 +25,8 @@
 Forecaster Arena is a reality-grounded evaluation for frontier LLMs. It uses real prediction markets from [Polymarket](https://polymarket.com), paper portfolios, and deterministic prompting as tools for testing whether models can turn forecasts about future events into measurable economic value. Every decision-eligible benchmark family receives the same market universe, the same portfolio constraints, and the same setup.
 
 The primary ranking is **portfolio value / P&L**. Brier score and calibration views are retained as historical diagnostics for resolved markets, but they are not the core current methodology.
+
+Historical v1 cohorts are archived. They remain publicly accessible for audit and drilldown history, but current v2 leaderboards, averages, charts, recent-decision feeds, and routine snapshot work exclude archived cohorts.
 
 The system also keeps **full decision logs** for reproducibility.
 
@@ -39,7 +41,7 @@ The codebase now separates **legacy model IDs**, **stable benchmark families**, 
 - `models.id` remains as a legacy compatibility key
 - `model_families` defines the long-lived benchmark slot
 - `model_releases` defines the exact deployed model
-- `benchmark_configs` define the default lineup used for future cohorts and Sunday refreshes of active cohorts
+- `benchmark_configs` define the default lineup used for future cohorts and Sunday refreshes of unarchived active cohorts
 - `agents.family_id`, `agents.release_id`, and `agents.benchmark_config_model_id` freeze that identity onto each cohort participant
 - `decisions`, `trades`, and `brier_scores` freeze release lineage at write time so historical records remain correct after family rollovers
 
@@ -74,8 +76,9 @@ Why this matters:
    - Cohorts are now **week-unique** at the database level, so duplicate Sunday starts do not create parallel competitions for the same week.
 
 3. **Decision run**
-   - Active cohorts stay live for tracking and resolution, but only the latest decision window receives new LLM calls.
+   - Active current cohorts stay live for tracking and resolution, but only the latest decision window receives new LLM calls.
    - By default, the newest `5` cohort numbers are decision-eligible through `DECISION_COHORT_LIMIT`.
+   - Archived v1 cohorts never receive new LLM calls.
    - Every decision-eligible agent builds a prompt from its current portfolio plus the current market set.
    - OpenRouter calls are deterministic (`temperature = 0`).
    - The current implementation uses a **40 second per-model timeout**, **no transport retries by default**, and **1 malformed-response retry**.
@@ -95,7 +98,8 @@ Why this matters:
 
 6. **Portfolio snapshots**
    - Snapshots are timestamped, not daily-bucketed.
-   - The current snapshot route records **10-minute mark-to-market state** and preserves prior value when markets are closed but unresolved and price feeds become unhelpful.
+   - The current snapshot route records **10-minute mark-to-market state** for unarchived active cohorts and preserves prior value when markets are closed but unresolved and price feeds become unhelpful.
+   - Archived v1 cohorts are not routine-snapshotted; their detail pages compute live portfolio state from cash, positions, and settlement records.
 
 ---
 
@@ -290,9 +294,12 @@ All cron routes require:
 Authorization: Bearer {CRON_SECRET}
 ```
 
-`run-decisions` only spends model calls on active cohorts inside the latest
-decision window. Older active cohorts remain included in portfolio snapshots,
-resolution checks, leaderboards, drilldowns, and audit history.
+`run-decisions` only spends model calls on unarchived active cohorts inside the
+latest decision window. Current v2 cohorts outside that window remain included
+in snapshots, resolution checks, leaderboards, drilldowns, and audit history.
+Archived v1 cohorts are settle-only: they remain linkable and can receive
+settlement updates, but they are excluded from current v2 scoring, graphs,
+recent decisions, lineup refreshes, and routine snapshots.
 
 ---
 

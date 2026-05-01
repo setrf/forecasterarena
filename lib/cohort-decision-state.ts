@@ -1,6 +1,7 @@
 import { DECISION_COHORT_LIMIT } from '@/lib/constants';
 
 export type CohortDecisionStatus = 'decisioning' | 'tracking_only' | 'completed';
+export type CohortScoringStatus = 'current' | 'archived';
 
 export interface CohortDecisionState {
   decision_eligible: boolean;
@@ -10,6 +11,19 @@ export interface CohortDecisionState {
 interface CohortDecisionStateInput {
   cohort_number: number;
   status: string;
+  is_archived?: boolean | number | null;
+}
+
+interface CohortScoringStateInput {
+  is_archived?: boolean | number | null;
+}
+
+export function isCohortArchived(cohort: CohortScoringStateInput): boolean {
+  return cohort.is_archived === true || cohort.is_archived === 1;
+}
+
+export function getCohortScoringStatus(cohort: CohortScoringStateInput): CohortScoringStatus {
+  return isCohortArchived(cohort) ? 'archived' : 'current';
 }
 
 export function getDecisionEligibilityThreshold(
@@ -28,6 +42,13 @@ export function getCohortDecisionState(
     return {
       decision_eligible: false,
       decision_status: 'completed'
+    };
+  }
+
+  if (isCohortArchived(cohort)) {
+    return {
+      decision_eligible: false,
+      decision_status: 'tracking_only'
     };
   }
 

@@ -29,6 +29,16 @@ export function getActiveCohorts(): Cohort[] {
   return db.prepare(`
     SELECT * FROM cohorts
     WHERE status = 'active'
+      AND COALESCE(is_archived, 0) = 0
+    ORDER BY started_at DESC
+  `).all() as Cohort[];
+}
+
+export function getActiveCohortsIncludingArchived(): Cohort[] {
+  const db = getDb();
+  return db.prepare(`
+    SELECT * FROM cohorts
+    WHERE status = 'active'
     ORDER BY started_at DESC
   `).all() as Cohort[];
 }
@@ -40,6 +50,7 @@ export function getDecisionEligibleCohorts(limit: number = DECISION_COHORT_LIMIT
   return db.prepare(`
     SELECT * FROM cohorts
     WHERE status = 'active'
+      AND COALESCE(is_archived, 0) = 0
       AND cohort_number >= ?
     ORDER BY cohort_number DESC
   `).all(threshold) as Cohort[];

@@ -81,8 +81,44 @@ export function getCohortMarketCount(db: Db, cohortId: string): number {
 
 export function getCohortPnlStats(
   db: Db,
-  cohortId: string
+  cohortId: string,
+  options: { useSnapshots?: boolean } = {}
 ): { avg_pnl_percent: number; best_pnl_percent: number; worst_pnl_percent: number } | undefined {
+  if (options.useSnapshots === false) {
+    return db.prepare(`
+      WITH cohort_agents AS (
+        SELECT id, cash_balance
+        FROM agents
+        WHERE cohort_id = ?
+      ),
+      open_position_values AS (
+        SELECT
+          p.agent_id,
+          COALESCE(SUM(COALESCE(p.current_value, p.total_cost)), 0) as total_position_value
+        FROM positions p
+        JOIN cohort_agents ca ON ca.id = p.agent_id
+        WHERE p.status = 'open'
+        GROUP BY p.agent_id
+      ),
+      current_agent_totals AS (
+        SELECT
+          ca.id as agent_id,
+          ((ca.cash_balance + COALESCE(op.total_position_value, 0) - ?) / ?) * 100 as total_pnl_percent
+        FROM cohort_agents ca
+        LEFT JOIN open_position_values op ON ca.id = op.agent_id
+      )
+      SELECT
+        AVG(total_pnl_percent) as avg_pnl_percent,
+        MAX(total_pnl_percent) as best_pnl_percent,
+        MIN(total_pnl_percent) as worst_pnl_percent
+      FROM current_agent_totals
+    `).get(cohortId, INITIAL_BALANCE, INITIAL_BALANCE) as {
+      avg_pnl_percent: number;
+      best_pnl_percent: number;
+      worst_pnl_percent: number;
+    } | undefined;
+  }
+
   return db.prepare(`
     WITH cohort_agents AS (
       SELECT id, cash_balance

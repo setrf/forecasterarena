@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import {
   getAverageBrierScore,
+  getBrierScoresByAgent,
   getClosedPositionsWithMarkets,
   getCohortById,
   getCohortDecisionStateByNumber,
@@ -9,6 +10,10 @@ import {
   resolveModelFamily,
   getLatestSnapshot
 } from '@/lib/db/queries';
+import {
+  getCohortScoringStatus,
+  isCohortArchived
+} from '@/lib/cohort-decision-state';
 import {
   getAgentDecisionsWithMarkets,
   getAgentOpenPositionCount,
@@ -54,10 +59,15 @@ export function getAgentCohortDetail(
   }
 
   const db = getDb();
-  const portfolio = resolveAgentPortfolioSummary(agent.id, getLatestSnapshot(agent.id));
-  const rankResult = getAgentRank(db, cohortId, portfolio.totalValue);
+  const archived = isCohortArchived(cohort);
+  const latestSnapshot = archived ? null : getLatestSnapshot(agent.id);
+  const portfolio = resolveAgentPortfolioSummary(agent.id, latestSnapshot);
+  const resolvedBetCount = archived
+    ? getBrierScoresByAgent(agent.id).length
+    : portfolio.numResolvedBets;
+  const rankResult = getAgentRank(db, cohortId, portfolio.totalValue, { useSnapshots: !archived });
   const winRateResult = getAgentWinRate(db, agent.id);
-  const cohortStats = getCohortPnlStats(db, cohortId);
+  const cohortStats = getCohortPnlStats(db, cohortId, { useSnapshots: !archived });
   const chartSeriesKey = family.slug ?? family.id;
   const performance = getPerformanceData('ALL', { cohortId, familyId: family.id });
 
@@ -73,6 +83,10 @@ export function getAgentCohortDetail(
         benchmark_config_id: cohort.benchmark_config_id,
         current_week: getCohortWeek(db, cohortId),
         total_markets: getCohortMarketCount(db, cohortId),
+        is_archived: archived,
+        archived_at: cohort.archived_at,
+        archive_reason: cohort.archive_reason,
+        scoring_status: getCohortScoringStatus(cohort),
         ...getCohortDecisionStateByNumber(cohort)
       },
       model: {
@@ -101,7 +115,7 @@ export function getAgentCohortDetail(
         total_pnl: portfolio.totalPnl,
         total_pnl_percent: portfolio.totalPnlPercent,
         brier_score: getAverageBrierScore(agent.id),
-        num_resolved_bets: portfolio.numResolvedBets,
+        num_resolved_bets: resolvedBetCount,
         rank: rankResult.rank,
         total_agents: rankResult.total_agents
       },

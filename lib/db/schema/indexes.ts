@@ -94,5 +94,6 @@ CREATE INDEX IF NOT EXISTS idx_logs_created ON system_logs(created_at DESC);
 
 -- Cohorts
 CREATE INDEX IF NOT EXISTS idx_cohorts_status ON cohorts(status);
+CREATE INDEX IF NOT EXISTS idx_cohorts_archived_status ON cohorts(is_archived, status);
 CREATE INDEX IF NOT EXISTS idx_cohorts_started ON cohorts(started_at DESC);
 `;

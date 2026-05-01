@@ -2,6 +2,7 @@ import type {
   Agent,
   BenchmarkConfigModel,
   CohortDecisionStatus,
+  CohortScoringStatus,
   Market,
   Model,
   ModelFamily,
@@ -68,4 +69,8 @@ export interface CohortSummary {
   methodology_version: string;
   decision_eligible: boolean;
   decision_status: CohortDecisionStatus;
+  is_archived: boolean;
+  archived_at: string | null;
+  archive_reason: string | null;
+  scoring_status: CohortScoringStatus;
 }

@@ -43,9 +43,12 @@ function getLatestSnapshotDateForScope(scope: Required<PerformanceScope>): Date 
 
   if (!scope.cohortId && !scope.familyId) {
     const row = db.prepare(`
-      SELECT snapshot_timestamp
-      FROM portfolio_snapshots INDEXED BY idx_snapshots_timestamp_agent_value
-      ORDER BY snapshot_timestamp DESC
+      SELECT ps.snapshot_timestamp
+      FROM portfolio_snapshots ps INDEXED BY idx_snapshots_timestamp_agent_value
+      JOIN agents a ON a.id = ps.agent_id
+      JOIN cohorts c ON c.id = a.cohort_id
+      WHERE COALESCE(c.is_archived, 0) = 0
+      ORDER BY ps.snapshot_timestamp DESC
       LIMIT 1
     `).get() as { snapshot_timestamp: string } | undefined;
     const parsedAt = row ? parseSqliteUtcTimestamp(row.snapshot_timestamp) : null;
@@ -56,13 +59,16 @@ function getLatestSnapshotDateForScope(scope: Required<PerformanceScope>): Date 
     SELECT MAX(ps.snapshot_timestamp) as snapshot_timestamp
     FROM portfolio_snapshots ps INDEXED BY idx_snapshots_timestamp_agent_value
     JOIN agents a ON a.id = ps.agent_id
+    JOIN cohorts c ON c.id = a.cohort_id
     WHERE (? IS NULL OR a.cohort_id = ?)
       AND (? IS NULL OR a.family_id = ?)
+      AND (? IS NOT NULL OR COALESCE(c.is_archived, 0) = 0)
   `).get(
     scope.cohortId,
     scope.cohortId,
     scope.familyId,
-    scope.familyId
+    scope.familyId,
+    scope.cohortId
   ) as { snapshot_timestamp: string | null } | undefined;
 
   const parsedAt = row?.snapshot_timestamp

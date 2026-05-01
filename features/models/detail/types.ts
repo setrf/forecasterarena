@@ -2,6 +2,11 @@ export interface CohortPerformance {
   cohort_id: string;
   cohort_number: number;
   cohort_status: string;
+  methodology_version: string;
+  is_archived: boolean;
+  archived_at: string | null;
+  archive_reason: string | null;
+  scoring_status: 'current' | 'archived';
   agent_status: string;
   cash_balance: number;
   total_value: number;
@@ -57,6 +62,7 @@ export interface ModelDetailData {
   avg_brier_score: number | null;
   win_rate: number | null;
   cohort_performance: CohortPerformance[];
+  archived_cohort_performance: CohortPerformance[];
   recent_decisions: ModelDecision[];
   equity_curve: EquityPoint[];
   release_changes: ReleaseChangeEvent[];

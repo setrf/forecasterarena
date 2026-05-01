@@ -10,8 +10,10 @@ export function getModelWinRate(
       COUNT(*) as total
     FROM trades t
     JOIN agents a ON t.agent_id = a.id
+    JOIN cohorts c ON c.id = a.cohort_id
     JOIN markets m ON t.market_id = m.id
     WHERE a.family_id = ?
+      AND COALESCE(c.is_archived, 0) = 0
       AND m.status = 'resolved'
       AND t.trade_type = 'BUY'
   `).get(familyId) as { wins: number; total: number } | undefined;
@@ -25,7 +27,9 @@ export function getModelEquitySnapshots(
     SELECT ps.snapshot_timestamp, ps.total_value
     FROM portfolio_snapshots ps
     JOIN agents a ON ps.agent_id = a.id
+    JOIN cohorts c ON c.id = a.cohort_id
     WHERE a.family_id = ?
+      AND COALESCE(c.is_archived, 0) = 0
     ORDER BY ps.snapshot_timestamp ASC
   `).all(familyId) as Array<{ snapshot_timestamp: string; total_value: number }>;
 }

@@ -228,6 +228,50 @@ describe('performance data route', () => {
     });
   });
 
+  it('excludes archived cohorts from global and family charts but keeps direct cohort charts accessible', async () => {
+    await withPerformanceFixture(async ({ agent, cohort, queries, route }) => {
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+
+      db.prepare(`
+        UPDATE cohorts
+        SET methodology_version = 'v1', is_archived = 1, archive_reason = ?
+        WHERE id = ?
+      `).run('test archive', cohort.id);
+      queries.createPortfolioSnapshot({
+        agent_id: agent.id,
+        snapshot_timestamp: snapshotTimestamp('2026-03-05T11:55:00.000Z'),
+        cash_balance: 10_250,
+        positions_value: 0,
+        total_value: 10_250,
+        total_pnl: 250,
+        total_pnl_percent: 2.5
+      });
+
+      const globalResponse = await route.GET(
+        new Request('http://localhost/api/performance-data?range=1M') as any
+      );
+      const globalPayload = await globalResponse.json();
+      expect(globalResponse.status).toBe(200);
+      expect(globalPayload.data).toEqual([]);
+
+      const familyResponse = await route.GET(
+        new Request(`http://localhost/api/performance-data?range=1M&family_id=${agent.family_id}`) as any
+      );
+      const familyPayload = await familyResponse.json();
+      expect(familyResponse.status).toBe(200);
+      expect(familyPayload.data).toEqual([]);
+
+      const cohortResponse = await route.GET(
+        new Request(`http://localhost/api/performance-data?range=1M&cohort_id=${cohort.id}`) as any
+      );
+      const cohortPayload = await cohortResponse.json();
+      expect(cohortResponse.status).toBe(200);
+      expect(cohortPayload.data).toHaveLength(1);
+      expect(cohortPayload.data[0]).toHaveProperty('date', '2026-03-05 06:00:00');
+    });
+  });
+
   it('serves persisted global chart cache entries without recomputing on user requests', async () => {
     await withPerformanceFixture(async ({ agent, queries, route }) => {
       const dbModule = await import('@/lib/db');

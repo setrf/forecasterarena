@@ -254,6 +254,7 @@ function computePerformanceSeries(
     scope.cohortId,
     scope.familyId,
     scope.familyId,
+    scope.cohortId,
     bucketSeconds,
     bucketSeconds,
     bucketSeconds,
@@ -268,9 +269,11 @@ function computePerformanceSeries(
         COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
         COALESCE(abi.color, '#94A3B8') as color
       FROM agents a
+      JOIN cohorts c ON c.id = a.cohort_id
       LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
       WHERE (? IS NULL OR a.cohort_id = ?)
         AND (? IS NULL OR a.family_id = ?)
+        AND (? IS NOT NULL OR COALESCE(c.is_archived, 0) = 0)
     ),
     filtered_snapshots AS (
       SELECT

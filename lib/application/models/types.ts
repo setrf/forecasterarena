@@ -11,6 +11,10 @@ export interface AgentWithCohort {
   cohort_number: number;
   cohort_started_at: string;
   cohort_status: string;
+  methodology_version: string;
+  is_archived: number;
+  archived_at: string | null;
+  archive_reason: string | null;
 }
 
 export interface ModelDetailIdentity {
@@ -26,6 +30,24 @@ export interface ModelDetailIdentity {
   current_release_name: string | null;
 }
 
+export interface ModelCohortPerformance {
+  cohort_id: string;
+  cohort_number: number;
+  cohort_status: string;
+  methodology_version: string;
+  is_archived: boolean;
+  archived_at: string | null;
+  archive_reason: string | null;
+  scoring_status: 'current' | 'archived';
+  agent_status: string;
+  cash_balance: number;
+  total_value: number;
+  total_pnl: number;
+  total_pnl_percent: number;
+  brier_score: number | null;
+  num_resolved_bets: number;
+}
+
 export interface ModelDetailPayload {
   model: ModelDetailIdentity;
   num_cohorts: number;
@@ -33,18 +55,8 @@ export interface ModelDetailPayload {
   avg_pnl_percent: number;
   avg_brier_score: number | null;
   win_rate: number | null;
-  cohort_performance: Array<{
-    cohort_id: string;
-    cohort_number: number;
-    cohort_status: string;
-    agent_status: string;
-    cash_balance: number;
-    total_value: number;
-    total_pnl: number;
-    total_pnl_percent: number;
-    brier_score: number | null;
-    num_resolved_bets: number;
-  }>;
+  cohort_performance: ModelCohortPerformance[];
+  archived_cohort_performance: ModelCohortPerformance[];
   recent_decisions: Array<Record<string, unknown>>;
   equity_curve: Array<{
     snapshot_timestamp: string;

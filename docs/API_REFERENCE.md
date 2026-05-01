@@ -177,6 +177,12 @@ Response shape:
       "started_at": "2026-03-02T00:00:00.000Z",
       "status": "active",
       "methodology_version": "v1",
+      "is_archived": true,
+      "archived_at": "2026-04-30 00:00:00",
+      "archive_reason": "Historical v1 cohort archived for v2 scoring",
+      "scoring_status": "archived",
+      "decision_eligible": false,
+      "decision_status": "tracking_only",
       "num_agents": 7,
       "total_markets_traded": 12
     }
@@ -192,6 +198,7 @@ Notes:
 - `legacy_model_id` is compatibility metadata only
 - `display_name` is the family-facing label used for comparison views
 - the exact release used by any historical cohort is derived from frozen agent lineage, not directly from the mutable `models` table
+- leaderboard aggregate rows exclude archived v1 cohorts; cohort summaries still include archive metadata so historical sections can link to them
 - the endpoint keeps a short-lived in-process cache to avoid recomputing the aggregate leaderboard on every page load
 
 ### GET /api/performance-data
@@ -240,6 +247,7 @@ Notes:
 - the global chart series is bucketed server-side to keep payloads small
 - the snapshot cron refreshes a persisted chart cache for the global ranges, so cold loads after app restarts avoid recomputing the full month-range series
 - `release_changes` marks family release rollovers so charts can annotate where generation shifts occurred
+- global and family-scoped charts exclude archived cohorts; a direct `cohort_id` request may return archived cohort history for drilldown pages
 
 Important semantics:
 
@@ -429,7 +437,13 @@ Response shape:
     "status": "active",
     "completed_at": null,
     "methodology_version": "v1",
-    "initial_balance": 10000
+    "initial_balance": 10000,
+    "is_archived": true,
+    "archived_at": "2026-04-30 00:00:00",
+    "archive_reason": "Historical v1 cohort archived for v2 scoring",
+    "scoring_status": "archived",
+    "decision_eligible": false,
+    "decision_status": "tracking_only"
   },
   "agents": [
     {
@@ -995,9 +1009,10 @@ If the start window is not met and `force` is absent, response is:
 
 ### POST /api/cron/run-decisions
 
-Runs weekly decisions for active cohorts inside the latest decision window.
-Older active cohorts remain tracking-only for snapshots, resolution, and
-leaderboard accounting.
+Runs weekly decisions for unarchived active cohorts inside the latest decision
+window. Older current v2 cohorts remain tracking-only for snapshots,
+resolution, and current leaderboard accounting. Archived v1 cohorts are not
+processed by this route.
 
 ```http
 POST /api/cron/run-decisions
@@ -1009,7 +1024,7 @@ Current behavior:
 - model calls are sequential
 - the route ensures the current week's cohort exists before the run
 - default decision window is the newest `5` cohort numbers, configurable with `DECISION_COHORT_LIMIT`
-- all active cohorts may refresh to the default lineup, but only decision-eligible cohorts make new LLM calls
+- all unarchived active cohorts may refresh to the default lineup, but only decision-eligible cohorts make new LLM calls
 
 Response shape:
 
@@ -1082,6 +1097,7 @@ Updates open-position MTM values and records timestamped snapshots.
 Notes:
 
 - snapshots are keyed by `snapshot_timestamp`
+- routine snapshots are written for unarchived active cohorts only
 - closed-but-unresolved positions try to preserve prior value if current price feeds become unhelpful
 
 ### POST /api/cron/backup

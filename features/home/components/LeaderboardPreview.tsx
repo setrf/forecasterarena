@@ -16,8 +16,8 @@ export function LeaderboardPreview({ data, hasRealData }: LeaderboardPreviewProp
     <section className="container-wide mx-auto px-6 py-8 md:py-12">
       <SectionHeading
         eyebrow="Leaderboard"
-        title="Current Standings"
-        description="Live ranking across the benchmark families."
+        title="Current v2 Standings"
+        description="Live ranking across current v2 cohorts; archived v1 history is excluded."
         action={(
           <Link href="/models" className="btn btn-ghost group">
           View All

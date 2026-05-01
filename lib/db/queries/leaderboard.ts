@@ -1,16 +1,26 @@
 import { getDb } from '../index';
 import { INITIAL_BALANCE } from '../../constants';
-import { getCohortDecisionState } from '@/lib/cohort-decision-state';
+import {
+  getCohortDecisionState,
+  getCohortScoringStatus
+} from '@/lib/cohort-decision-state';
 import type { CohortSummary, LeaderboardEntry } from '../../types';
 
 export function getAggregateLeaderboard(): LeaderboardEntry[] {
   const db = getDb();
   const results = db.prepare(`
-    WITH open_position_values AS (
+    WITH current_agents AS (
+      SELECT a.*
+      FROM agents a
+      JOIN cohorts c ON c.id = a.cohort_id
+      WHERE COALESCE(c.is_archived, 0) = 0
+    ),
+    open_position_values AS (
       SELECT
         p.agent_id,
         COALESCE(SUM(COALESCE(p.current_value, p.total_cost)), 0) as total_position_value
       FROM positions p
+      JOIN current_agents ca ON ca.id = p.agent_id
       WHERE p.status = 'open'
       GROUP BY p.agent_id
     ),
@@ -23,7 +33,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         COALESCE(abi.family_display_name, abi.release_display_name, a.model_id) as display_name,
         COALESCE(abi.provider, 'Unknown') as provider,
         COALESCE(abi.color, '#94A3B8') as color
-      FROM agents a
+      FROM current_agents a
       LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     ),
     agent_stats AS (
@@ -75,7 +85,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         ai.family_slug,
         AVG(bs.brier_score) as avg_brier_score
       FROM brier_scores bs
-      JOIN agents a ON bs.agent_id = a.id
+      JOIN current_agents a ON bs.agent_id = a.id
       JOIN agent_identity ai ON ai.agent_id = a.id
       GROUP BY ai.family_slug
     ),
@@ -89,7 +99,7 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
         THEN 1 END) as wins,
         COUNT(*) as total_bets
       FROM brier_scores bs
-      JOIN agents a ON bs.agent_id = a.id
+      JOIN current_agents a ON bs.agent_id = a.id
       JOIN agent_identity ai ON ai.agent_id = a.id
       JOIN trades t ON bs.trade_id = t.id
       JOIN markets m ON bs.market_id = m.id
@@ -134,6 +144,9 @@ export function getCohortSummaries(): CohortSummary[] {
       c.started_at,
       c.status,
       c.methodology_version,
+      COALESCE(c.is_archived, 0) as is_archived,
+      c.archived_at,
+      c.archive_reason,
       COUNT(DISTINCT a.id) as num_agents,
       COUNT(DISTINCT t.market_id) as total_markets_traded
     FROM cohorts c
@@ -141,7 +154,11 @@ export function getCohortSummaries(): CohortSummary[] {
     LEFT JOIN trades t ON a.id = t.agent_id
     GROUP BY c.id
     ORDER BY c.started_at DESC
-  `).all() as Array<Omit<CohortSummary, 'decision_eligible' | 'decision_status'>>;
+  `).all() as Array<
+    Omit<CohortSummary, 'decision_eligible' | 'decision_status' | 'scoring_status' | 'is_archived'> & {
+      is_archived: number;
+    }
+  >;
 
   const latestCohortNumber = rows.reduce(
     (max, cohort) => Math.max(max, cohort.cohort_number),
@@ -150,6 +167,8 @@ export function getCohortSummaries(): CohortSummary[] {
 
   return rows.map((cohort) => ({
     ...cohort,
-    ...getCohortDecisionState(cohort, latestCohortNumber)
+    is_archived: cohort.is_archived === 1,
+    ...getCohortDecisionState(cohort, latestCohortNumber),
+    scoring_status: getCohortScoringStatus(cohort)
   }));
 }

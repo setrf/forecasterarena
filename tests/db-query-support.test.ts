@@ -678,6 +678,70 @@ describe('db query modules - support and reporting', () => {
     });
   });
 
+  it('excludes archived cohorts from aggregate leaderboard scoring while keeping summary metadata', async () => {
+    await withModules(async ({ agents, cohorts, db, leaderboard, models, snapshots }) => {
+      const activeModels = models.getActiveModels();
+      const legacyId = activeModels[0]!.id;
+      db.prepare(
+        `UPDATE models SET is_active = CASE WHEN id = ? THEN 1 ELSE 0 END`
+      ).run(legacyId);
+
+      const benchmarkConfig = await createTestBenchmarkConfigForLegacyModels([legacyId]);
+      const archivedCohort = cohorts.createCohort(benchmarkConfig.id);
+      db.prepare(`
+        UPDATE cohorts
+        SET started_at = ?, methodology_version = 'v1', is_archived = 1, archive_reason = ?
+        WHERE id = ?
+      `).run('2026-01-04T00:00:00.000Z', 'test archive', archivedCohort.id);
+      const currentCohort = cohorts.createCohort(benchmarkConfig.id);
+
+      const [archivedAgent] = agents.createAgentsForCohort(archivedCohort.id, benchmarkConfig.id);
+      const [currentAgent] = agents.createAgentsForCohort(currentCohort.id, benchmarkConfig.id);
+      const family = db.prepare('SELECT id, slug FROM model_families WHERE legacy_model_id = ?')
+        .get(legacyId) as { id: string; slug: string };
+
+      snapshots.createPortfolioSnapshot({
+        agent_id: archivedAgent!.id,
+        snapshot_timestamp: '2026-01-05 00:00:00',
+        cash_balance: 20_000,
+        positions_value: 0,
+        total_value: 20_000,
+        total_pnl: 10_000,
+        total_pnl_percent: 100
+      });
+      snapshots.createPortfolioSnapshot({
+        agent_id: currentAgent!.id,
+        snapshot_timestamp: '2026-01-12 00:00:00',
+        cash_balance: 10_250,
+        positions_value: 0,
+        total_value: 10_250,
+        total_pnl: 250,
+        total_pnl_percent: 2.5
+      });
+
+      const entries = leaderboard.getAggregateLeaderboard();
+      const summaries = leaderboard.getCohortSummaries();
+
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        family_slug: family.slug,
+        total_pnl: 250,
+        total_pnl_percent: 2.5,
+        num_cohorts: 1
+      });
+      expect(summaries.find((cohort) => cohort.id === archivedCohort.id)).toMatchObject({
+        is_archived: true,
+        scoring_status: 'archived',
+        decision_eligible: false,
+        decision_status: 'tracking_only'
+      });
+      expect(summaries.find((cohort) => cohort.id === currentCohort.id)).toMatchObject({
+        is_archived: false,
+        scoring_status: 'current'
+      });
+    });
+  });
+
   it('covers cohort summary aggregation', async () => {
     await withModules(({ agents, cohorts, db, leaderboard, markets, models, positions, trades }) => {
       const cohortOne = cohorts.createCohort();

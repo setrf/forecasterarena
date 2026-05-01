@@ -174,6 +174,83 @@ describe('model route', () => {
     });
   });
 
+  it('separates archived v1 history from current model detail scoring', async () => {
+    await withModelRoute(async ({ db, queries, route, cohort, agent, legacyModelId }) => {
+      const benchmarkConfigId = cohort.benchmark_config_id;
+      db.prepare(`
+        UPDATE cohorts
+        SET started_at = ?, methodology_version = 'v1', is_archived = 1, archive_reason = ?
+        WHERE id = ?
+      `).run('2026-01-04T00:00:00.000Z', 'test archive', cohort.id);
+      const currentCohort = queries.createCohort(benchmarkConfigId);
+      const [currentAgent] = queries.createAgentsForCohort(currentCohort.id, benchmarkConfigId);
+
+      queries.createPortfolioSnapshot({
+        agent_id: agent.id,
+        snapshot_timestamp: '2026-01-05 00:00:00',
+        cash_balance: 15_000,
+        positions_value: 0,
+        total_value: 15_000,
+        total_pnl: 5_000,
+        total_pnl_percent: 50
+      });
+      queries.createPortfolioSnapshot({
+        agent_id: currentAgent!.id,
+        snapshot_timestamp: '2026-01-12 00:00:00',
+        cash_balance: 10_020,
+        positions_value: 0,
+        total_value: 10_020,
+        total_pnl: 20,
+        total_pnl_percent: 0.2
+      });
+
+      const archivedDecision = queries.createDecision({
+        agent_id: agent.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'HOLD'
+      });
+      const currentDecision = queries.createDecision({
+        agent_id: currentAgent!.id,
+        cohort_id: currentCohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'HOLD'
+      });
+      db.prepare('UPDATE decisions SET decision_timestamp = ? WHERE id = ?')
+        .run('2026-01-05T00:00:00.000Z', archivedDecision.id);
+      db.prepare('UPDATE decisions SET decision_timestamp = ? WHERE id = ?')
+        .run('2026-01-12T00:00:00.000Z', currentDecision.id);
+
+      const response = await route.GET(
+        new Request(`http://localhost/api/models/${legacyModelId}`) as any,
+        { params: Promise.resolve({ id: legacyModelId }) }
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.num_cohorts).toBe(1);
+      expect(data.total_pnl).toBe(20);
+      expect(data.cohort_performance).toMatchObject([{
+        cohort_id: currentCohort.id,
+        is_archived: false,
+        scoring_status: 'current',
+        total_pnl: 20
+      }]);
+      expect(data.archived_cohort_performance).toMatchObject([{
+        cohort_id: cohort.id,
+        is_archived: true,
+        scoring_status: 'archived'
+      }]);
+      expect(data.recent_decisions.map((decision: { id: string }) => decision.id)).toEqual([
+        currentDecision.id
+      ]);
+    });
+  });
+
   it('returns 404 for a missing model', async () => {
     await withModelRoute(async ({ route }) => {
       const response = await route.GET(

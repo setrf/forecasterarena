@@ -7,7 +7,7 @@ test('models and research pages stay navigable from real UI links', async ({ pag
   await expect(page).toHaveURL(/\/models$/);
   await expect(page.getByRole('heading', { level: 1, name: /Frontier model families/i })).toBeVisible();
 
-  await page.getByRole('link', { name: /Current Leader/i }).click();
+  await page.getByRole('link', { name: /Current v2 Leader/i }).click();
   await expect(page).toHaveURL(new RegExp(`${seededRoutes.leaderModel}$`));
   await expect(page.getByRole('heading', { level: 1, name: 'Kimi' })).toBeVisible();
 

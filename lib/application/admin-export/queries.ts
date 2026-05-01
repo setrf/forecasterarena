@@ -5,8 +5,8 @@ import type { ExportQueries } from '@/lib/application/admin-export/types';
 export function buildQueries(includePrompts: boolean): ExportQueries {
   return {
     cohorts: {
-      columns: ['id', 'cohort_number', 'started_at', 'status', 'completed_at', 'methodology_version', 'benchmark_config_id', 'initial_balance', 'created_at'],
-      sql: 'SELECT id, cohort_number, started_at, status, completed_at, methodology_version, benchmark_config_id, initial_balance, created_at FROM cohorts WHERE id = ?'
+      columns: ['id', 'cohort_number', 'started_at', 'status', 'completed_at', 'methodology_version', 'benchmark_config_id', 'is_archived', 'archived_at', 'archive_reason', 'initial_balance', 'created_at'],
+      sql: 'SELECT id, cohort_number, started_at, status, completed_at, methodology_version, benchmark_config_id, is_archived, archived_at, archive_reason, initial_balance, created_at FROM cohorts WHERE id = ?'
     },
     agents: {
       columns: ['id', 'cohort_id', 'model_id', 'family_id', 'release_id', 'benchmark_config_model_id', 'cash_balance', 'total_invested', 'status', 'created_at'],

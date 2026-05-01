@@ -90,6 +90,26 @@ describe('db query modules - core operations', () => {
     });
   });
 
+  it('excludes archived active cohorts from operational active and decision queries', async () => {
+    await withDbQueryModules(({ cohorts, db }) => {
+      const archived = cohorts.createCohort();
+      db.prepare('UPDATE cohorts SET started_at = ?, is_archived = 1, archive_reason = ? WHERE id = ?')
+        .run('2026-01-04T00:00:00.000Z', 'test archive', archived.id);
+      const current = cohorts.createCohort();
+
+      expect(cohorts.getActiveCohorts().map((cohort) => cohort.id)).toEqual([current.id]);
+      expect(cohorts.getActiveCohortsIncludingArchived().map((cohort) => cohort.id)).toEqual([
+        current.id,
+        archived.id
+      ]);
+      expect(cohorts.getDecisionEligibleCohorts(5).map((cohort) => cohort.id)).toEqual([current.id]);
+      expect(cohorts.getCohortDecisionStateByNumber(cohorts.getCohortById(archived.id)!)).toEqual({
+        decision_eligible: false,
+        decision_status: 'tracking_only'
+      });
+    });
+  });
+
   it('covers agent reads, balance updates, and portfolio valuation branches', async () => {
     await withDbQueryModules(({ agents, cohorts, markets, models, positions }) => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});

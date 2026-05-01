@@ -47,6 +47,43 @@ describe('db query modules - decision and trade operations', () => {
     });
   });
 
+  it('keeps archived cohort decisions out of the public recent decision feed', async () => {
+    await withDbQueryModules(async ({ agents, cohorts, db, decisions }) => {
+      const { listRecentDecisions } = await import('@/lib/application/decisions');
+      const archivedCohort = cohorts.createCohort();
+      db.prepare('UPDATE cohorts SET started_at = ?, is_archived = 1 WHERE id = ?')
+        .run('2026-01-04T00:00:00.000Z', archivedCohort.id);
+      const currentCohort = cohorts.createCohort();
+      const [archivedAgent] = agents.createAgentsForCohort(archivedCohort.id);
+      const [currentAgent] = agents.createAgentsForCohort(currentCohort.id);
+
+      const archivedDecision = decisions.createDecision({
+        agent_id: archivedAgent!.id,
+        cohort_id: archivedCohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'HOLD'
+      });
+      const currentDecision = decisions.createDecision({
+        agent_id: currentAgent!.id,
+        cohort_id: currentCohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'user',
+        action: 'HOLD'
+      });
+      db.prepare('UPDATE decisions SET decision_timestamp = ? WHERE id = ?')
+        .run('2026-01-05T00:00:00.000Z', archivedDecision.id);
+      db.prepare('UPDATE decisions SET decision_timestamp = ? WHERE id = ?')
+        .run('2026-01-12T00:00:00.000Z', currentDecision.id);
+
+      expect(listRecentDecisions(10).decisions.map((decision) => decision.id)).toEqual([
+        currentDecision.id
+      ]);
+    });
+  });
+
   it('covers in-progress decision claims and error finalization defaults', async () => {
     await withDbQueryModules(({ agents, cohorts, decisions }) => {
       const cohort = cohorts.createCohort();

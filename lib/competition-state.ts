@@ -5,6 +5,8 @@ interface LeaderboardLikeEntry {
 
 interface CohortLikeSummary {
   total_markets_traded?: number | null;
+  is_archived?: boolean | number | null;
+  scoring_status?: string | null;
 }
 
 export function hasLiveCompetitionData(args: {
@@ -20,5 +22,10 @@ export function hasLiveCompetitionData(args: {
     return true;
   }
 
-  return cohorts.some((cohort) => (cohort.total_markets_traded ?? 0) > 0);
+  return cohorts.some((cohort) => (
+    cohort.scoring_status !== 'archived' &&
+    cohort.is_archived !== true &&
+    cohort.is_archived !== 1 &&
+    (cohort.total_markets_traded ?? 0) > 0
+  ));
 }

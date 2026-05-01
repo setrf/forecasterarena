@@ -462,6 +462,12 @@ h3 {
   border: 1px solid rgba(251, 191, 36, 0.2);
 }
 
+.badge-archived {
+  background: rgba(148, 163, 184, 0.10);
+  color: var(--text-muted);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
 /* ========================================
    NAVIGATION
    ======================================== */
