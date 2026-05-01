@@ -19,6 +19,7 @@ than a generic Next.js app.
 
 - [ ] `npm ci` completed successfully
 - [ ] `npm run check` passed
+- [ ] `npm run check:standalone-assets` passed after the production build
 - [ ] `npm run test:e2e` passed for seeded rich-state browser coverage
 - [ ] `npm run test:e2e:empty` passed or was intentionally skipped because the release does not touch empty-state/browser-visible behavior
 
@@ -61,6 +62,8 @@ than a generic Next.js app.
 
 - [ ] target database file exists, or first boot creation is expected
 - [ ] latest full backup exists before deploy
+- [ ] release directory includes `.next/standalone/.next/static`
+- [ ] release directory includes `.next/standalone/public`
 - [ ] backup path has enough free space for the next scheduled backup
 - [ ] `PRAGMA integrity_check` passes on the target database
 - [ ] there are no known duplicate weekly cohorts or duplicate per-week

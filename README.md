@@ -218,9 +218,13 @@ npm run dev
 Production build:
 
 ```bash
-npm run build
+npm run build:standalone
 npm run start
 ```
+
+`build:standalone` runs `next build`, copies `.next/static` and `public` into
+`.next/standalone`, and verifies CSS, JS, and font assets exist in the exact
+tree used by the production systemd service.
 
 Typecheck:
 

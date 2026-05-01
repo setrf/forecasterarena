@@ -364,9 +364,25 @@ If the new build succeeds but runtime looks wrong:
 
 1. inspect `journalctl -u forecasterarena`
 2. hit `/api/health`
-3. verify `.env.local`
-4. verify cron auth still matches `CRON_SECRET`
-5. verify the database path still points to the intended file
+3. verify standalone assets are present:
+   `npm run check:standalone-assets`
+4. verify the deployed server returns static assets:
+   `curl -I http://127.0.0.1:3010/_next/static/css/<current-css-file>.css`
+5. verify `.env.local`
+6. verify cron auth still matches `CRON_SECRET`
+7. verify the database path still points to the intended file
+
+For standalone systemd releases, never deploy the raw `next build` output
+without also running:
+
+```bash
+npm run prepare:standalone-assets
+npm run check:standalone-assets
+```
+
+The standalone server runs from `.next/standalone`; missing
+`.next/standalone/.next/static` will produce an unstyled app even when the
+HTML route itself returns `200`.
 
 ---
 

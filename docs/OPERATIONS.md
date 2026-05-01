@@ -561,9 +561,11 @@ After every deploy:
 1. `curl /api/health`
 2. `curl /api/leaderboard`
 3. `curl /api/markets?limit=1`
-4. verify admin login,
-5. run a build-local smoke test if the host permits it,
-6. confirm scheduled jobs still include the correct bearer token.
+4. verify one CSS file, one JS chunk, and one font under `/_next/static/*`
+   return `200` with the correct content type,
+5. verify admin login,
+6. run a build-local smoke test if the host permits it,
+7. confirm scheduled jobs still include the correct bearer token.
 
 Recommended additional checks after schema-affecting changes:
 
@@ -585,6 +587,11 @@ For local validation, use this order:
 1. `npm run check`
 2. `npm run test:e2e`
 3. `npm run test:e2e:empty` when you need explicit empty-state browser coverage
+
+`npm run check` includes `npm run build:standalone`, which copies and verifies
+the static assets required by the production standalone server. If a deploy
+uses a manually created release directory, run `npm run prepare:standalone-assets`
+and `npm run check:standalone-assets` in that release before switching systemd.
 
 ---
 

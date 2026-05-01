@@ -8,17 +8,20 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:standalone": "npm run build && npm run prepare:standalone-assets && npm run check:standalone-assets",
     "start": "next start",
     "lint": "next lint",
     "check:architecture": "node scripts/check-architecture.mjs",
     "check:queries": "node scripts/check-query-structure.mjs",
+    "check:standalone-assets": "node scripts/prepare-standalone-assets.mjs --check",
+    "prepare:standalone-assets": "node scripts/prepare-standalone-assets.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --maxWorkers=1 --testTimeout=15000",
     "test:e2e": "env -u FORCE_COLOR NODE_DISABLE_COLORS=1 playwright test",
     "test:e2e:empty": "env -u FORCE_COLOR NODE_DISABLE_COLORS=1 E2E_SEED_SCENARIO=empty playwright test playwright/empty-state.spec.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run test:coverage && npm run lint && npm run check:architecture && npm run check:queries && npm run build && npm run typecheck"
+    "check": "npm run test:coverage && npm run lint && npm run check:architecture && npm run check:queries && npm run build:standalone && npm run typecheck"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0",
