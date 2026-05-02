@@ -95,7 +95,7 @@ Why this schedule matters:
 - `run-decisions` only spends LLM calls on unarchived active cohorts inside the latest decision window; older current v2 cohorts remain tracking-only.
 - `check-resolutions` only processes markets that are locally `closed`.
 - `check-model-lineup` only reads the public OpenRouter catalog and creates an admin review. It never promotes releases or rolls cohorts without operator approval.
-- `take-snapshots` is most useful when run regularly; the database schema is timestamp-based, not day-based, and archived v1 cohorts are intentionally excluded from routine snapshots.
+- `take-snapshots` is most useful when run regularly; the database schema is timestamp-based, not day-based, archived v1 cohorts are intentionally excluded from routine snapshots, and open-position valuation uses CLOB prices with prior-value fallback on anomalies.
 
 ---
 
@@ -302,6 +302,7 @@ Important:
 
 - The table uses `snapshot_timestamp`, not `snapshot_date`.
 - Snapshot rows are upserted per `(agent_id, snapshot_timestamp)`.
+- Price provenance for markets used in a run is stored in `market_price_snapshots`; fallback or Gamma/CLOB disagreement events are logged as `price_validation_anomaly`.
 
 ---
 

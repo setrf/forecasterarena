@@ -66,6 +66,7 @@ export interface SimplifiedMarket {
   status: 'active' | 'closed' | 'resolved';
   current_price: number | null;  // YES price for binary
   current_prices: string | null; // JSON for multi-outcome
+  clob_token_ids: string | null; // JSON token id array aligned with outcomes
   volume: number | null;
   liquidity: number | null;
 }
@@ -106,5 +107,4 @@ export interface MarketsResponse {
   markets: PolymarketMarket[];
   next_cursor?: string;
 }
-
 

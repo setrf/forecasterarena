@@ -22,6 +22,28 @@ CREATE TABLE IF NOT EXISTS portfolio_snapshots (
 );
 
 -- ============================================================================
+-- MARKET PRICE SNAPSHOTS
+-- ============================================================================
+-- Price provenance used when valuing paper portfolios.
+
+CREATE TABLE IF NOT EXISTS market_price_snapshots (
+  id TEXT PRIMARY KEY,
+  market_id TEXT NOT NULL,
+  snapshot_timestamp TEXT NOT NULL,
+  source TEXT NOT NULL,
+  accepted_price REAL,
+  accepted_prices TEXT,
+  gamma_price REAL,
+  gamma_prices TEXT,
+  clob_token_ids TEXT,
+  validation_status TEXT NOT NULL,
+  anomaly_reason TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (market_id) REFERENCES markets(id),
+  UNIQUE(market_id, snapshot_timestamp)
+);
+
+-- ============================================================================
 -- BRIER SCORES
 -- ============================================================================
 -- Individual bet scoring records.

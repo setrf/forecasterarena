@@ -60,4 +60,52 @@ describe('engine/market/refreshStatuses', () => {
       await ctx.cleanup();
     }
   });
+
+  it('rotates through stale active markets without open positions to catch early closures', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+    const fetchMarketById = vi.fn().mockResolvedValue({ id: 'pm-stale-closed' });
+    const simplifyMarket = vi.fn().mockReturnValue({
+      polymarket_id: 'pm-stale-closed',
+      question: 'Will this early-closed market refresh?',
+      close_date: '2026-12-31T00:00:00.000Z',
+      status: 'closed',
+      current_price: 0,
+      volume: 1000,
+      liquidity: 0
+    });
+
+    vi.doMock('@/lib/polymarket/client', () => ({
+      fetchMarketById,
+      simplifyMarket
+    }));
+
+    try {
+      const queries = await import('@/lib/db/queries');
+      const { getDb } = await import('@/lib/db');
+      const refreshModule = await import('@/lib/engine/market/refreshStatuses');
+
+      const market = queries.upsertMarket({
+        polymarket_id: 'pm-stale-closed',
+        question: 'Will this early-closed market refresh?',
+        close_date: '2026-12-31T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.4,
+        volume: 1000,
+        liquidity: 300
+      });
+      getDb().prepare('UPDATE markets SET last_updated_at = ? WHERE id = ?')
+        .run('2026-03-04 00:00:00', market.id);
+
+      const result = await refreshModule.refreshExistingMarketStatuses([]);
+      const refreshed = queries.getMarketById(market.id)!;
+
+      expect(result.checked).toBe(1);
+      expect(result.statusUpdates).toBe(1);
+      expect(fetchMarketById).toHaveBeenCalledWith('pm-stale-closed');
+      expect(refreshed.status).toBe('closed');
+      expect(refreshed.current_price).toBe(0);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
 });

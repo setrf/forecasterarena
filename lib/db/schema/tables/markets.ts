@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS markets (
   status TEXT NOT NULL DEFAULT 'active',         -- active|closed|resolved|cancelled
   current_price REAL,                            -- YES price for binary (0-1)
   current_prices TEXT,                           -- JSON for multi-outcome
+  clob_token_ids TEXT,                           -- JSON token id array aligned with outcomes
   volume REAL,                                   -- Total trading volume
   liquidity REAL,                                -- Current liquidity
   resolution_outcome TEXT,                       -- 'YES', 'NO', or outcome name

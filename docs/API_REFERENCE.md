@@ -1134,7 +1134,8 @@ Notes:
 
 - snapshots are keyed by `snapshot_timestamp`
 - routine snapshots are written for unarchived active cohorts only
-- closed-but-unresolved positions try to preserve prior value if current price feeds become unhelpful
+- open positions are valued from validated CLOB prices when available
+- if CLOB pricing is invalid or unavailable, prior position value is preserved and a price anomaly/provenance row is recorded
 
 ### POST /api/cron/backup
 

@@ -124,12 +124,14 @@ describe('polymarket client facade', () => {
     const simplified = client.simplifyMarket(makeMarket({
       outcomes: '["Yes","No"]',
       outcomePrices: '["0.42","0.58"]',
+      clobTokenIds: '["yes-token","no-token"]',
       events: [{ id: 'event-1', title: 'Event', slug: 'event-slug', markets: [] }]
     }));
 
     expect(simplified.market_type).toBe('binary');
     expect(simplified.current_price).toBeCloseTo(0.42);
     expect(simplified.current_prices).toBeNull();
+    expect(simplified.clob_token_ids).toBe('["yes-token","no-token"]');
     expect(simplified.event_slug).toBe('event-slug');
   });
 

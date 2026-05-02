@@ -117,6 +117,7 @@ export function simplifyMarket(market: PolymarketMarket): SimplifiedMarket {
     status: getMarketStatus(market, pricesList),
     current_price: currentPrice,
     current_prices: currentPrices,
+    clob_token_ids: market.clobTokenIds || null,
     volume: market.volumeNum ?? (market.volume ? parseFloat(String(market.volume)) : null),
     liquidity: market.liquidity ? parseFloat(String(market.liquidity)) : null
   };

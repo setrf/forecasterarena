@@ -13,6 +13,7 @@ import { archiveV1CohortsMigration } from '@/lib/db/migrations/011_archive_v1_co
 import { latestModelLineupMigration } from '@/lib/db/migrations/012_latest_model_lineup';
 import { modelLineupReviewsMigration } from '@/lib/db/migrations/013_model_lineup_reviews';
 import { integrityAndPositionReopenGuardsMigration } from '@/lib/db/migrations/014_integrity_and_position_reopen_guards';
+import { clobPriceProvenanceMigration } from '@/lib/db/migrations/015_clob_price_provenance';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
 const MIGRATIONS: DbMigration[] = [
@@ -28,7 +29,8 @@ const MIGRATIONS: DbMigration[] = [
   archiveV1CohortsMigration,
   latestModelLineupMigration,
   modelLineupReviewsMigration,
-  integrityAndPositionReopenGuardsMigration
+  integrityAndPositionReopenGuardsMigration,
+  clobPriceProvenanceMigration
 ];
 
 export function runMigrations(db: Database.Database): void {

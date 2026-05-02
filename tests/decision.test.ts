@@ -146,6 +146,9 @@ describe('engine/decision', () => {
     );
 
     vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () =>
+      new Response(JSON.stringify({ 'sell-yes-token': '0.52' }), { status: 200 })
+    ));
 
     try {
       const { queries, cohort, agent } = await createSingleAgentFixture();
@@ -360,6 +363,7 @@ describe('engine/decision', () => {
         market_type: 'binary',
         status: 'active',
         current_price: 0.52,
+        clob_token_ids: '["sell-yes-token","sell-no-token"]',
         close_date: '2099-01-01T00:00:00.000Z',
         volume: 50_000
       });
@@ -467,6 +471,9 @@ describe('engine/decision', () => {
     ));
 
     vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () =>
+      new Response(JSON.stringify({ 'sell-yes-token': '0.52' }), { status: 200 })
+    ));
 
     try {
       const { queries, cohort, agent } = await createSingleAgentFixture();
@@ -476,14 +483,24 @@ describe('engine/decision', () => {
         market_type: 'binary',
         status: 'active',
         current_price: 0.52,
+        clob_token_ids: '["sell-yes-token","sell-no-token"]',
         close_date: '2099-01-01T00:00:00.000Z',
         volume: 50_000
       });
       const position = queries.upsertPosition(agent.id, market.id, 'YES', 20, 0.5, 10);
+      expect(queries.getMarketById(market.id)?.clob_token_ids).toBe('["sell-yes-token","sell-no-token"]');
       sellPositionId = position.id;
       agent.cash_balance -= 10;
       queries.updateAgentBalance(agent.id, 9_990, 10);
       queries.updatePositionMTM(position.id, 10.4, 0.4);
+
+      const { prepareExecutionPriceOverrides } = await import('@/lib/engine/decision/prepareExecutionPrices');
+      const priceOverrides = await prepareExecutionPriceOverrides({
+        action: 'SELL',
+        reasoning: 'debug',
+        sells: [{ position_id: sellPositionId, percentage: 50 }]
+      });
+      expect(priceOverrides?.get(`${market.id}:YES`)).toBe(0.52);
 
       const decisionEngine = await import('@/lib/engine/decision');
       const firstRun = await decisionEngine.runCohortDecisions(cohort.id);
@@ -507,6 +524,7 @@ describe('engine/decision', () => {
       expect(callOpenRouterWithRetry).toHaveBeenCalledTimes(1);
     } finally {
       vi.doUnmock('@/lib/openrouter/client');
+      vi.unstubAllGlobals();
       await ctx.cleanup();
     }
   });
@@ -551,6 +569,7 @@ describe('engine/decision', () => {
       getTopMarketsByVolumeSpy.mockRestore();
     } finally {
       vi.doUnmock('@/lib/openrouter/client');
+      vi.unstubAllGlobals();
       await ctx.cleanup();
     }
   });

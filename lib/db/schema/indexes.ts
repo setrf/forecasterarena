@@ -44,6 +44,8 @@ CREATE INDEX IF NOT EXISTS idx_snapshots_agent ON portfolio_snapshots(agent_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON portfolio_snapshots(snapshot_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_snapshots_agent_timestamp ON portfolio_snapshots(agent_id, snapshot_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp_agent_value ON portfolio_snapshots(snapshot_timestamp DESC, agent_id, total_value);
+CREATE INDEX IF NOT EXISTS idx_market_price_snapshots_market_time ON market_price_snapshots(market_id, snapshot_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_market_price_snapshots_status_time ON market_price_snapshots(validation_status, snapshot_timestamp DESC);
 
 -- Markets
 CREATE INDEX IF NOT EXISTS idx_markets_status ON markets(status);

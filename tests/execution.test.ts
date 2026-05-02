@@ -211,6 +211,21 @@ describe('engine/execution - executeBet', () => {
     });
   });
 
+  it('rejects production-priced BETs when validated CLOB price is unavailable', async () => {
+    await withFixture(async ({ execution, queries, agent }) => {
+      const market = createBinaryMarket(queries, { current_price: 0.5 });
+      const priceOverrides = new Map([[`${market.id}:YES`, Number.NaN]]);
+      const result = execution.executeBet(agent.id, {
+        market_id: market.id,
+        side: 'YES',
+        amount: 100
+      }, 'decision-1', priceOverrides);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('No validated CLOB price available');
+    });
+  });
+
   it('normalizes binary side casing for storage', async () => {
     await withFixture(async ({ execution, queries, agent }) => {
       const market = createBinaryMarket(queries, { current_price: 0.5 });
@@ -533,6 +548,27 @@ describe('engine/execution - executeSell', () => {
       });
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/No current price available/);
+    });
+  });
+
+  it('rejects production-priced SELLs when validated CLOB price is unavailable', async () => {
+    await withFixture(async ({ execution, queries, agent }) => {
+      const market = createBinaryMarket(queries, { current_price: 0.5 });
+      const buy = execution.executeBet(agent.id, {
+        market_id: market.id,
+        side: 'YES',
+        amount: 100
+      });
+      expect(buy.success).toBe(true);
+
+      const priceOverrides = new Map([[`${market.id}:YES`, Number.NaN]]);
+      const result = execution.executeSell(agent.id, {
+        position_id: buy.position_id!,
+        percentage: 50
+      }, 'decision-1', priceOverrides);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('No validated CLOB price available');
     });
   });
 

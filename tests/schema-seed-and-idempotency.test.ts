@@ -3,6 +3,32 @@ import { latestModelLineupMigration } from '@/lib/db/migrations/012_latest_model
 import { createIsolatedTestContext } from '@/tests/helpers/test-context';
 
 describe('schema seeds and idempotency behavior', () => {
+  it('includes CLOB token metadata and market price provenance tables', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+      const marketColumns = db.prepare(`PRAGMA table_info(markets)`).all() as Array<{ name: string }>;
+      const provenanceTable = db.prepare(`
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'market_price_snapshots'
+      `).get();
+      const provenanceIndexes = db.prepare(`
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'index' AND tbl_name = 'market_price_snapshots'
+      `).all() as Array<{ name: string }>;
+
+      expect(marketColumns.some((column) => column.name === 'clob_token_ids')).toBe(true);
+      expect(provenanceTable).toEqual({ name: 'market_price_snapshots' });
+      expect(provenanceIndexes.map((index) => index.name)).toContain('idx_market_price_snapshots_market_time');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('enforces frozen cohort and agent lineage at the schema and trigger level', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 

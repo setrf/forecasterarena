@@ -6,6 +6,7 @@ import {
   handleExecutionFailure
 } from '@/lib/engine/decision/processAgentDecision/errors';
 import { finalizeProcessedDecision } from '@/lib/engine/decision/processAgentDecision/finalize';
+import { prepareExecutionPriceOverrides } from '@/lib/engine/decision/prepareExecutionPrices';
 import { requestDecisionWithRetries } from '@/lib/engine/decision/processAgentDecision/llm';
 import { createDecisionResult } from '@/lib/engine/decision/processAgentDecision/result';
 import { SYSTEM_PROMPT } from '@/lib/openrouter/prompts';
@@ -60,7 +61,8 @@ export async function processAgentDecision(
     result.decision_id = decision.id;
     result.action = decisionOutput.parsed.action;
 
-    const tradeSummary = executeDecisionTrades(agent.id, decisionOutput.parsed, decision.id);
+    const priceOverrides = await prepareExecutionPriceOverrides(decisionOutput.parsed);
+    const tradeSummary = executeDecisionTrades(agent.id, decisionOutput.parsed, decision.id, priceOverrides);
     result.trades_executed = tradeSummary.tradesExecuted;
 
     if (

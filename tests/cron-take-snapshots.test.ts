@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { withDbQueryModules } from '@/tests/helpers/db-query-test-utils';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createMarket, withDbQueryModules } from '@/tests/helpers/db-query-test-utils';
 
 const refreshPersistedPerformanceCache = vi.fn();
 
@@ -8,6 +8,10 @@ vi.mock('@/lib/application/performance', () => ({
 }));
 
 describe('takeSnapshots decision window behavior', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('snapshots active current cohorts outside the decision window but skips archived cohorts', async () => {
     await withDbQueryModules(async ({ agents, cohorts, db, snapshots }) => {
       const created = Array.from({ length: 3 }, (_, index) => {
@@ -48,6 +52,46 @@ describe('takeSnapshots decision window behavior', () => {
         }
       }
       expect(refreshPersistedPerformanceCache).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('values positions from CLOB prices and records market price provenance', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ 'yes-token': '0.25' }), { status: 200 })
+    ));
+
+    await withDbQueryModules(async ({ agents, cohorts, db, markets, positions, snapshots }) => {
+      const cohort = cohorts.createCohort();
+      agents.createAgentsForCohort(cohort.id);
+      const agent = agents.getAgentsByCohort(cohort.id)[0]!;
+      const market = createMarket(markets, {
+        current_price: 0.9,
+        clob_token_ids: '["yes-token","no-token"]'
+      });
+      positions.upsertPosition(agent.id, market.id, 'YES', 100, 0.5, 50);
+
+      const { takeSnapshots } = await import('@/lib/application/cron/takeSnapshots');
+      const result = await takeSnapshots();
+
+      expect(result.ok).toBe(true);
+      const snapshot = snapshots.getLatestSnapshot(agent.id)!;
+      expect(snapshot.positions_value).toBeCloseTo(25, 10);
+
+      const provenance = db.prepare(`
+        SELECT accepted_price, gamma_price, validation_status, anomaly_reason
+        FROM market_price_snapshots
+        WHERE market_id = ?
+      `).get(market.id) as {
+        accepted_price: number;
+        gamma_price: number;
+        validation_status: string;
+        anomaly_reason: string;
+      };
+
+      expect(provenance.accepted_price).toBe(0.25);
+      expect(provenance.gamma_price).toBe(0.9);
+      expect(provenance.validation_status).toBe('accepted_with_gamma_disagreement');
+      expect(provenance.anomaly_reason).toContain('Gamma price 0.9000 differs');
     });
   });
 });

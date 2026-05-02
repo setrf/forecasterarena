@@ -4,13 +4,14 @@ import { getSellExecutionContextOrError } from '@/lib/engine/execution/sell/cont
 import { calculateSellEconomics } from '@/lib/engine/execution/sell/economics';
 import { resolveSellCurrentPriceOrError } from '@/lib/engine/execution/sell/pricing';
 import { toErrorMessage } from '@/lib/engine/execution/shared';
-import type { SellResult } from '@/lib/engine/execution/types';
+import type { ExecutionPriceOverrides, SellResult } from '@/lib/engine/execution/types';
 import type { SellInstruction } from '@/lib/openrouter/parser';
 
 export function executeSell(
   agentId: string,
   sell: SellInstruction,
-  decisionId?: string
+  decisionId?: string,
+  priceOverrides?: ExecutionPriceOverrides
 ): SellResult {
   try {
     const context = getSellExecutionContextOrError(agentId, sell);
@@ -19,7 +20,7 @@ export function executeSell(
     }
 
     const { agent, position, market, sharesToSell } = context.value;
-    const resolved = resolveSellCurrentPriceOrError(market, position.side);
+    const resolved = resolveSellCurrentPriceOrError(market, position.side, priceOverrides);
     if (!resolved.ok) {
       return { success: false, error: resolved.error };
     }

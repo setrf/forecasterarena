@@ -10,7 +10,7 @@ type ExistingMarketForRefresh = {
 function getExistingMarketsForRefresh(): ExistingMarketForRefresh[] {
   const db = getDb();
 
-  return db.prepare(`
+  const priorityMarkets = db.prepare(`
     SELECT DISTINCT m.polymarket_id, m.status
     FROM markets m
     WHERE m.status IN ('active', 'closed')
@@ -23,6 +23,22 @@ function getExistingMarketsForRefresh(): ExistingMarketForRefresh[] {
       OR (m.status = 'active' AND julianday(m.close_date) < julianday('now'))
     )
   `).all() as ExistingMarketForRefresh[];
+
+  const seen = new Set(priorityMarkets.map((market) => market.polymarket_id));
+  const staleMarkets = db.prepare(`
+    SELECT m.polymarket_id, m.status
+    FROM markets m
+    WHERE m.status = 'active'
+      AND m.polymarket_id IS NOT NULL
+      AND julianday(m.last_updated_at) < julianday('now', '-6 hours')
+    ORDER BY m.last_updated_at ASC
+    LIMIT 100
+  `).all() as ExistingMarketForRefresh[];
+
+  return [
+    ...priorityMarkets,
+    ...staleMarkets.filter((market) => !seen.has(market.polymarket_id))
+  ];
 }
 
 export async function refreshExistingMarketStatuses(errors: string[]): Promise<{

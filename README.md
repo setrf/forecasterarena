@@ -99,7 +99,8 @@ Why this matters:
 
 6. **Portfolio snapshots**
    - Snapshots are timestamped, not daily-bucketed.
-   - The current snapshot route records **10-minute mark-to-market state** for unarchived active cohorts and preserves prior value when markets are closed but unresolved and price feeds become unhelpful.
+   - The current snapshot route records **10-minute mark-to-market state** for unarchived active cohorts using Polymarket CLOB midpoints for paper valuation.
+   - If CLOB pricing is missing or invalid, snapshots preserve the prior position value, log a price anomaly, and record market-price provenance for audit.
    - Archived v1 cohorts are not routine-snapshotted; their detail pages compute live portfolio state from cash, positions, and settlement records.
 
 ---
@@ -370,6 +371,7 @@ Admin exports:
   - `trades`
   - `positions`
   - `portfolio_snapshots`
+  - `market_price_snapshots`
 - are deleted after roughly **24 hours**
 
 ---

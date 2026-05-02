@@ -17,3 +17,9 @@ export interface SellResult {
 export type ExecResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: string };
+
+export type ExecutionPriceOverrides = Map<string, number>;
+
+export function getExecutionPriceKey(marketId: string, side: string): string {
+  return `${marketId}:${side}`;
+}

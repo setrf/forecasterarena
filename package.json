@@ -15,6 +15,7 @@
     "check:openrouter-lineup": "node scripts/check-openrouter-lineup.mjs",
     "check:openrouter-upgrades": "node scripts/check-openrouter-upgrades.mjs",
     "check:queries": "node scripts/check-query-structure.mjs",
+    "repair:apr28-snapshots": "node scripts/repair-apr28-clob-snapshots.mjs",
     "check:standalone-assets": "node scripts/prepare-standalone-assets.mjs --check",
     "prepare:standalone-assets": "node scripts/prepare-standalone-assets.mjs",
     "test": "vitest run",

@@ -12,6 +12,7 @@ export interface Market {
   status: 'active' | 'closed' | 'resolved' | 'cancelled';
   current_price: number | null;
   current_prices: string | null;
+  clob_token_ids: string | null;
   volume: number | null;
   liquidity: number | null;
   resolution_outcome: string | null;

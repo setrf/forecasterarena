@@ -8,7 +8,7 @@
  */
 
 import { executeSell } from '@/lib/engine/execution/sell';
-import type { SellResult } from '@/lib/engine/execution/types';
+import type { ExecutionPriceOverrides, SellResult } from '@/lib/engine/execution/types';
 import type { SellInstruction } from '@/lib/openrouter/parser';
 
 export type { BetResult, SellResult } from '@/lib/engine/execution/types';
@@ -19,7 +19,8 @@ export { executeSell } from '@/lib/engine/execution/sell';
 export function executeSells(
   agentId: string,
   sells: SellInstruction[],
-  decisionId?: string
+  decisionId?: string,
+  priceOverrides?: ExecutionPriceOverrides
 ): SellResult[] {
-  return sells.map((sell) => executeSell(agentId, sell, decisionId));
+  return sells.map((sell) => executeSell(agentId, sell, decisionId, priceOverrides));
 }

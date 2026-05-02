@@ -58,6 +58,7 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
           status = COALESCE(?, status),
           current_price = COALESCE(?, current_price),
           current_prices = COALESCE(?, current_prices),
+          clob_token_ids = COALESCE(?, clob_token_ids),
           volume = COALESCE(?, volume),
           liquidity = COALESCE(?, liquidity),
           last_updated_at = CURRENT_TIMESTAMP
@@ -74,6 +75,7 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
       market.status,
       market.current_price,
       market.current_prices,
+      market.clob_token_ids,
       market.volume,
       market.liquidity,
       market.polymarket_id
@@ -87,8 +89,8 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
   db.prepare(`
     INSERT INTO markets (
       id, polymarket_id, slug, event_slug, question, description, category, market_type,
-      outcomes, close_date, status, current_price, current_prices, volume, liquidity
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      outcomes, close_date, status, current_price, current_prices, clob_token_ids, volume, liquidity
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     market.polymarket_id,
@@ -103,6 +105,7 @@ export function upsertMarket(market: Partial<Market> & { polymarket_id: string }
     market.status || 'active',
     market.current_price,
     market.current_prices,
+    market.clob_token_ids,
     market.volume,
     market.liquidity
   );

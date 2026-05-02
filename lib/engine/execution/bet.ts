@@ -3,13 +3,14 @@ import { commitBetTrade } from '@/lib/engine/execution/bet/commit';
 import { getBetExecutionContextOrError } from '@/lib/engine/execution/bet/context';
 import { resolveBetPriceAndSideOrError } from '@/lib/engine/execution/bet/pricing';
 import { toErrorMessage } from '@/lib/engine/execution/shared';
-import type { BetResult } from '@/lib/engine/execution/types';
+import type { BetResult, ExecutionPriceOverrides } from '@/lib/engine/execution/types';
 import type { BetInstruction } from '@/lib/openrouter/parser';
 
 export function executeBet(
   agentId: string,
   bet: BetInstruction,
-  decisionId?: string
+  decisionId?: string,
+  priceOverrides?: ExecutionPriceOverrides
 ): BetResult {
   try {
     const context = getBetExecutionContextOrError(agentId, bet);
@@ -18,7 +19,7 @@ export function executeBet(
     }
 
     const { agent, market, maxBet } = context.value;
-    const resolved = resolveBetPriceAndSideOrError(market, bet.side);
+    const resolved = resolveBetPriceAndSideOrError(market, bet.side, priceOverrides);
     if (!resolved.ok) {
       return { success: false, error: resolved.error };
     }

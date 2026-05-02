@@ -233,12 +233,13 @@ Flow:
 1. [`POST /api/cron/take-snapshots`](../app/api/cron/take-snapshots/route.ts)
 2. [`lib/application/cron/takeSnapshots.ts`](../lib/application/cron/takeSnapshots.ts)
 3. Load all unarchived active cohorts and agents, including current v2 cohorts outside the decision window.
-4. For each agent, read all open positions, derive snapshot pricing through [`lib/application/cron/snapshotPricing.ts`](../lib/application/cron/snapshotPricing.ts), update mark-to-market fields on positions, and create a portfolio snapshot row.
-5. Refresh persisted performance cache through [`lib/application/performance.ts`](../lib/application/performance.ts).
+4. Batch the markets with open positions, fetch validated CLOB prices through [`lib/pricing/marketPrices.ts`](../lib/pricing/marketPrices.ts), and write price provenance to `market_price_snapshots`.
+5. For each agent, read all open positions, derive snapshot pricing through [`lib/application/cron/snapshotPricing.ts`](../lib/application/cron/snapshotPricing.ts), update mark-to-market fields on positions, and create a portfolio snapshot row.
+6. Refresh persisted performance cache through [`lib/application/performance.ts`](../lib/application/performance.ts).
 
 Key property:
 
-- Snapshots are timestamped, not day-bucketed, which is what enables the `10M`, `1H`, and other intraday chart ranges.
+- Snapshots are timestamped, not day-bucketed, and CLOB pricing anomalies preserve prior value instead of writing suspect Gamma prices into portfolio curves.
 
 ### 7. Admin benchmark release / config / rollover flow
 

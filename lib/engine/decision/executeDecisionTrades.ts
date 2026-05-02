@@ -1,4 +1,5 @@
 import { executeBetsAtomically, executeSells } from '@/lib/engine/execution';
+import type { ExecutionPriceOverrides } from '@/lib/engine/execution/types';
 import type { ParsedDecision } from '@/lib/openrouter/parser';
 import type { BetResult, SellResult } from '@/lib/engine/execution';
 
@@ -21,21 +22,22 @@ function collectExecutionErrors(results: Array<BetResult | SellResult>): string[
 export function executeDecisionTrades(
   agentId: string,
   parsed: ParsedDecision,
-  decisionId: string
+  decisionId: string,
+  priceOverrides?: ExecutionPriceOverrides
 ): DecisionTradeExecutionSummary {
   let results: Array<BetResult | SellResult> = [];
   let attemptedTrades = 0;
 
   if (parsed.action === 'BET' && parsed.bets) {
     attemptedTrades = parsed.bets.length;
-    results = executeBetsAtomically(agentId, parsed.bets, decisionId);
+    results = executeBetsAtomically(agentId, parsed.bets, decisionId, priceOverrides);
   } else if (parsed.action === 'SELL' && parsed.sells) {
     attemptedTrades = parsed.sells.length;
-    results = executeSells(agentId, parsed.sells, decisionId);
+    results = executeSells(agentId, parsed.sells, decisionId, priceOverrides);
 
     const failedSells = parsed.sells.filter((_, index) => !results[index]?.success);
     if (failedSells.length > 0) {
-      const retryResults = executeSells(agentId, failedSells, decisionId);
+      const retryResults = executeSells(agentId, failedSells, decisionId, priceOverrides);
       let retryIndex = 0;
       results = results.map((entry) => {
         if (entry.success) {

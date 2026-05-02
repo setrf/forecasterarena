@@ -2,7 +2,7 @@ import { MAX_BET_PERCENT } from '@/lib/constants';
 import { withImmediateTransaction } from '@/lib/db';
 import { getAgentById } from '@/lib/db/queries';
 import { executeBet } from '@/lib/engine/execution/bet';
-import type { BetResult } from '@/lib/engine/execution/types';
+import type { BetResult, ExecutionPriceOverrides } from '@/lib/engine/execution/types';
 import type { BetInstruction } from '@/lib/openrouter/parser';
 
 class AtomicBetBatchFailure extends Error {
@@ -15,9 +15,10 @@ class AtomicBetBatchFailure extends Error {
 export function executeBets(
   agentId: string,
   bets: BetInstruction[],
-  decisionId?: string
+  decisionId?: string,
+  priceOverrides?: ExecutionPriceOverrides
 ): BetResult[] {
-  return bets.map((bet) => executeBet(agentId, bet, decisionId));
+  return bets.map((bet) => executeBet(agentId, bet, decisionId, priceOverrides));
 }
 
 function getBetBatchPreflightError(agentId: string, bets: BetInstruction[]): string | null {
@@ -58,7 +59,8 @@ function getAtomicFailureResult(errors: string[]): BetResult[] {
 export function executeBetsAtomically(
   agentId: string,
   bets: BetInstruction[],
-  decisionId?: string
+  decisionId?: string,
+  priceOverrides?: ExecutionPriceOverrides
 ): BetResult[] {
   if (bets.length === 0) {
     return [];
@@ -73,7 +75,7 @@ export function executeBetsAtomically(
     let results: BetResult[] = [];
 
     withImmediateTransaction(() => {
-      results = executeBets(agentId, bets, decisionId);
+      results = executeBets(agentId, bets, decisionId, priceOverrides);
       const errors = results
         .filter((result) => !result.success)
         .map((result) => result.error || 'Unknown BET execution error');

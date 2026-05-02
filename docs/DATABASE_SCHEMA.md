@@ -334,6 +334,7 @@ Stores local Polymarket market state.
 | `status` | `TEXT` | Not null, default `active` |
 | `current_price` | `REAL` | Nullable YES price for binary markets |
 | `current_prices` | `TEXT` | Nullable multi-outcome prices payload |
+| `clob_token_ids` | `TEXT` | Nullable JSON token ids aligned with YES/NO or outcomes |
 | `volume` | `REAL` | Nullable |
 | `liquidity` | `REAL` | Nullable |
 | `resolution_outcome` | `TEXT` | Nullable |
@@ -485,6 +486,8 @@ Interpretation:
 ### 3.9 `portfolio_snapshots`
 
 Timestamped portfolio history for charts and operations.
+Open-position values are derived from validated CLOB prices when available;
+Gamma catalog prices remain stored on `markets` for display and comparison.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -513,11 +516,36 @@ Important correction:
 - the schema is timestamp-based
 - documentation that refers to `snapshot_date` is outdated
 
-This table is what enables intraday chart ranges such as `10M`, `1H`, and `1D`.
+This table is what enables intraday and recent chart ranges such as `1D` and `1W`.
 
 ---
 
-### 3.10 `brier_scores`
+### 3.10 `market_price_snapshots`
+
+Per-market price provenance captured during portfolio snapshot runs.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `TEXT` | Primary key |
+| `market_id` | `TEXT` | Not null |
+| `snapshot_timestamp` | `TEXT` | Not null |
+| `source` | `TEXT` | `clob` or `fallback` |
+| `accepted_price` | `REAL` | Nullable accepted YES price for binary markets |
+| `accepted_prices` | `TEXT` | Nullable accepted multi-outcome price JSON |
+| `gamma_price` | `REAL` | Nullable Gamma comparison YES price |
+| `gamma_prices` | `TEXT` | Nullable Gamma comparison multi-outcome prices |
+| `clob_token_ids` | `TEXT` | Token ids used or discovered for valuation |
+| `validation_status` | `TEXT` | Accepted, disagreement, or fallback status |
+| `anomaly_reason` | `TEXT` | Nullable reason when fallback/disagreement occurred |
+| `created_at` | `TEXT` | Defaults to `CURRENT_TIMESTAMP` |
+
+Uniqueness:
+
+- `UNIQUE(market_id, snapshot_timestamp)`
+
+---
+
+### 3.11 `brier_scores`
 
 One scoring row per resolved buy trade.
 
@@ -544,7 +572,7 @@ Behavior note:
 
 ---
 
-### 3.11 `api_costs`
+### 3.12 `api_costs`
 
 Optional cost-tracking table for model usage with frozen lineage.
 
@@ -579,7 +607,7 @@ Note:
 
 ---
 
-### 3.12 `system_logs`
+### 3.13 `system_logs`
 
 Application audit trail and operational log stream.
 
@@ -662,6 +690,15 @@ The snapshot cron now also refreshes a persisted `performance_chart_cache`
 table for the global time ranges. This lets cold app starts serve the main
 chart from SQLite-backed cached JSON instead of recomputing the full recent
 series on the first request.
+
+### 5.5 Price provenance and anomaly handling
+
+Portfolio valuation uses CLOB midpoints as the authoritative paper-accounting
+price source. Each snapshot run stores Gamma comparison prices, accepted CLOB
+prices, token ids, and fallback/disagreement status in `market_price_snapshots`.
+When CLOB pricing is missing or invalid, positions keep their prior value and a
+system log anomaly is emitted instead of baking a suspect Gamma price into the
+portfolio curve.
 
 ---
 

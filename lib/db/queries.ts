@@ -12,6 +12,7 @@ export * from './queries/model-releases';
 export * from './queries/benchmark-configs';
 export * from './queries/agents';
 export * from './queries/markets';
+export * from './queries/market-price-snapshots';
 export * from './queries/positions';
 export * from './queries/trades';
 export * from './queries/decisions';
