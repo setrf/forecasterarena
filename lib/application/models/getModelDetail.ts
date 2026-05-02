@@ -43,7 +43,7 @@ export function getModelDetail(
   const totalCapital = cohortPerformance.length * INITIAL_BALANCE;
   const winRateResult = getModelWinRate(db, family.id);
   const chartSeriesKey = family.slug ?? family.id;
-  const performance = getPerformanceData('ALL', { familyId: family.id });
+  const performance = getPerformanceData('1M', { familyId: family.id });
 
   return {
     status: 'ok',

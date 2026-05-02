@@ -42,6 +42,10 @@ export function createAdminBenchmarkConfigRecord(
   const seenFamilies = new Set<string>();
 
   for (const assignment of assignments) {
+    if (!assignment || typeof assignment !== 'object') {
+      return { ok: false, status: 400, error: 'Lineup assignments must be objects' };
+    }
+
     const familyId = getRequiredTrimmedString(assignment.family_id, 'Lineup assignment family');
     if (!familyId.ok) {
       return { ok: false, status: 400, error: familyId.error };

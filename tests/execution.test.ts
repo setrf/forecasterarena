@@ -198,7 +198,7 @@ describe('engine/execution - executeBet', () => {
     });
   });
 
-  it('defaults null binary price to 0.5 and succeeds', async () => {
+  it('rejects null binary bet prices instead of inventing 50/50 odds', async () => {
     await withFixture(async ({ execution, queries, agent }) => {
       const market = createBinaryMarket(queries, { current_price: null });
       const result = execution.executeBet(agent.id, {
@@ -206,8 +206,8 @@ describe('engine/execution - executeBet', () => {
         side: 'YES',
         amount: 100
       });
-      expect(result.success).toBe(true);
-      expect(result.shares).toBeCloseTo(200, 6);
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/No executable price available/);
     });
   });
 
@@ -516,22 +516,23 @@ describe('engine/execution - executeSell', () => {
     });
   });
 
-  it('defaults null binary price to 0.5 for sells', async () => {
-    await withFixture(async ({ execution, queries, agent }) => {
-      const market = createBinaryMarket(queries, { current_price: null });
+  it('rejects null binary sell prices instead of inventing 50/50 odds', async () => {
+    await withFixture(async ({ execution, queries, agent, db }) => {
+      const market = createBinaryMarket(queries, { current_price: 0.5 });
       const buy = execution.executeBet(agent.id, {
         market_id: market.id,
         side: 'YES',
         amount: 100
       });
       expect(buy.success).toBe(true);
+      db.prepare(`UPDATE markets SET current_price = NULL WHERE id = ?`).run(market.id);
 
       const result = execution.executeSell(agent.id, {
         position_id: buy.position_id!,
         percentage: 50
       });
-      expect(result.success).toBe(true);
-      expect(result.proceeds).toBeCloseTo(50, 6);
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/No current price available/);
     });
   });
 

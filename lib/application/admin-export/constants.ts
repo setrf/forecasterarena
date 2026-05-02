@@ -1,4 +1,5 @@
 import path from 'path';
+import { BACKUP_PATH } from '@/lib/db/runtime';
 
 export const MAX_DAYS = 7;
 export const MAX_ROWS = 50_000;
@@ -36,4 +37,4 @@ export const DEFAULT_TABLES = [
 
 export type ExportTable = (typeof ALL_EXPORT_TABLES)[number];
 
-export const EXPORTS_DIR = path.join(process.cwd(), 'backups', 'exports');
+export const EXPORTS_DIR = path.join(BACKUP_PATH, 'exports');

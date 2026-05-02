@@ -37,6 +37,7 @@ export function buildListMarketsWhereClause({
       JOIN cohorts c ON a.cohort_id = c.id
       WHERE p.market_id = m.id
         AND c.status = 'active'
+        AND COALESCE(c.is_archived, 0) = 0
         AND p.status = 'open'
     )`);
   }
@@ -69,7 +70,15 @@ export function selectListedMarkets(
   return db.prepare(`
     SELECT
       m.*,
-      (SELECT COUNT(DISTINCT p.agent_id) FROM positions p WHERE p.market_id = m.id AND p.status = 'open') as positions_count
+      (
+        SELECT COUNT(DISTINCT p.agent_id)
+        FROM positions p
+        JOIN agents a ON a.id = p.agent_id
+        JOIN cohorts c ON c.id = a.cohort_id
+        WHERE p.market_id = m.id
+          AND p.status = 'open'
+          AND COALESCE(c.is_archived, 0) = 0
+      ) as positions_count
     FROM markets m
     ${whereClause}
     ORDER BY ${getMarketsOrderBy(sort)}

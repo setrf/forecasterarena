@@ -3,7 +3,12 @@ import { getDb } from '@/lib/db';
 export function getAdminStats() {
   const db = getDb();
 
-  const activeCohorts = (db.prepare('SELECT COUNT(*) as count FROM cohorts WHERE status = ?')
+  const activeCohorts = (db.prepare(`
+    SELECT COUNT(*) as count
+    FROM cohorts
+    WHERE status = ?
+      AND COALESCE(is_archived, 0) = 0
+  `)
     .get('active') as { count: number }).count;
 
   const totalAgents = (db.prepare('SELECT COUNT(*) as count FROM agents')

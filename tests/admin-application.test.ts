@@ -84,6 +84,24 @@ describe('admin application data services', () => {
     }
   });
 
+  it('excludes archived active cohorts from the admin active cohort count', async () => {
+      const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const { queries, cohort, db } = await createSingleAgentFixture();
+      db.prepare(`
+        INSERT INTO cohorts (
+          id, cohort_number, started_at, methodology_version, benchmark_config_id, is_archived, archive_reason
+        ) VALUES ('archived-admin-cohort', ?, '2026-01-01T00:00:00.000Z', 'v1', ?, 1, 'test archive')
+      `).run(cohort.cohort_number + 1, cohort.benchmark_config_id);
+
+      const admin = await import('@/lib/application/admin');
+      expect(admin.getAdminStats().active_cohorts).toBe(1);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('filters and limits admin logs', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 

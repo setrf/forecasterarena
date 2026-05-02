@@ -1,5 +1,5 @@
 import { logSystemEvent } from '@/lib/db';
-import { markDecisionAsError } from '@/lib/db/queries';
+import { markDecisionAsError, markDecisionExecutionFailure } from '@/lib/db/queries';
 import type { AgentDecisionResult } from '@/lib/engine/decision/types';
 import type { AgentWithModel } from '@/lib/types';
 
@@ -19,6 +19,7 @@ export function handleExecutionFailure(args: {
       ? `All ${args.action.toLowerCase()} executions failed`
       : `${failedTrades} ${args.action.toLowerCase()} execution(s) failed after ${args.tradesExecuted} succeeded`
   );
+  markDecisionExecutionFailure(args.decisionId, args.result.error);
 
   logSystemEvent('agent_decision_execution_failed', {
     agent_id: args.agent.id,

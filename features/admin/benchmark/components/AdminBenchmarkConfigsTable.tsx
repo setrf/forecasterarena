@@ -3,24 +3,20 @@ import type { BenchmarkOverview } from '@/features/admin/benchmark/types';
 interface AdminBenchmarkConfigsTableProps {
   overview: BenchmarkOverview;
   promotingConfigId: string | null;
-  previewingConfigId: string | null;
   onPromote: (configId: string) => void;
-  onPreviewRollover: (configId: string) => void;
 }
 
 export function AdminBenchmarkConfigsTable({
   overview,
   promotingConfigId,
-  previewingConfigId,
-  onPromote,
-  onPreviewRollover
+  onPromote
 }: AdminBenchmarkConfigsTableProps) {
   return (
     <div className="glass-card p-6 border border-[var(--border-medium)]">
       <div className="mb-4">
         <h2 className="heading-block">Recent Benchmark Configs</h2>
         <p className="text-sm text-[var(--text-muted)]">
-          Promotion changes the default lineup for future cohorts. Use active rollover preview to see and confirm immediate changes for running cohorts.
+          Promotion changes the default lineup for future cohorts. Running cohorts keep their frozen release lineage.
         </p>
       </div>
 
@@ -65,15 +61,8 @@ export function AdminBenchmarkConfigsTable({
                     ) : (
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => onPreviewRollover(config.id)}
-                          disabled={promotingConfigId !== null || previewingConfigId !== null}
-                          className="btn btn-secondary text-sm"
-                        >
-                          {previewingConfigId === config.id ? 'Previewing...' : 'Preview active rollout'}
-                        </button>
-                        <button
                           onClick={() => onPromote(config.id)}
-                          disabled={promotingConfigId !== null || previewingConfigId !== null}
+                          disabled={promotingConfigId !== null}
                           className="btn btn-secondary text-sm"
                         >
                           {promotingConfigId === config.id ? 'Promoting...' : `Promote default`}

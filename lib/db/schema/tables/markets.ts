@@ -47,7 +47,6 @@ CREATE TABLE IF NOT EXISTS positions (
   opened_at TEXT DEFAULT CURRENT_TIMESTAMP,      -- When position opened
   closed_at TEXT,                                -- When position closed
   FOREIGN KEY (agent_id) REFERENCES agents(id),
-  FOREIGN KEY (market_id) REFERENCES markets(id),
-  UNIQUE(agent_id, market_id, side)              -- One position per side
+  FOREIGN KEY (market_id) REFERENCES markets(id)
 );
 `;

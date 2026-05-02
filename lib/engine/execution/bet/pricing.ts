@@ -12,7 +12,11 @@ export function resolveBetPriceAndSideOrError(
       return fail(`Invalid side "${requestedSide}" for binary market (must be YES or NO)`);
     }
 
-    const yesPrice = market.current_price ?? 0.5;
+    if (market.current_price === null || market.current_price === undefined) {
+      return fail(`No executable price available for binary market ${market.id}`);
+    }
+
+    const yesPrice = market.current_price;
     const price = normalizedSide === 'YES' ? yesPrice : (1 - yesPrice);
 
     if (!Number.isFinite(price) || price <= 0 || price > 1) {

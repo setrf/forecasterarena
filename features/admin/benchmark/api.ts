@@ -1,7 +1,6 @@
 import type {
   BenchmarkOverview,
   BenchmarkResultMessage,
-  BenchmarkRolloverPreview,
   ConfigFormState,
   ReleaseFormState
 } from '@/features/admin/benchmark/types';
@@ -111,45 +110,6 @@ export async function promoteAdminBenchmarkConfig(
   return {
     type: 'success',
     message: `${payload.version_name || 'Benchmark config'} promoted as the default lineup`
-  };
-}
-
-export async function previewAdminBenchmarkRollover(
-  configId: string
-): Promise<BenchmarkRolloverPreview> {
-  const response = await fetch('/api/admin/benchmark/rollover', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ config_id: configId, apply: false })
-  });
-
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response, 'Failed to preview lineup rollover'));
-  }
-
-  return response.json() as Promise<BenchmarkRolloverPreview>;
-}
-
-export async function applyAdminBenchmarkRollover(
-  configId: string
-): Promise<BenchmarkResultMessage> {
-  const response = await fetch('/api/admin/benchmark/rollover', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ config_id: configId, apply: true })
-  });
-
-  if (!response.ok) {
-    return {
-      type: 'error',
-      message: await readErrorMessage(response, 'Lineup rollover failed')
-    };
-  }
-
-  const payload = await response.json() as BenchmarkRolloverPreview;
-  return {
-    type: 'success',
-    message: `${payload.version_name} applied to ${payload.impacted_cohorts} active cohort(s) and ${payload.impacted_agents} agent slot(s)`
   };
 }
 

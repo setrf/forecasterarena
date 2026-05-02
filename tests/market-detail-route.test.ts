@@ -147,4 +147,63 @@ describe('market detail route', () => {
       expect(data.positions[0].decision_id).toBe(openingDecision.id);
     });
   });
+
+  it('excludes archived cohort positions, trades, and Brier rows from current market detail', async () => {
+    await withRouteFixture(async ({ agent, cohort, db, queries, route }) => {
+      db.prepare(`
+        UPDATE cohorts
+        SET methodology_version = 'v1', is_archived = 1, archive_reason = 'test archive'
+        WHERE id = ?
+      `).run(cohort.id);
+      const market = queries.upsertMarket({
+        polymarket_id: `pm-archived-detail-${Date.now()}`,
+        question: 'Will archived market activity stay out of current detail?',
+        close_date: '2030-01-01T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.6,
+        volume: 1000,
+        liquidity: 500
+      });
+      const position = queries.upsertPosition(agent.id, market.id, 'YES', 10, 0.5, 5);
+      const decision = queries.createDecision({
+        agent_id: agent.id,
+        cohort_id: cohort.id,
+        decision_week: 1,
+        prompt_system: 'system',
+        prompt_user: 'buy',
+        action: 'BET'
+      });
+      const trade = queries.createTrade({
+        agent_id: agent.id,
+        market_id: market.id,
+        position_id: position.id,
+        decision_id: decision.id,
+        trade_type: 'BUY',
+        side: 'YES',
+        shares: 10,
+        price: 0.5,
+        total_amount: 5,
+        implied_confidence: 0.5
+      });
+      queries.createBrierScore({
+        agent_id: agent.id,
+        trade_id: trade.id,
+        market_id: market.id,
+        forecast_probability: 0.5,
+        actual_outcome: 1,
+        brier_score: 0.25
+      });
+
+      const response = await route.GET(
+        new Request(`http://localhost/api/markets/${market.id}`) as any,
+        { params: Promise.resolve({ id: market.id }) }
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.positions).toEqual([]);
+      expect(data.trades).toEqual([]);
+      expect(data.brier_scores).toEqual([]);
+    });
+  });
 });

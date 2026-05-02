@@ -1,5 +1,5 @@
 import { checkModelLineupReview } from '@/lib/application/admin-benchmark';
-import { ok, type CronAppResult } from '@/lib/application/cron/types';
+import { failure, ok, type CronAppResult } from '@/lib/application/cron/types';
 
 export async function checkModelLineup(): Promise<CronAppResult<{
   success: true;
@@ -9,6 +9,9 @@ export async function checkModelLineup(): Promise<CronAppResult<{
   checked_at: string;
 }>> {
   const review = await checkModelLineupReview();
+  if (review.status === 'failed') {
+    return failure(502, review.error_message || 'OpenRouter model lineup check failed');
+  }
 
   return ok({
     success: true,

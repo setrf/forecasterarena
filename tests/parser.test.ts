@@ -1,8 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
 import { parseDecision, isValidDecision, getDefaultHoldDecision } from '@/lib/openrouter/parser';
-import { validateBetBatch } from '@/lib/openrouter/parser/validate/bet';
+import { cleanResponse } from '@/lib/openrouter/parser/clean';
+import { validateBet, validateBetBatch } from '@/lib/openrouter/parser/validate/bet';
+import { validateSell } from '@/lib/openrouter/parser/validate/sell';
+import { SYSTEM_PROMPT } from '@/lib/openrouter/prompts/systemPrompt';
 
 describe('openrouter/parser', () => {
+  it('keeps the BET example in the system prompt valid JSON', () => {
+    const betExample = SYSTEM_PROMPT
+      .split('FOR PLACING BETS:')[1]!
+      .split('MARKET TYPES:')[0]!
+      .trim();
+
+    expect(JSON.parse(betExample)).toMatchObject({
+      action: 'BET',
+      bets: [{ side: 'YES' }]
+    });
+  });
+
   it('parses a valid HOLD decision', () => {
     const parsed = parseDecision(
       JSON.stringify({
@@ -32,6 +47,22 @@ describe('openrouter/parser', () => {
 
     expect(parsed.action).toBe('HOLD');
     expect(parsed.reasoning).toBe('Fence-wrapped output');
+  });
+
+  it('parses JSON wrapped in spaced markdown fences', () => {
+    const parsed = parseDecision(
+      [
+        '``` json',
+        '{',
+        '  "action": "HOLD",',
+        '  "reasoning": "Fence label has whitespace"',
+        '}',
+        '```'
+      ].join('\n')
+    );
+
+    expect(parsed.action).toBe('HOLD');
+    expect(parsed.reasoning).toBe('Fence label has whitespace');
   });
 
   it('parses JSON wrapped in outer quotes', () => {
@@ -80,6 +111,46 @@ describe('openrouter/parser', () => {
     expect(parsed.action).toBe('SELL');
     expect(parsed.sells).toHaveLength(1);
     expect(parsed.sells?.[0]).toEqual({ position_id: 'pos-1', percentage: 50 });
+  });
+
+  it('extracts embedded JSON while ignoring braces inside quoted strings', () => {
+    const parsed = parseDecision(
+      [
+        'Commentary before the object {not json}.',
+        '{',
+        '  "action": "HOLD",',
+        '  "reasoning": "The literal text {still not structure} should not stop extraction."',
+        '}',
+        'Commentary after.'
+      ].join('\n')
+    );
+
+    expect(parsed.action).toBe('HOLD');
+    expect(parsed.reasoning).toContain('{still not structure}');
+  });
+
+  it('extracts embedded JSON while respecting escaped quotes inside strings', () => {
+    const parsed = parseDecision(
+      [
+        'Commentary before JSON.',
+        '{',
+        '  "action": "HOLD",',
+        '  "reasoning": "The model wrote an escaped quote: \\"keep going\\" before closing."',
+        '}',
+        'Commentary after.'
+      ].join('\n')
+    );
+
+    expect(parsed.action).toBe('HOLD');
+    expect(parsed.reasoning).toContain('"keep going"');
+  });
+
+  it('leaves plain non-json responses unchanged during cleaning', () => {
+    expect(cleanResponse('plain response with no object')).toBe('plain response with no object');
+  });
+
+  it('leaves dangling embedded-json candidates unchanged during cleaning', () => {
+    expect(cleanResponse('plain response with dangling object {')).toBe('plain response with dangling object {');
   });
 
   it('returns ERROR when extracted JSON candidate has no closing brace', () => {
@@ -214,6 +285,13 @@ describe('openrouter/parser', () => {
     expect(parsed.error).toMatch(/Missing market_id/);
   });
 
+  it('rejects whitespace-only BET market ids at validation time', () => {
+    expect(validateBet(
+      { market_id: '   ', side: 'YES', amount: 100 },
+      10_000
+    )).toBe('Market ID cannot be empty');
+  });
+
   it('returns ERROR for BET missing side', () => {
     const parsed = parseDecision(
       JSON.stringify({
@@ -267,6 +345,24 @@ describe('openrouter/parser', () => {
     expect(parsed.bets?.[0].side).toBe('Candidate A');
   });
 
+  it('trims ids and canonicalizes binary BET sides before validation', () => {
+    const parsed = parseDecision(
+      JSON.stringify({
+        action: 'BET',
+        bets: [{ market_id: ' market-1 ', side: ' yes ', amount: 100 }],
+        reasoning: 'Trim and normalize fields'
+      }),
+      10_000
+    );
+
+    expect(parsed.action).toBe('BET');
+    expect(parsed.bets?.[0]).toEqual({
+      market_id: 'market-1',
+      side: 'YES',
+      amount: 100
+    });
+  });
+
   it('returns ERROR for SELL with invalid percentage', () => {
     const parsed = parseDecision(
       JSON.stringify({
@@ -289,6 +385,27 @@ describe('openrouter/parser', () => {
     );
     expect(parsed.action).toBe('ERROR');
     expect(parsed.error).toMatch(/Missing position_id/);
+  });
+
+  it('rejects whitespace-only SELL position ids at validation time', () => {
+    expect(validateSell({ position_id: '   ', percentage: 50 }))
+      .toBe('Position ID cannot be empty');
+  });
+
+  it('trims SELL position ids before validation', () => {
+    const parsed = parseDecision(
+      JSON.stringify({
+        action: 'SELL',
+        sells: [{ position_id: ' position-1 ', percentage: 50 }],
+        reasoning: 'Trim sell identifiers'
+      })
+    );
+
+    expect(parsed.action).toBe('SELL');
+    expect(parsed.sells?.[0]).toEqual({
+      position_id: 'position-1',
+      percentage: 50
+    });
   });
 
   it('returns ERROR for SELL with non-numeric percentage', () => {

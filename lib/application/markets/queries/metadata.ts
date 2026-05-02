@@ -24,8 +24,11 @@ export function selectMarketStats(db: Db): {
        FROM markets m
        WHERE EXISTS (
          SELECT 1 FROM positions p
+         JOIN agents a ON a.id = p.agent_id
+         JOIN cohorts c ON c.id = a.cohort_id
          WHERE p.market_id = m.id
            AND p.status = 'open'
+           AND COALESCE(c.is_archived, 0) = 0
        )
       ) as markets_with_positions
     FROM markets

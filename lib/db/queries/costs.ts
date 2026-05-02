@@ -18,14 +18,14 @@ export function createApiCost(cost: {
     : undefined;
   const id = existing?.id ?? generateId();
   const decisionLinkedLineage = cost.decision_id
-    ? db.prepare(`
+      ? db.prepare(`
         SELECT
           d.agent_id,
-          a.family_id,
-          a.release_id,
-          a.benchmark_config_model_id
+          COALESCE(d.family_id, a.family_id) as family_id,
+          COALESCE(d.release_id, a.release_id) as release_id,
+          COALESCE(d.benchmark_config_model_id, a.benchmark_config_model_id) as benchmark_config_model_id
         FROM decisions d
-        JOIN agents a ON a.id = d.agent_id
+        LEFT JOIN agents a ON a.id = d.agent_id
         WHERE d.id = ?
         LIMIT 1
       `).get(cost.decision_id) as {

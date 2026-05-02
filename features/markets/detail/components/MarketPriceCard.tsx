@@ -44,7 +44,7 @@ export function MarketPriceCard({ market }: MarketPriceCardProps) {
       <div className="h-4 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-[var(--accent-emerald)] to-[var(--accent-blue)]"
-          style={{ width: `${(market.current_price ?? 0.5) * 100}%` }}
+          style={{ width: `${(market.current_price ?? 0) * 100}%` }}
         />
       </div>
     </div>

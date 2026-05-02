@@ -1,7 +1,7 @@
 export function stripCodeFences(input: string): string {
   let cleaned = input;
   if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '');
+    cleaned = cleaned.replace(/^```\s*(?:json)?\s*\n?/i, '');
     cleaned = cleaned.replace(/\n?```\s*$/i, '');
   }
 
@@ -24,32 +24,62 @@ export function extractEmbeddedJsonWithAction(input: string): string {
     return input;
   }
 
-  const jsonMatch = input.match(/\{[\s\S]*"action"\s*:\s*"[^"]+"/);
-  if (!jsonMatch) {
-    return input;
-  }
-
-  const startIndex = input.indexOf(jsonMatch[0]);
-  let braceCount = 0;
-  let endIndex = startIndex;
-
-  for (let index = startIndex; index < input.length; index++) {
-    if (input[index] === '{') {
-      braceCount++;
+  let searchFrom = 0;
+  while (searchFrom < input.length) {
+    const startIndex = input.indexOf('{', searchFrom);
+    if (startIndex < 0) {
+      return input;
     }
 
-    if (input[index] === '}') {
-      braceCount--;
+    let braceCount = 0;
+    let endIndex = startIndex;
+    let inString = false;
+    let escaped = false;
+
+    for (let index = startIndex; index < input.length; index++) {
+      const char = input[index];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) {
+        continue;
+      }
+
+      if (char === '{') {
+        braceCount++;
+      }
+
+      if (char === '}') {
+        braceCount--;
+      }
+
+      if (braceCount === 0 && index > startIndex) {
+        endIndex = index + 1;
+        break;
+      }
     }
 
-    if (braceCount === 0 && index > startIndex) {
-      endIndex = index + 1;
-      break;
+    if (endIndex > startIndex) {
+      const candidate = input.slice(startIndex, endIndex);
+      if (candidate.includes('"action"')) {
+        return candidate;
+      }
     }
-  }
 
-  if (endIndex > startIndex) {
-    return input.slice(startIndex, endIndex);
+    searchFrom = startIndex + 1;
   }
 
   return input;

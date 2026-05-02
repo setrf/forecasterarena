@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 afterEach(() => {
   vi.doUnmock('@/lib/api/result-response');
   vi.doUnmock('@/lib/application/cron');
+  vi.doUnmock('@/lib/application/admin-benchmark');
   vi.resetModules();
 });
 
@@ -37,6 +38,30 @@ describe('cron check-model-lineup route', () => {
       data: {
         review_id: 'review-1'
       }
+    });
+  });
+
+  it('reports failed catalog checks as cron failures', async () => {
+    vi.doMock('@/lib/application/admin-benchmark', () => ({
+      checkModelLineupReview: vi.fn(async () => ({
+        id: 'review-failed',
+        status: 'failed',
+        checked_at: '2026-05-01T00:00:00.000Z',
+        reviewed_at: null,
+        candidate_count: 0,
+        target_config_id: null,
+        error_message: 'OpenRouter unavailable',
+        candidates: []
+      }))
+    }));
+
+    const { checkModelLineup } = await import('@/lib/application/cron/checkModelLineup');
+    const result = await checkModelLineup();
+
+    expect(result).toEqual({
+      ok: false,
+      status: 502,
+      error: 'OpenRouter unavailable'
     });
   });
 });

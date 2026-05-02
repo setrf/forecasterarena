@@ -18,6 +18,12 @@ import { withImmediateTransaction } from '@/lib/db/transactions';
 export function claimDecisionForProcessing(args: ClaimDecisionArgs): DecisionClaimResult {
   return withImmediateTransaction(() => {
     const db = getDb();
+    const agent = db.prepare('SELECT cohort_id FROM agents WHERE id = ?')
+      .get(args.agent_id) as { cohort_id: string } | undefined;
+    if (!agent || agent.cohort_id !== args.cohort_id) {
+      throw new Error('Decision agent/cohort mismatch');
+    }
+
     const now = new Date().toISOString();
     const existing = getDecisionByAgentWeek(args.agent_id, args.cohort_id, args.decision_week);
 

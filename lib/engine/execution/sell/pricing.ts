@@ -12,7 +12,11 @@ export function resolveSellCurrentPriceOrError(
       return fail(`Invalid side "${positionSide}" for binary market position`);
     }
 
-    const yesPrice = market.current_price ?? 0.5;
+    if (market.current_price === null || market.current_price === undefined) {
+      return fail(`No current price available for binary market side "${normalizedSide}"`);
+    }
+
+    const yesPrice = market.current_price;
     const currentPrice = normalizedSide === 'YES' ? yesPrice : (1 - yesPrice);
 
     if (!Number.isFinite(currentPrice) || currentPrice < 0 || currentPrice > 1) {

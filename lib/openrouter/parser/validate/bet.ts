@@ -10,6 +10,10 @@ export function validateBet(
     return 'Missing market_id';
   }
 
+  if (!bet.market_id.trim()) {
+    return 'Market ID cannot be empty';
+  }
+
   if (!bet.side) {
     return 'Missing side';
   }

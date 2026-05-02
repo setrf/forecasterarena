@@ -18,8 +18,7 @@ const TABLE_REBUILDS = [
         opened_at TEXT DEFAULT CURRENT_TIMESTAMP,
         closed_at TEXT,
         FOREIGN KEY (agent_id) REFERENCES agents(id),
-        FOREIGN KEY (market_id) REFERENCES markets(id),
-        UNIQUE(agent_id, market_id, side)
+        FOREIGN KEY (market_id) REFERENCES markets(id)
       )
     `
   },

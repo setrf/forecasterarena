@@ -3,13 +3,11 @@
 import { useEffect, useState } from 'react';
 import {
   approveAdminModelLineupReview,
-  applyAdminBenchmarkRollover,
   checkAdminModelLineup,
   createAdminBenchmarkConfig,
   createAdminBenchmarkRelease,
   dismissAdminModelLineupReview,
   fetchAdminBenchmarkOverview,
-  previewAdminBenchmarkRollover,
   promoteAdminBenchmarkConfig
 } from '@/features/admin/benchmark/api';
 import {
@@ -19,7 +17,6 @@ import {
 import type {
     BenchmarkOverview,
     BenchmarkResultMessage,
-    BenchmarkRolloverPreview,
     ConfigFormState,
     ReleaseFormState
 } from '@/features/admin/benchmark/types';
@@ -36,12 +33,9 @@ export function useAdminBenchmarkController() {
   const [releaseLoading, setReleaseLoading] = useState(false);
   const [configLoading, setConfigLoading] = useState(false);
   const [promotingConfigId, setPromotingConfigId] = useState<string | null>(null);
-  const [previewingConfigId, setPreviewingConfigId] = useState<string | null>(null);
   const [checkingLineup, setCheckingLineup] = useState(false);
   const [approvingReviewId, setApprovingReviewId] = useState<string | null>(null);
   const [dismissingReviewId, setDismissingReviewId] = useState<string | null>(null);
-  const [applyingRollover, setApplyingRollover] = useState(false);
-  const [rolloverPreview, setRolloverPreview] = useState<BenchmarkRolloverPreview | null>(null);
   const [releaseState, setReleaseState] = useState<ReleaseFormState>(buildReleaseFormState(null));
   const [configState, setConfigState] = useState<ConfigFormState | null>(null);
   async function loadOverview(preserveDrafts: boolean = true) {
@@ -224,41 +218,6 @@ export function useAdminBenchmarkController() {
       setPromotingConfigId(null);
     }
   }
-  async function handlePreviewRollover(configId: string) {
-    setPreviewingConfigId(configId);
-    setResult(null);
-
-    try {
-      const preview = await previewAdminBenchmarkRollover(configId);
-      setRolloverPreview(preview);
-    } catch {
-      setResult({ type: 'error', message: 'Failed to preview active cohort rollover' });
-    } finally {
-      setPreviewingConfigId(null);
-    }
-  }
-  async function handleApplyRollover() {
-    if (!rolloverPreview) {
-      return;
-    }
-
-    setApplyingRollover(true);
-    setResult(null);
-
-    try {
-      const nextResult = await applyAdminBenchmarkRollover(rolloverPreview.config_id);
-      setResult(nextResult);
-
-      if (nextResult.type === 'success') {
-        setRolloverPreview(null);
-        await loadOverview(true);
-      }
-    } catch {
-      setResult({ type: 'error', message: 'Connection error' });
-    } finally {
-      setApplyingRollover(false);
-    }
-  }
   async function handleCheckLineup() {
     setCheckingLineup(true);
     setResult(null);
@@ -316,12 +275,9 @@ export function useAdminBenchmarkController() {
     releaseLoading,
     configLoading,
     promotingConfigId,
-    previewingConfigId,
     checkingLineup,
     approvingReviewId,
     dismissingReviewId,
-    applyingRollover,
-    rolloverPreview,
     releaseState,
     configState,
     setPassword,
@@ -334,11 +290,8 @@ export function useAdminBenchmarkController() {
     handleCreateRelease,
     handleCreateConfig,
     handlePromoteConfig,
-    handlePreviewRollover,
-    handleApplyRollover,
     handleCheckLineup,
     handleApproveLineupReview,
-    handleDismissLineupReview,
-    dismissRolloverPreview: () => setRolloverPreview(null)
+    handleDismissLineupReview
   };
 }

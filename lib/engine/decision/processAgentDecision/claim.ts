@@ -38,6 +38,22 @@ export function claimAgentDecisionForProcessing(
   });
 
   if (decisionClaim.status === 'skipped') {
+    if (
+      (decisionClaim.decision.action === 'BET' || decisionClaim.decision.action === 'SELL') &&
+      decisionClaim.decision.error_message
+    ) {
+      return {
+        status: 'skipped',
+        skippedResult: {
+          ...result,
+          decision_id: decisionClaim.decision.id,
+          action: decisionClaim.decision.action,
+          error: decisionClaim.decision.error_message,
+          success: false
+        }
+      };
+    }
+
     return {
       status: 'skipped',
       skippedResult: {

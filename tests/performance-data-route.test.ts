@@ -198,6 +198,14 @@ describe('performance data route', () => {
 
   it('supports cohort, family, and cohort-family scoped chart requests', async () => {
     await withPerformanceFixture(async ({ agent, cohort, queries, route }) => {
+      const dbModule = await import('@/lib/db');
+      const db = dbModule.getDb();
+      const family = db.prepare(`
+        SELECT slug
+        FROM model_families
+        WHERE id = ?
+      `).get(agent.family_id) as { slug: string };
+
       queries.createPortfolioSnapshot({
         agent_id: agent.id,
         snapshot_timestamp: snapshotTimestamp('2026-03-05T11:55:00.000Z'),
@@ -219,12 +227,106 @@ describe('performance data route', () => {
         expect.objectContaining({ family_id: agent.family_id })
       ]);
 
+      const slugScoped = await route.GET(
+        new Request(`http://localhost/api/performance-data?range=1M&family_id=${family.slug}`) as any
+      );
+      const slugPayload = await slugScoped.json();
+      expect(slugScoped.status).toBe(200);
+      expect(slugPayload.data).toEqual(familyPayload.data);
+
       const cohortAndFamilyScoped = await route.GET(
         new Request(`http://localhost/api/performance-data?range=1M&cohort_id=${cohort.id}&family_id=${agent.family_id}`) as any
       );
       const cohortAndFamilyPayload = await cohortAndFamilyScoped.json();
       expect(cohortAndFamilyScoped.status).toBe(200);
       expect(cohortAndFamilyPayload.data).toEqual(familyPayload.data);
+    });
+  });
+
+  it('rejects invalid scoped chart identifiers before generating cache keys', async () => {
+    await withPerformanceFixture(async ({ route }) => {
+      const missingCohort = await route.GET(
+        new Request('http://localhost/api/performance-data?range=1M&cohort_id=missing-cohort') as any
+      );
+      const missingFamily = await route.GET(
+        new Request('http://localhost/api/performance-data?range=1M&family_id=missing-family') as any
+      );
+
+      expect(missingCohort.status).toBe(400);
+      expect(await missingCohort.json()).toEqual({ error: 'Unknown cohort_id' });
+      expect(missingFamily.status).toBe(400);
+      expect(await missingFamily.json()).toEqual({ error: 'Unknown family_id' });
+    });
+  });
+
+  it('weights family chart aggregation by agents, not display/color subgroup averages', async () => {
+    await withPerformanceFixture(async ({ agent, cohort, queries, route }) => {
+      const dbModule = await import('@/lib/db');
+      const benchmarkConfigs = await import('@/lib/db/queries/benchmark-configs');
+      const modelFamilies = await import('@/lib/db/queries/model-families');
+      const modelReleases = await import('@/lib/db/queries/model-releases');
+      const db = dbModule.getDb();
+      const family = modelFamilies.getModelFamilyById(agent.family_id)!;
+      const release = modelReleases.getModelReleaseById(agent.release_id)!;
+      const secondCohortId = 'weighted-family-cohort-2';
+      db.prepare(`
+        INSERT INTO cohorts (
+          id, cohort_number, started_at, methodology_version, benchmark_config_id
+        ) VALUES (?, ?, '2026-01-01T00:00:00.000Z', 'v2', ?)
+      `).run(secondCohortId, cohort.cohort_number + 1, cohort.benchmark_config_id);
+      const [secondAgent] = queries.createAgentsForCohort(secondCohortId, cohort.benchmark_config_id);
+
+      const alternateConfig = benchmarkConfigs.createBenchmarkConfig({
+        version_name: `alternate-display-${Date.now()}`,
+        methodology_version: 'v2',
+        created_by: 'vitest'
+      });
+      benchmarkConfigs.createBenchmarkConfigModel({
+        benchmark_config_id: alternateConfig.id,
+        family_id: family.id,
+        release_id: release.id,
+        slot_order: 0,
+        family_display_name_snapshot: `${family.public_display_name} Alternate`,
+        short_display_name_snapshot: family.short_display_name,
+        release_display_name_snapshot: release.release_name,
+        provider_snapshot: release.provider,
+        color_snapshot: '#123456',
+        openrouter_id_snapshot: release.openrouter_id,
+        input_price_per_million_snapshot: 0,
+        output_price_per_million_snapshot: 0
+      });
+      const thirdCohortId = 'weighted-family-cohort-3';
+      db.prepare(`
+        INSERT INTO cohorts (
+          id, cohort_number, started_at, methodology_version, benchmark_config_id
+        ) VALUES (?, ?, '2026-01-08T00:00:00.000Z', 'v2', ?)
+      `).run(thirdCohortId, cohort.cohort_number + 2, alternateConfig.id);
+      const [thirdAgent] = queries.createAgentsForCohort(thirdCohortId, alternateConfig.id);
+
+      [
+        [agent.id, 10_000],
+        [secondAgent!.id, 10_000],
+        [thirdAgent!.id, 13_000]
+      ].forEach(([agentId, totalValue]) => {
+        queries.createPortfolioSnapshot({
+          agent_id: String(agentId),
+          snapshot_timestamp: snapshotTimestamp('2026-03-05T11:55:00.000Z'),
+          cash_balance: Number(totalValue),
+          positions_value: 0,
+          total_value: Number(totalValue),
+          total_pnl: Number(totalValue) - 10_000,
+          total_pnl_percent: 0
+        });
+      });
+
+      const response = await route.GET(
+        new Request(`http://localhost/api/performance-data?range=1M&family_id=${family.slug}`) as any
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.data).toHaveLength(1);
+      expect(payload.data[0][family.slug]).toBeCloseTo(11_000, 8);
     });
   });
 

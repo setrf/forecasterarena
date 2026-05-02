@@ -1,5 +1,4 @@
 import { getPositionsByMarket } from '@/lib/db/queries';
-import { recordBrierScoresForMarket } from '@/lib/engine/resolution/brier';
 import { settlePositionForMarket } from '@/lib/engine/resolution/settlePositionForMarket';
 import type { Market } from '@/lib/types';
 
@@ -12,10 +11,9 @@ export function processResolvedMarket(
 
   if (positions.length === 0) {
     console.log(`No positions to settle for market ${market.id}`);
-    return { positions_settled: 0, errors };
+  } else {
+    console.log(`Settling ${positions.length} position(s) for market "${market.question.slice(0, 50)}..."`);
   }
-
-  console.log(`Settling ${positions.length} position(s) for market "${market.question.slice(0, 50)}..."`);
 
   let positionsSettled = 0;
   for (const position of positions) {
@@ -29,6 +27,5 @@ export function processResolvedMarket(
     }
   }
 
-  recordBrierScoresForMarket(market, winningOutcome);
   return { positions_settled: positionsSettled, errors };
 }

@@ -126,6 +126,35 @@ describe('OpenRouter model lineup reviews', () => {
     }
   });
 
+  it('dismisses open review records without promoting a lineup', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+
+    try {
+      const {
+        createModelLineupReview,
+        dismissModelLineupReview,
+        getModelLineupReviewById
+      } = await import('@/lib/db/queries/model-lineup-reviews');
+      const review = createModelLineupReview({
+        status: 'open',
+        candidate_lineup_json: '[]',
+        catalog_summary_json: '{}',
+        checked_at: '2026-05-01T00:00:00.000Z'
+      });
+
+      dismissModelLineupReview(review.id);
+
+      expect(getModelLineupReviewById(review.id)).toMatchObject({
+        id: review.id,
+        status: 'dismissed',
+        target_config_id: null
+      });
+      expect(getModelLineupReviewById(review.id)?.reviewed_at).toEqual(expect.any(String));
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('approves selected upgrades for future cohorts without rolling existing active cohorts', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 

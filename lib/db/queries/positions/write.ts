@@ -55,7 +55,7 @@ export function upsertPosition(
   return getPositionById(id)!;
 }
 
-export function reducePosition(id: string, sharesToSell: number): void {
+export function reducePosition(id: string, sharesToSell: number, executionPrice?: number): void {
   const db = getDb();
   const position = getPositionById(id);
 
@@ -71,8 +71,9 @@ export function reducePosition(id: string, sharesToSell: number): void {
   const costReduction = (sharesToSell / position.shares) * position.total_cost;
   const newCost = position.total_cost - costReduction;
   const currentValue = position.current_value ?? position.total_cost;
-  const currentValueReduction = (sharesToSell / position.shares) * currentValue;
-  const newCurrentValue = currentValue - currentValueReduction;
+  const newCurrentValue = typeof executionPrice === 'number'
+    ? newShares * executionPrice
+    : currentValue - ((sharesToSell / position.shares) * currentValue);
 
   if (newShares <= 0) {
     db.prepare(`

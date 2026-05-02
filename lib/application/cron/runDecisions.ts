@@ -1,20 +1,9 @@
-import { getDb, logSystemEvent, withImmediateTransaction } from '@/lib/db';
+import { logSystemEvent } from '@/lib/db';
 import { DECISION_COHORT_LIMIT } from '@/lib/constants';
 import { maybeStartNewCohort } from '@/lib/engine/cohort';
 import { runAllDecisions } from '@/lib/engine/decision';
-import {
-  getActiveCohorts,
-  getBenchmarkConfigModels,
-  getDecisionEligibleCohorts,
-  getDefaultBenchmarkConfig
-} from '@/lib/db/queries';
+import { getActiveCohorts, getDecisionEligibleCohorts } from '@/lib/db/queries';
 import { errorMessage, failure, ok, type CronAppResult } from '@/lib/application/cron/types';
-
-type LineupRefreshSummary = {
-  default_config_id: string;
-  cohorts_updated: number;
-  agents_updated: number;
-};
 
 type RunDecisionsSuccess = {
   success: true;
@@ -22,7 +11,6 @@ type RunDecisionsSuccess = {
     cohort_id?: string;
     cohort_number?: number;
   } | null;
-  lineup_refresh: LineupRefreshSummary;
   decision_cohort_limit: number;
   tracking_active_cohorts: number;
   decision_eligible_cohorts: number;
@@ -51,96 +39,12 @@ function decisionRunFailureMessage(args: {
   return args.firstError ? `${summary}. First error: ${args.firstError}` : summary;
 }
 
-function refreshActiveCohortsToDefaultBenchmarkConfig(): LineupRefreshSummary {
-  const benchmarkConfig = getDefaultBenchmarkConfig();
-  if (!benchmarkConfig) {
-    throw new Error('No default benchmark config is configured for active cohort refresh');
-  }
-
-  const configModels = getBenchmarkConfigModels(benchmarkConfig.id);
-  const configModelsByFamily = new Map(configModels.map((model) => [model.family_id, model] as const));
-
-  return withImmediateTransaction(() => {
-    const db = getDb();
-    const activeCohorts = getActiveCohorts();
-    const updateCohort = db.prepare(`
-      UPDATE cohorts
-      SET benchmark_config_id = ?
-      WHERE id = ?
-    `);
-    const updateAgent = db.prepare(`
-      UPDATE agents
-      SET release_id = ?, benchmark_config_model_id = ?
-      WHERE id = ?
-    `);
-    const selectAgents = db.prepare(`
-      SELECT id, family_id, release_id, benchmark_config_model_id
-      FROM agents
-      WHERE cohort_id = ?
-    `);
-
-    let cohortsUpdated = 0;
-    let agentsUpdated = 0;
-
-    for (const cohort of activeCohorts) {
-      let changed = false;
-
-      if (cohort.benchmark_config_id !== benchmarkConfig.id) {
-        updateCohort.run(benchmarkConfig.id, cohort.id);
-        changed = true;
-      }
-
-      const agents = selectAgents.all(cohort.id) as Array<{
-        id: string;
-        family_id: string;
-        release_id: string;
-        benchmark_config_model_id: string;
-      }>;
-
-      for (const agent of agents) {
-        const target = configModelsByFamily.get(agent.family_id);
-        if (!target) {
-          throw new Error(`Default benchmark config ${benchmarkConfig.id} is missing family ${agent.family_id}`);
-        }
-
-        if (
-          agent.release_id !== target.release_id ||
-          agent.benchmark_config_model_id !== target.id
-        ) {
-          updateAgent.run(target.release_id, target.id, agent.id);
-          agentsUpdated += 1;
-          changed = true;
-        }
-      }
-
-      if (changed) {
-        cohortsUpdated += 1;
-      }
-    }
-
-    if (cohortsUpdated > 0 || agentsUpdated > 0) {
-      logSystemEvent('active_cohort_lineup_refreshed', {
-        default_config_id: benchmarkConfig.id,
-        cohorts_updated: cohortsUpdated,
-        agents_updated: agentsUpdated
-      });
-    }
-
-    return {
-      default_config_id: benchmarkConfig.id,
-      cohorts_updated: cohortsUpdated,
-      agents_updated: agentsUpdated
-    };
-  });
-}
-
 export async function runDecisions(): Promise<CronAppResult<RunDecisionsSuccess>> {
   try {
     console.log('Starting weekly decision run...');
 
     const startTime = Date.now();
     const cohortBootstrap = maybeStartNewCohort(false);
-    const lineupRefresh = refreshActiveCohortsToDefaultBenchmarkConfig();
     const trackingActiveCohorts = getActiveCohorts().length;
     const decisionEligibleCohorts = getDecisionEligibleCohorts(DECISION_COHORT_LIMIT).length;
     const results = await runAllDecisions(DECISION_COHORT_LIMIT);
@@ -195,7 +99,6 @@ export async function runDecisions(): Promise<CronAppResult<RunDecisionsSuccess>
             cohort_number: cohortBootstrap.cohort?.cohort_number
           }
         : null,
-      lineup_refresh: lineupRefresh,
       decision_cohort_limit: DECISION_COHORT_LIMIT,
       tracking_active_cohorts: trackingActiveCohorts,
       decision_eligible_cohorts: decisionEligibleCohorts,

@@ -21,7 +21,7 @@ async function buildUpdatedConfigForFamily(familyId: string, releaseId: string) 
 }
 
 describe('benchmark rollover and frozen lineage application', () => {
-  it('previews and applies active-cohort rollovers through the admin benchmark service', async () => {
+  it('previews active-cohort changes but rejects rollover application', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {
@@ -74,20 +74,25 @@ describe('benchmark rollover and frozen lineage application', () => {
       ]);
 
       const applyResult = admin.applyAdminBenchmarkRollover(configResult.data.config.id);
-      expect(applyResult.ok).toBe(true);
+      expect(applyResult.ok).toBe(false);
+      if (applyResult.ok) {
+        return;
+      }
+      expect(applyResult.status).toBe(400);
+      expect(applyResult.error).toMatch(/future cohorts only/);
 
       const cohortAfter = queries.getCohortById(fixture.cohort.id)!;
       const agentAfter = queries.getAgentsWithModelsByCohort(fixture.cohort.id).find((item) => item.family_id === family.id)!;
 
-      expect(cohortAfter.benchmark_config_id).toBe(configResult.data.config.id);
-      expect(agentAfter.release_id).toBe(releaseResult.data.release.id);
-      expect(agentAfter.model.release_name).toBe('Future Rollover Release');
+      expect(cohortAfter.benchmark_config_id).toBe(fixture.cohort.benchmark_config_id);
+      expect(agentAfter.release_id).toBe(agentBefore.release_id);
+      expect(agentAfter.model.release_name).toBe(agentBefore.model.release_name);
     } finally {
       await ctx.cleanup();
     }
   });
 
-  it('keeps decision, trade, and brier lineage frozen after the active agent release changes', async () => {
+  it('keeps active agents and historical rows frozen after future default promotion', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {
@@ -167,11 +172,11 @@ describe('benchmark rollover and frozen lineage application', () => {
         return;
       }
 
-      const applyResult = admin.applyAdminBenchmarkRollover(configResult.data.config.id);
-      expect(applyResult.ok).toBe(true);
+      const promoted = admin.promoteAdminBenchmarkConfig(configResult.data.config.id);
+      expect(promoted.ok).toBe(true);
 
       const afterAgent = queries.getAgentsWithModelsByCohort(fixture.cohort.id).find((item) => item.family_id === family.id)!;
-      expect(afterAgent.release_id).toBe(releaseResult.data.release.id);
+      expect(afterAgent.release_id).toBe(beforeAgent.release_id);
 
       const frozenDecision = queries.getDecisionById(decision.id)!;
       const frozenTrade = queries.getTradesByDecision(decision.id)[0]!;

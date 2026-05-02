@@ -375,6 +375,75 @@ describe('db query modules - support and reporting', () => {
     });
   });
 
+  it('uses the decision frozen lineage before falling back to the current agent lineage for API costs', async () => {
+    await withModules(async ({ agents, cohorts, costs, db }) => {
+      const benchmarkConfigs = await import('@/lib/db/queries/benchmark-configs');
+      const modelReleases = await import('@/lib/db/queries/model-releases');
+      const cohort = cohorts.createCohort();
+      const [agent] = agents.createAgentsForCohort(cohort.id);
+      const alternateRelease = modelReleases.createModelRelease({
+        id: uniqueId('release'),
+        family_id: agent!.family_id,
+        release_name: 'Frozen Cost Release',
+        release_slug: uniqueId('frozen-cost-release'),
+        openrouter_id: 'provider/frozen-cost-release',
+        provider: 'Provider',
+        release_status: 'active'
+      });
+      const alternateConfig = benchmarkConfigs.createBenchmarkConfig({
+        version_name: uniqueId('frozen-cost-config'),
+        methodology_version: 'v2',
+        created_by: 'vitest'
+      });
+      const alternateConfigModel = benchmarkConfigs.createBenchmarkConfigModel({
+        benchmark_config_id: alternateConfig.id,
+        family_id: agent!.family_id,
+        release_id: alternateRelease.id,
+        slot_order: 0,
+        family_display_name_snapshot: 'Frozen Cost Family',
+        short_display_name_snapshot: 'FC',
+        release_display_name_snapshot: alternateRelease.release_name,
+        provider_snapshot: alternateRelease.provider,
+        color_snapshot: '#fff',
+        openrouter_id_snapshot: alternateRelease.openrouter_id,
+        input_price_per_million_snapshot: 0,
+        output_price_per_million_snapshot: 0
+      });
+      const decisionId = uniqueId('decision');
+
+      db.prepare(`
+        INSERT INTO decisions (
+          id, agent_id, cohort_id, decision_week, decision_timestamp,
+          prompt_system, prompt_user, retry_count, action,
+          family_id, release_id, benchmark_config_model_id
+        ) VALUES (?, ?, ?, 1, ?, 'system', 'user', 0, 'HOLD', ?, ?, ?)
+      `).run(
+        decisionId,
+        agent!.id,
+        cohort.id,
+        '2025-01-01T00:00:00.000Z',
+        agent!.family_id,
+        alternateRelease.id,
+        alternateConfigModel.id
+      );
+
+      const apiCost = costs.createApiCost({
+        model_id: agent!.model_id,
+        decision_id: decisionId,
+        tokens_input: 120,
+        tokens_output: 45,
+        cost_usd: 0.42
+      });
+
+      expect(apiCost).toMatchObject({
+        agent_id: agent!.id,
+        family_id: agent!.family_id,
+        release_id: alternateRelease.id,
+        benchmark_config_model_id: alternateConfigModel.id
+      });
+    });
+  });
+
   it('keeps API cost lineage stable because agent lineage cannot be nulled once written', async () => {
     await withModules(({ agents, cohorts, costs, db }) => {
       const cohort = cohorts.createCohort();
@@ -579,7 +648,7 @@ describe('db query modules - support and reporting', () => {
       });
 
       markets.resolveMarket(marketOne.id, 'YES');
-      markets.resolveMarket(marketTwo.id, 'NO');
+      markets.resolveMarket(marketTwo.id, 'no');
 
       brierScores.createBrierScore({
         agent_id: agentOne.id,

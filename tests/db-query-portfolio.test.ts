@@ -26,6 +26,8 @@ describe('db query modules - positions and snapshots', () => {
       const closedMarketPosition = positions.upsertPosition(agent!.id, closedMarket.id, 'NO', 8, 0.3, 2.4);
       const nullCurrentValueMergeMarket = createMarket(markets, { question: 'Null current value merge market' });
       const nullCurrentValueReduceMarket = createMarket(markets, { question: 'Null current value reduce market' });
+      const repricedReduceMarket = createMarket(markets, { question: 'Repriced reduce market' });
+      const reopenMarket = createMarket(markets, { question: 'Reopen market side' });
       const nullCurrentValueMergePosition = positions.upsertPosition(
         agent!.id,
         nullCurrentValueMergeMarket.id,
@@ -42,6 +44,16 @@ describe('db query modules - positions and snapshots', () => {
         0.3,
         3
       );
+      const repricedReducePosition = positions.upsertPosition(
+        agent!.id,
+        repricedReduceMarket.id,
+        'YES',
+        10,
+        0.5,
+        5
+      );
+      positions.updatePositionMTM(repricedReducePosition.id, 8, 3);
+      const initialReopenPosition = positions.upsertPosition(agent!.id, reopenMarket.id, 'YES', 5, 0.4, 2);
 
       expect(mergedPosition.shares).toBe(15);
       expect(mergedPosition.avg_entry_price).toBeCloseTo(8 / 15, 10);
@@ -54,11 +66,19 @@ describe('db query modules - positions and snapshots', () => {
           activeMarket.id,
           closedMarket.id,
           nullCurrentValueMergeMarket.id,
-          nullCurrentValueReduceMarket.id
+          nullCurrentValueReduceMarket.id,
+          repricedReduceMarket.id,
+          reopenMarket.id
         ].sort()
       );
       expect(positions.getOpenPositions(agent!.id).map(position => position.market_id).sort()).toEqual(
-        [activeMarket.id, nullCurrentValueMergeMarket.id, nullCurrentValueReduceMarket.id].sort()
+        [
+          activeMarket.id,
+          nullCurrentValueMergeMarket.id,
+          nullCurrentValueReduceMarket.id,
+          repricedReduceMarket.id,
+          reopenMarket.id
+        ].sort()
       );
 
       positions.updatePositionMTM(openPosition.id, 11, 3);
@@ -115,6 +135,19 @@ describe('db query modules - positions and snapshots', () => {
       expect(reducedWithFallbackCurrentValue.total_cost).toBeCloseTo(1.8, 10);
       expect(reducedWithFallbackCurrentValue.current_value).toBeCloseTo(1.8, 10);
       expect(reducedWithFallbackCurrentValue.unrealized_pnl).toBeCloseTo(0, 10);
+
+      positions.reducePosition(repricedReducePosition.id, 4, 0.9);
+      const repricedRemainder = positions.getPositionById(repricedReducePosition.id)!;
+      expect(repricedRemainder.shares).toBe(6);
+      expect(repricedRemainder.total_cost).toBeCloseTo(3, 10);
+      expect(repricedRemainder.current_value).toBeCloseTo(5.4, 10);
+      expect(repricedRemainder.unrealized_pnl).toBeCloseTo(2.4, 10);
+
+      positions.reducePosition(initialReopenPosition.id, 5);
+      const reopenedPosition = positions.upsertPosition(agent!.id, reopenMarket.id, 'YES', 2, 0.7, 1.4);
+      expect(positions.getPositionById(initialReopenPosition.id)?.status).toBe('closed');
+      expect(reopenedPosition.id).not.toBe(initialReopenPosition.id);
+      expect(positions.getPosition(agent!.id, reopenMarket.id, 'YES')?.id).toBe(reopenedPosition.id);
 
       positions.reducePosition(closedMarketPosition.id, 8);
       expect(positions.getPositionById(closedMarketPosition.id)?.status).toBe('closed');

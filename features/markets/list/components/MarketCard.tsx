@@ -9,8 +9,8 @@ interface MarketCardProps {
 }
 
 export function MarketCard({ market, index }: MarketCardProps) {
-  const yesPrice = market.current_price ?? 0.5;
-  const noPrice = 1 - yesPrice;
+  const yesPrice = market.current_price;
+  const noPrice = yesPrice === null || yesPrice === undefined ? null : 1 - yesPrice;
 
   return (
     <Link
@@ -44,7 +44,7 @@ export function MarketCard({ market, index }: MarketCardProps) {
           <div className="flex-1 h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-[var(--color-positive)] to-[#00ff9d]"
-              style={{ width: `${yesPrice * 100}%` }}
+              style={{ width: `${(yesPrice ?? 0) * 100}%` }}
             />
           </div>
           <span className="text-sm font-mono w-12 text-right">{formatProbabilityPercent(yesPrice)}</span>
@@ -54,7 +54,7 @@ export function MarketCard({ market, index }: MarketCardProps) {
           <div className="flex-1 h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-[var(--color-negative)] to-[#ff8a8a]"
-              style={{ width: `${noPrice * 100}%` }}
+              style={{ width: `${(noPrice ?? 0) * 100}%` }}
             />
           </div>
           <span className="text-sm font-mono w-12 text-right">{formatProbabilityPercent(noPrice)}</span>

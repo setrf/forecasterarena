@@ -158,11 +158,36 @@ describe('admin export route', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('application/zip');
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
       expect(response.headers.get('Content-Disposition')).toBe(
         `attachment; filename="${filename}"`
       );
       expect(await response.text()).toBe('zip payload');
     } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('stores export artifacts under BACKUP_PATH and neutralizes CSV formula cells', async () => {
+    const backupPath = path.join(process.cwd(), 'tmp-test-backups');
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'test',
+      env: { BACKUP_PATH: backupPath }
+    });
+
+    try {
+      const constants = await import('@/lib/application/admin-export/constants');
+      const helpers = await import('@/lib/application/admin-export/helpers');
+
+      expect(constants.EXPORTS_DIR).toBe(path.join(backupPath, 'exports'));
+      expect(helpers.csvEscape('=SUM(A1:A2)')).toBe("'=SUM(A1:A2)");
+      expect(helpers.csvEscape('+cmd')).toBe("'+cmd");
+      expect(helpers.csvEscape('-cmd')).toBe("'-cmd");
+      expect(helpers.csvEscape('@cmd')).toBe("'@cmd");
+      expect(helpers.csvEscape('\tcmd')).toBe("'\tcmd");
+      expect(helpers.csvEscape('\rcmd')).toBe("'\rcmd");
+    } finally {
+      fs.rmSync(backupPath, { recursive: true, force: true });
       await ctx.cleanup();
     }
   });

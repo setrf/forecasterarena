@@ -3,6 +3,7 @@ import { resolveMarket } from '@/lib/db/queries';
 import {
   processResolvedMarket
 } from '@/lib/engine/resolution/settlement';
+import { recordBrierScoresForMarket } from '@/lib/engine/resolution/brier';
 import type { MarketResolutionResult } from '@/lib/engine/resolution/types';
 import { fetchMarketById, checkResolution } from '@/lib/polymarket/client';
 import type { Market } from '@/lib/types';
@@ -68,12 +69,14 @@ export async function checkMarketResolution(market: Market): Promise<MarketResol
     }
 
     resolveMarket(market.id, resolution.winner);
+    const brierScoresRecorded = recordBrierScoresForMarket(market, resolution.winner);
 
     logSystemEvent('market_resolved', {
       market_id: market.id,
       polymarket_id: market.polymarket_id,
       winning_outcome: resolution.winner,
-      positions_settled: settled.positions_settled
+      positions_settled: settled.positions_settled,
+      brier_scores_recorded: brierScoresRecorded
     });
 
     return {

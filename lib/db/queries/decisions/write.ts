@@ -114,3 +114,17 @@ export function markDecisionAsError(
     error_message: errorMessage
   });
 }
+
+export function markDecisionExecutionFailure(
+  decisionId: string,
+  errorMessage: string
+): Decision {
+  const db = getDb();
+  db.prepare(`
+    UPDATE decisions
+    SET error_message = ?
+    WHERE id = ?
+  `).run(errorMessage, decisionId);
+
+  return getDecisionById(decisionId)!;
+}

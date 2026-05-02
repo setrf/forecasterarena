@@ -3,6 +3,13 @@ import type Database from 'better-sqlite3';
 import { rebuildTablesReferencingAgents } from '@/lib/db/migrations/helpers/rebuildAgentForeignKeyTables';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
+function assertForeignKeyIntegrity(db: Database.Database): void {
+  const violations = db.pragma('foreign_key_check') as unknown[];
+  if (violations.length > 0) {
+    throw new Error(`foreign_key_check failed after agent lineage migration: ${JSON.stringify(violations)}`);
+  }
+}
+
 function createAgentLineageWriteGuards(db: Database.Database): void {
   db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_insert;');
   db.exec('DROP TRIGGER IF EXISTS agents_require_frozen_lineage_update;');
@@ -106,6 +113,6 @@ export const agentsBenchmarkSlotIdentityMigration: DbMigration = {
     db.exec('DROP TABLE agents_legacy_unique_backup;');
     createAgentLineageWriteGuards(db);
     db.pragma('foreign_keys = ON');
-    db.pragma('foreign_key_check');
+    assertForeignKeyIntegrity(db);
   }
 };

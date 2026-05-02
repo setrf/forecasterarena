@@ -5,7 +5,6 @@ import { AdminBenchmarkConfigsTable } from '@/features/admin/benchmark/component
 import { AdminBenchmarkCurrentLineup } from '@/features/admin/benchmark/components/AdminBenchmarkCurrentLineup';
 import { AdminBenchmarkLineupReviewPanel } from '@/features/admin/benchmark/components/AdminBenchmarkLineupReviewPanel';
 import { AdminBenchmarkReleaseForm } from '@/features/admin/benchmark/components/AdminBenchmarkReleaseForm';
-import { AdminBenchmarkRolloverPreview } from '@/features/admin/benchmark/components/AdminBenchmarkRolloverPreview';
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell';
 import { useAdminBenchmarkController } from '@/features/admin/benchmark/useAdminBenchmarkController';
 import { AdminLoginCard } from '@/features/admin/dashboard/components/AdminLoginCard';
@@ -23,12 +22,9 @@ export default function AdminBenchmarkPageClient() {
     releaseLoading,
     configLoading,
     promotingConfigId,
-    previewingConfigId,
     checkingLineup,
     approvingReviewId,
     dismissingReviewId,
-    applyingRollover,
-    rolloverPreview,
     releaseState,
     configState,
     setPassword,
@@ -41,12 +37,9 @@ export default function AdminBenchmarkPageClient() {
     handleCreateRelease,
     handleCreateConfig,
     handlePromoteConfig,
-    handlePreviewRollover,
-    handleApplyRollover,
     handleCheckLineup,
     handleApproveLineupReview,
     handleDismissLineupReview,
-    dismissRolloverPreview
   } = useAdminBenchmarkController();
 
   if (!hasResolvedAuth) {
@@ -116,15 +109,6 @@ export default function AdminBenchmarkPageClient() {
         onApprove={handleApproveLineupReview}
         onDismiss={handleDismissLineupReview}
       />
-      {rolloverPreview && (
-        <AdminBenchmarkRolloverPreview
-          preview={rolloverPreview}
-          applying={applyingRollover}
-          onApply={handleApplyRollover}
-          onCancel={dismissRolloverPreview}
-        />
-      )}
-
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
         <AdminBenchmarkReleaseForm
           overview={overview}
@@ -148,9 +132,7 @@ export default function AdminBenchmarkPageClient() {
         <AdminBenchmarkConfigsTable
           overview={overview}
           promotingConfigId={promotingConfigId}
-          previewingConfigId={previewingConfigId}
           onPromote={handlePromoteConfig}
-          onPreviewRollover={handlePreviewRollover}
         />
       </div>
     </AdminPageShell>

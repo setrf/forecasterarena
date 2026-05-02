@@ -12,6 +12,7 @@ import { snapshotChartIndexesMigration } from '@/lib/db/migrations/010_snapshot_
 import { archiveV1CohortsMigration } from '@/lib/db/migrations/011_archive_v1_cohorts';
 import { latestModelLineupMigration } from '@/lib/db/migrations/012_latest_model_lineup';
 import { modelLineupReviewsMigration } from '@/lib/db/migrations/013_model_lineup_reviews';
+import { integrityAndPositionReopenGuardsMigration } from '@/lib/db/migrations/014_integrity_and_position_reopen_guards';
 import type { DbMigration } from '@/lib/db/migrations/types';
 
 const MIGRATIONS: DbMigration[] = [
@@ -26,7 +27,8 @@ const MIGRATIONS: DbMigration[] = [
   snapshotChartIndexesMigration,
   archiveV1CohortsMigration,
   latestModelLineupMigration,
-  modelLineupReviewsMigration
+  modelLineupReviewsMigration,
+  integrityAndPositionReopenGuardsMigration
 ];
 
 export function runMigrations(db: Database.Database): void {

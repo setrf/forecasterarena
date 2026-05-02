@@ -14,7 +14,7 @@ FOR PLACING BETS:
   "bets": [
     {
       "market_id": "uuid",
-      "side": "YES" or "NO" (for binary markets) OR outcome name (for multi-outcome markets),
+      "side": "YES",
       "amount": 500.00
     }
   ],

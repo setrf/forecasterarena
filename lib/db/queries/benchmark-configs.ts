@@ -142,6 +142,16 @@ export function createBenchmarkConfigModel(args: {
 }): BenchmarkConfigModelAssignment {
   const db = getDb();
   const id = generateId();
+  const release = db.prepare('SELECT family_id FROM model_releases WHERE id = ?')
+    .get(args.release_id) as { family_id: string } | undefined;
+
+  if (!release) {
+    throw new Error(`Unknown model release: ${args.release_id}`);
+  }
+
+  if (release.family_id !== args.family_id) {
+    throw new Error(`Release ${args.release_id} does not belong to family ${args.family_id}`);
+  }
 
   db.prepare(`
     INSERT INTO benchmark_config_models (
@@ -180,6 +190,11 @@ export function createBenchmarkConfigModel(args: {
 
 export function setDefaultBenchmarkConfig(configId: string): void {
   const db = getDb();
+  const exists = getBenchmarkConfigById(configId);
+  if (!exists) {
+    throw new Error(`Unknown benchmark config: ${configId}`);
+  }
+
   db.prepare(`
     UPDATE benchmark_configs
     SET is_default_for_future_cohorts = CASE WHEN id = ? THEN 1 ELSE 0 END

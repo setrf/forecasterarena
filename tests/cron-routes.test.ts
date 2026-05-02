@@ -16,6 +16,36 @@ afterEach(() => {
 });
 
 describe('cron routes', () => {
+  it('requires the Bearer authorization scheme exactly', async () => {
+    const ctx = await createIsolatedTestContext({
+      nodeEnv: 'test',
+      env: { CRON_SECRET: 'cron-secret' }
+    });
+
+    try {
+      const runMarketSync = vi.fn(async () => ({
+        ok: true as const,
+        data: { markets_added: 1, markets_updated: 2 }
+      }));
+
+      vi.doMock('@/lib/application/cron', () => ({ runMarketSync }));
+
+      const route = await import('@/app/api/cron/sync-markets/route');
+      const rawSecretResponse = await route.POST(new Request('http://localhost/api/cron/sync-markets', {
+        method: 'POST',
+        headers: { Authorization: 'cron-secret' }
+      }) as any);
+      const bearerResponse = await route.POST(authorizedRequest('http://localhost/api/cron/sync-markets') as any);
+
+      expect(rawSecretResponse.status).toBe(401);
+      expect(await rawSecretResponse.json()).toEqual({ error: 'Unauthorized' });
+      expect(bearerResponse.status).toBe(200);
+      expect(runMarketSync).toHaveBeenCalledOnce();
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('delegates market sync to the cron application layer', async () => {
     const ctx = await createIsolatedTestContext({
       nodeEnv: 'test',
@@ -90,11 +120,6 @@ describe('cron routes', () => {
         data: {
           success: true,
           cohort_bootstrap: { cohort_id: 'cohort-2', cohort_number: 2 },
-          lineup_refresh: {
-            default_config_id: 'benchmark-default',
-            cohorts_updated: 2,
-            agents_updated: 14
-          },
           decision_cohort_limit: 5,
           tracking_active_cohorts: 8,
           decision_eligible_cohorts: 5,

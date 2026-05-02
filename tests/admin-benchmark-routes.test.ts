@@ -240,11 +240,21 @@ describe('admin benchmark routes', () => {
           assignments: []
         })
       }) as any);
+      const nullAssignmentResponse = await configRoute.POST(new Request('http://localhost/api/admin/benchmark/configs', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          version_name: 'lineup-null-assignment',
+          assignments: [null]
+        })
+      }) as any);
 
       expect(releaseResponse.status).toBe(400);
       expect(await releaseResponse.json()).toEqual({ error: 'Release name is required' });
       expect(configResponse.status).toBe(400);
       expect(await configResponse.json()).toEqual({ error: 'Version name is required' });
+      expect(nullAssignmentResponse.status).toBe(400);
+      expect(await nullAssignmentResponse.json()).toEqual({ error: 'Lineup assignments must be objects' });
     } finally {
       await ctx.cleanup();
     }

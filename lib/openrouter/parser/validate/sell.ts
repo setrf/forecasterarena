@@ -5,6 +5,10 @@ export function validateSell(sell: SellInstruction): string | null {
     return 'Missing position_id';
   }
 
+  if (!sell.position_id.trim()) {
+    return 'Position ID cannot be empty';
+  }
+
   if (typeof sell.percentage !== 'number' || Number.isNaN(sell.percentage)) {
     return 'Invalid percentage';
   }

@@ -16,7 +16,12 @@ export function isCronAuthorized(request: Request): boolean {
     return false;
   }
 
-  const token = authHeader.replace('Bearer ', '');
+  const match = authHeader.match(/^Bearer\s+(.+)$/);
+  if (!match) {
+    return false;
+  }
+
+  const token = match[1];
   return constantTimeCompare(token, CRON_SECRET);
 }
 
@@ -26,4 +31,3 @@ export function cronUnauthorizedResponse(): NextResponse {
     { status: 401 }
   );
 }
-

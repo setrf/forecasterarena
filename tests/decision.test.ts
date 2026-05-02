@@ -452,6 +452,65 @@ describe('engine/decision', () => {
     }
   });
 
+  it('persists partial SELL execution failures and keeps them visible on rerun', async () => {
+    const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
+    let sellPositionId = 'position-not-created-yet';
+    const callOpenRouterWithRetry = vi.fn().mockImplementation(async () => (
+      response(JSON.stringify({
+          action: 'SELL',
+          reasoning: 'Attempt two sells with one partial failure',
+          sells: [
+            { position_id: sellPositionId, percentage: 50 },
+            { position_id: 'missing-position', percentage: 50 }
+          ]
+        }))
+    ));
+
+    vi.doMock('@/lib/openrouter/client', () => mockOpenRouterModule(callOpenRouterWithRetry));
+
+    try {
+      const { queries, cohort, agent } = await createSingleAgentFixture();
+      const market = queries.upsertMarket({
+        polymarket_id: nextMarketId(),
+        question: 'Will the successful partial sell stay recorded?',
+        market_type: 'binary',
+        status: 'active',
+        current_price: 0.52,
+        close_date: '2099-01-01T00:00:00.000Z',
+        volume: 50_000
+      });
+      const position = queries.upsertPosition(agent.id, market.id, 'YES', 20, 0.5, 10);
+      sellPositionId = position.id;
+      agent.cash_balance -= 10;
+      queries.updateAgentBalance(agent.id, 9_990, 10);
+      queries.updatePositionMTM(position.id, 10.4, 0.4);
+
+      const decisionEngine = await import('@/lib/engine/decision');
+      const firstRun = await decisionEngine.runCohortDecisions(cohort.id);
+      const decision = queries.getDecisionsByAgent(agent.id, 1)[0]!;
+      const secondRun = await decisionEngine.runCohortDecisions(cohort.id);
+
+      expect(firstRun.decisions[0]).toMatchObject({
+        action: 'SELL',
+        success: false,
+        trades_executed: 1,
+        error: 'Position not found'
+      });
+      expect(decision.error_message).toBe('Position not found');
+      expect(queries.getTradesByDecision(decision.id)).toHaveLength(1);
+      expect(secondRun.decisions[0]).toMatchObject({
+        action: 'SELL',
+        success: false,
+        decision_id: decision.id,
+        error: 'Position not found'
+      });
+      expect(callOpenRouterWithRetry).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.doUnmock('@/lib/openrouter/client');
+      await ctx.cleanup();
+    }
+  });
+
   it('loads top markets once per cohort run instead of once per agent', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
     const callOpenRouterWithRetry = vi.fn().mockResolvedValue(

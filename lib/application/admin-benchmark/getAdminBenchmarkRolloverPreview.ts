@@ -1,4 +1,4 @@
-import { getDb, logSystemEvent, withImmediateTransaction } from '@/lib/db';
+import { getDb } from '@/lib/db';
 import {
   getActiveCohorts,
   getAgentsByCohort,
@@ -98,46 +98,9 @@ export function getAdminBenchmarkRolloverPreview(
 export function applyAdminBenchmarkRollover(
   configId: string
 ): AdminOperationResult<AdminBenchmarkRolloverPreview> {
-  const preview = getAdminBenchmarkRolloverPreview(configId);
-  if (!preview.ok) {
-    return preview;
-  }
-
-  const configModels = getBenchmarkConfigModels(configId);
-  const configByFamily = new Map(configModels.map((model) => [model.family_id, model] as const));
-
-  withImmediateTransaction(() => {
-    const db = getDb();
-    const updateCohort = db.prepare(`
-      UPDATE cohorts
-      SET benchmark_config_id = ?
-      WHERE id = ?
-    `);
-    const updateAgent = db.prepare(`
-      UPDATE agents
-      SET release_id = ?, benchmark_config_model_id = ?
-      WHERE id = ?
-    `);
-
-    for (const cohort of getActiveCohorts()) {
-      updateCohort.run(configId, cohort.id);
-
-      for (const agent of getAgentsByCohort(cohort.id)) {
-        const target = configByFamily.get(agent.family_id);
-        if (!target) {
-          continue;
-        }
-        updateAgent.run(target.release_id, target.id, agent.id);
-      }
-    }
-  });
-
-  logSystemEvent('admin_benchmark_rollover_applied', {
-    benchmark_config_id: preview.data.config_id,
-    version_name: preview.data.version_name,
-    impacted_cohorts: preview.data.impacted_cohorts,
-    impacted_agents: preview.data.impacted_agents
-  });
-
-  return preview;
+  return {
+    ok: false,
+    status: 400,
+    error: 'Active cohort rollover is disabled; promote defaults for future cohorts only.'
+  };
 }

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { agentsBenchmarkSlotIdentityMigration } from '@/lib/db/migrations/005_agents_benchmark_slot_identity';
+import { integrityAndPositionReopenGuardsMigration } from '@/lib/db/migrations/014_integrity_and_position_reopen_guards';
 import { runMigrations } from '@/lib/db/migrations';
 
 const tempDirs: string[] = [];
@@ -258,6 +259,112 @@ describe('agents benchmark slot identity migration', () => {
         db.prepare(`SELECT id FROM schema_migrations WHERE id = '005_agents_benchmark_slot_identity'`).get()
       ).toBeTruthy();
       expect(db.pragma('foreign_key_check')).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+});
+
+describe('position reopen integrity migration', () => {
+  it('rebuilds legacy position uniqueness into an open-position partial index', async () => {
+    const { default: Database } = await import('better-sqlite3');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'positions-migration-'));
+    tempDirs.push(dir);
+    const db = new Database(path.join(dir, 'test.db'));
+
+    try {
+      db.exec(`
+        PRAGMA foreign_keys = ON;
+
+        CREATE TABLE cohorts (id TEXT PRIMARY KEY);
+        CREATE TABLE agents (id TEXT PRIMARY KEY, cohort_id TEXT NOT NULL, FOREIGN KEY (cohort_id) REFERENCES cohorts(id));
+        CREATE TABLE markets (id TEXT PRIMARY KEY);
+        CREATE TABLE model_releases (id TEXT PRIMARY KEY, family_id TEXT NOT NULL);
+        CREATE TABLE benchmark_config_models (id TEXT PRIMARY KEY, family_id TEXT NOT NULL, release_id TEXT NOT NULL);
+        CREATE TABLE decisions (
+          id TEXT PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          cohort_id TEXT NOT NULL,
+          decision_week INTEGER NOT NULL,
+          decision_timestamp TEXT NOT NULL,
+          prompt_system TEXT NOT NULL,
+          prompt_user TEXT NOT NULL,
+          action TEXT NOT NULL,
+          FOREIGN KEY (agent_id) REFERENCES agents(id),
+          FOREIGN KEY (cohort_id) REFERENCES cohorts(id)
+        );
+        CREATE TABLE positions (
+          id TEXT PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          market_id TEXT NOT NULL,
+          side TEXT NOT NULL,
+          shares REAL NOT NULL,
+          avg_entry_price REAL NOT NULL,
+          total_cost REAL NOT NULL,
+          current_value REAL,
+          unrealized_pnl REAL,
+          status TEXT NOT NULL DEFAULT 'open',
+          opened_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          closed_at TEXT,
+          FOREIGN KEY (agent_id) REFERENCES agents(id),
+          FOREIGN KEY (market_id) REFERENCES markets(id),
+          UNIQUE(agent_id, market_id, side)
+        );
+        CREATE TABLE trades (
+          id TEXT PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          market_id TEXT NOT NULL,
+          position_id TEXT,
+          decision_id TEXT,
+          family_id TEXT,
+          release_id TEXT,
+          trade_type TEXT NOT NULL,
+          side TEXT NOT NULL,
+          shares REAL NOT NULL,
+          price REAL NOT NULL,
+          total_amount REAL NOT NULL,
+          FOREIGN KEY (agent_id) REFERENCES agents(id),
+          FOREIGN KEY (market_id) REFERENCES markets(id),
+          FOREIGN KEY (position_id) REFERENCES positions(id),
+          FOREIGN KEY (decision_id) REFERENCES decisions(id)
+        );
+
+        INSERT INTO cohorts (id) VALUES ('cohort-1');
+        INSERT INTO agents (id, cohort_id) VALUES ('agent-1', 'cohort-1');
+        INSERT INTO markets (id) VALUES ('market-1');
+        INSERT INTO positions (id, agent_id, market_id, side, shares, avg_entry_price, total_cost, current_value, unrealized_pnl, status)
+        VALUES ('position-closed-1', 'agent-1', 'market-1', 'YES', 0, 0.5, 0, 0, 0, 'closed');
+      `);
+
+      integrityAndPositionReopenGuardsMigration.apply(db);
+
+      const positionSql = db.prepare(`
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'positions'
+      `).get() as { sql: string };
+      const partialIndex = db.prepare(`
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'index' AND name = 'idx_positions_open_agent_market_side'
+      `).get() as { sql: string };
+
+      expect(positionSql.sql).not.toContain('UNIQUE(agent_id, market_id, side)');
+      expect(partialIndex.sql).toContain("WHERE status = 'open'");
+      expect(db.pragma('foreign_key_check')).toEqual([]);
+
+      db.prepare(`
+        INSERT INTO positions (id, agent_id, market_id, side, shares, avg_entry_price, total_cost, current_value, unrealized_pnl, status)
+        VALUES ('position-closed-2', 'agent-1', 'market-1', 'YES', 0, 0.6, 0, 0, 0, 'closed')
+      `).run();
+      db.prepare(`
+        INSERT INTO positions (id, agent_id, market_id, side, shares, avg_entry_price, total_cost, current_value, unrealized_pnl, status)
+        VALUES ('position-open-1', 'agent-1', 'market-1', 'YES', 4, 0.7, 2.8, 2.8, 0, 'open')
+      `).run();
+      expect(() => db.prepare(`
+        INSERT INTO positions (id, agent_id, market_id, side, shares, avg_entry_price, total_cost, current_value, unrealized_pnl, status)
+        VALUES ('position-open-2', 'agent-1', 'market-1', 'YES', 5, 0.8, 4, 4, 0, 'open')
+      `).run()).toThrow();
     } finally {
       db.close();
     }

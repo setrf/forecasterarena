@@ -18,6 +18,9 @@ CREATE INDEX IF NOT EXISTS idx_positions_agent ON positions(agent_id);
 CREATE INDEX IF NOT EXISTS idx_positions_market ON positions(market_id);
 CREATE INDEX IF NOT EXISTS idx_positions_status ON positions(status);
 CREATE INDEX IF NOT EXISTS idx_positions_agent_status ON positions(agent_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_positions_open_agent_market_side
+  ON positions(agent_id, market_id, side)
+  WHERE status = 'open';
 
 -- Trades
 CREATE INDEX IF NOT EXISTS idx_trades_agent ON trades(agent_id);

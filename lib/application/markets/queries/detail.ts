@@ -37,8 +37,11 @@ export function selectMarketPositions(
       ) as decision_id
     FROM positions p
     JOIN agents a ON p.agent_id = a.id
+    JOIN cohorts c ON c.id = a.cohort_id
     LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
-    WHERE p.market_id = ? AND p.status = 'open'
+    WHERE p.market_id = ?
+      AND p.status = 'open'
+      AND COALESCE(c.is_archived, 0) = 0
     ORDER BY p.total_cost DESC
   `).all(marketId) as Array<Record<string, unknown>>;
 }
@@ -59,12 +62,14 @@ export function selectMarketTrades(
       COALESCE(t.release_id, dbi.release_id, abi.release_id) as release_id
     FROM trades t
     JOIN agents a ON t.agent_id = a.id
+    JOIN cohorts c ON c.id = a.cohort_id
     LEFT JOIN decisions d ON d.id = t.decision_id
     LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
     LEFT JOIN agent_benchmark_identity_v abi ON abi.agent_id = a.id
     LEFT JOIN model_families tf ON tf.id = t.family_id
     LEFT JOIN model_releases tr ON tr.id = t.release_id
     WHERE t.market_id = ?
+      AND COALESCE(c.is_archived, 0) = 0
     ORDER BY t.executed_at DESC
     LIMIT 100
   `).all(marketId) as Array<Record<string, unknown>>;
@@ -86,6 +91,7 @@ export function selectMarketBrierScores(
       COALESCE(bs.release_id, dbi.release_id, abi.release_id) as release_id
     FROM brier_scores bs
     JOIN agents a ON bs.agent_id = a.id
+    JOIN cohorts c ON c.id = a.cohort_id
     LEFT JOIN trades t ON t.id = bs.trade_id
     LEFT JOIN decisions d ON d.id = t.decision_id
     LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
@@ -93,6 +99,7 @@ export function selectMarketBrierScores(
     LEFT JOIN model_families bf ON bf.id = bs.family_id
     LEFT JOIN model_releases br ON br.id = bs.release_id
     WHERE bs.market_id = ?
+      AND COALESCE(c.is_archived, 0) = 0
     ORDER BY bs.brier_score ASC
   `).all(marketId) as Array<Record<string, unknown>>;
 }

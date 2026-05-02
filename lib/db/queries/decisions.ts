@@ -9,6 +9,7 @@ export {
 export {
   createDecision,
   finalizeDecision,
+  markDecisionExecutionFailure,
   markDecisionAsError
 } from '@/lib/db/queries/decisions/write';
 export type { DecisionClaimResult } from '@/lib/db/queries/decisions/types';

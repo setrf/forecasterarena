@@ -5,6 +5,7 @@ import {
   type ReleaseChangeEvent
 } from '@/lib/application/performance-release-changes';
 import { getRangeStartForLatestSnapshot } from '@/lib/application/performance-range';
+import { getCohortById, resolveModelFamily } from '@/lib/db/queries';
 
 export type PerformanceTimeRange = '10M' | '1H' | '1D' | '1W' | '1M' | '3M' | 'ALL';
 export { getReleaseChangeEvents, type ReleaseChangeEvent };
@@ -34,6 +35,10 @@ export interface PerformanceResult {
   payload: PerformancePayload;
   diagnostics: PerformanceDiagnostics;
 }
+
+export type PerformanceScopeResolution =
+  | { ok: true; scope: Required<PerformanceScope> }
+  | { ok: false; status: 400; error: string };
 
 export {
   performanceDataToEquityCurve,
@@ -92,6 +97,25 @@ function normalizeScope(scopeOrCohortId?: PerformanceScope | string | null): Req
     cohortId: scopeOrCohortId?.cohortId ?? null,
     familyId: scopeOrCohortId?.familyId ?? null
   };
+}
+
+export function resolvePerformanceRequestScope(
+  rawCohortId?: string | null,
+  rawFamilyId?: string | null
+): PerformanceScopeResolution {
+  const cohortId = rawCohortId?.trim() || null;
+  const familyIdentifier = rawFamilyId?.trim() || null;
+
+  if (cohortId && !getCohortById(cohortId)) {
+    return { ok: false, status: 400, error: 'Unknown cohort_id' };
+  }
+
+  const family = familyIdentifier ? resolveModelFamily(familyIdentifier) : null;
+  if (familyIdentifier && !family) {
+    return { ok: false, status: 400, error: 'Unknown family_id' };
+  }
+
+  return { ok: true, scope: { cohortId, familyId: family?.id ?? null } };
 }
 
 function hasScopeFilters(scope: Required<PerformanceScope>): boolean {
@@ -298,14 +322,14 @@ function computePerformanceSeries(
       SELECT
         datetime(bucket_epoch, 'unixepoch') as snapshot_timestamp,
         family_slug,
-        display_name,
-        color,
+        MIN(display_name) as display_name,
+        MIN(color) as color,
         AVG(total_value) as total_value
       FROM filtered_snapshots
       WHERE rn = 1
       -- Downsample to a bucketed family-level series so chart payloads stay small
       -- and the API does not have to ship every per-agent snapshot to the browser.
-      GROUP BY bucket_epoch, family_slug, display_name, color
+      GROUP BY bucket_epoch, family_slug
     )
     SELECT
       snapshot_timestamp,
@@ -327,34 +351,15 @@ function computePerformanceSeries(
   }>;
 
   const dataByDate = new Map<string, Record<string, number | string>>();
-  const countsByDate = new Map<string, Record<string, number>>();
 
   for (const row of rows) {
     if (!dataByDate.has(row.snapshot_timestamp)) {
       dataByDate.set(row.snapshot_timestamp, { date: row.snapshot_timestamp });
-      countsByDate.set(row.snapshot_timestamp, {});
     }
 
     const dateData = dataByDate.get(row.snapshot_timestamp)!;
-    const counts = countsByDate.get(row.snapshot_timestamp)!;
-
-    if (dateData[row.family_slug] === undefined) {
-      dateData[row.family_slug] = row.total_value;
-      counts[row.family_slug] = 1;
-    } else {
-      dateData[row.family_slug] = (dateData[row.family_slug] as number) + row.total_value;
-      counts[row.family_slug] = (counts[row.family_slug] || 1) + 1;
-    }
+    dateData[row.family_slug] = row.total_value;
   }
-
-  dataByDate.forEach((dateData, timestamp) => {
-    const counts = countsByDate.get(timestamp)!;
-    Object.keys(counts).forEach((familySlug) => {
-      if (counts[familySlug] > 1) {
-        dateData[familySlug] = (dateData[familySlug] as number) / counts[familySlug];
-      }
-    });
-  });
 
   return Array.from(dataByDate.values());
 }
@@ -403,7 +408,8 @@ export function getPerformanceDataWithDiagnostics(
   const cacheKey = buildPerformanceCacheKey(range, scope);
   const now = new Date();
   const nowMs = now.getTime();
-  const cached = performanceCache.get(cacheKey);
+  const cacheableInMemory = !hasScopeFilters(scope);
+  const cached = cacheableInMemory ? performanceCache.get(cacheKey) : undefined;
   if (cached && cached.expiresAt > nowMs) {
     const totalMs = performance.now() - startedAt;
     const bytes = getPayloadByteSize(cached.data);
@@ -429,14 +435,16 @@ export function getPerformanceDataWithDiagnostics(
       writePersistedPerformanceData(range, scope, payload);
     }
 
-    performanceCache.set(cacheKey, {
-      expiresAt: nowMs + MEMORY_CACHE_TTL_MS,
-      data: payload,
-      diagnostics: {
-        query_ms: 0,
-        points: payload.data.length
-      }
-    });
+    if (cacheableInMemory) {
+      performanceCache.set(cacheKey, {
+        expiresAt: nowMs + MEMORY_CACHE_TTL_MS,
+        data: payload,
+        diagnostics: {
+          query_ms: 0,
+          points: payload.data.length
+        }
+      });
+    }
 
     return {
       payload,
@@ -462,14 +470,16 @@ export function getPerformanceDataWithDiagnostics(
     updated_at: now.toISOString()
   };
 
-  performanceCache.set(cacheKey, {
-    expiresAt: nowMs + MEMORY_CACHE_TTL_MS,
-    data,
-    diagnostics: {
-      query_ms: queryMs,
-      points: dataPoints.length
-    }
-  });
+  if (cacheableInMemory) {
+    performanceCache.set(cacheKey, {
+      expiresAt: nowMs + MEMORY_CACHE_TTL_MS,
+      data,
+      diagnostics: {
+        query_ms: queryMs,
+        points: dataPoints.length
+      }
+    });
+  }
   if (!hasScopeFilters(scope)) {
     writePersistedPerformanceData(range, scope, data);
   }

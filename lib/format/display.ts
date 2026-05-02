@@ -71,7 +71,7 @@ export function formatProbabilityPercent(
   value: number | null | undefined,
   options: NumericFormatOptions = {}
 ): string {
-  const { decimals = 1, nullDisplay = '50%' } = options;
+  const { decimals = 1, nullDisplay = 'N/A' } = options;
 
   if (value === null || value === undefined) {
     return nullDisplay;

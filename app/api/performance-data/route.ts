@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPerformanceDataWithDiagnostics } from '@/lib/application/performance';
+import {
+  getPerformanceDataWithDiagnostics,
+  resolvePerformanceRequestScope
+} from '@/lib/application/performance';
 import { safeErrorMessage } from '@/lib/utils/security';
 
 export const dynamic = 'force-dynamic';
@@ -7,10 +10,15 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const result = getPerformanceDataWithDiagnostics(searchParams.get('range'), {
-      cohortId: searchParams.get('cohort_id'),
-      familyId: searchParams.get('family_id')
-    });
+    const scope = resolvePerformanceRequestScope(
+      searchParams.get('cohort_id'),
+      searchParams.get('family_id')
+    );
+    if (!scope.ok) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
+    }
+
+    const result = getPerformanceDataWithDiagnostics(searchParams.get('range'), scope.scope);
     const response = NextResponse.json(result.payload);
 
     response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');

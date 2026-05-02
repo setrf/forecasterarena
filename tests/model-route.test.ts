@@ -128,8 +128,8 @@ describe('model route', () => {
         cohort_number: cohort.cohort_number
       }]);
       expect(data.equity_curve).toEqual([
-        { snapshot_timestamp: '2024-12-26 00:00:00', total_value: 10006 },
-        { snapshot_timestamp: '2025-01-02 00:00:00', total_value: 10020 }
+        { snapshot_timestamp: '2025-01-01 00:00:00', total_value: 10006 },
+        { snapshot_timestamp: '2025-01-08 00:00:00', total_value: 10020 }
       ]);
       expect(data.updated_at).toBeTypeOf('string');
     });

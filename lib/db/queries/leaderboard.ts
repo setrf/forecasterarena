@@ -93,9 +93,9 @@ export function getAggregateLeaderboard(): LeaderboardEntry[] {
       SELECT
         ai.family_slug,
         COUNT(CASE WHEN
-          (t.side = 'YES' AND m.resolution_outcome = 'YES') OR
-          (t.side = 'NO' AND m.resolution_outcome = 'NO') OR
-          (t.side = m.resolution_outcome)
+          (UPPER(t.side) = 'YES' AND UPPER(m.resolution_outcome) = 'YES') OR
+          (UPPER(t.side) = 'NO' AND UPPER(m.resolution_outcome) = 'NO') OR
+          (UPPER(t.side) = UPPER(m.resolution_outcome))
         THEN 1 END) as wins,
         COUNT(*) as total_bets
       FROM brier_scores bs

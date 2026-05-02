@@ -1,3 +1,6 @@
+'use client';
+
+import React, { useEffect, useRef } from 'react';
 import { formatDisplayDate } from '@/lib/utils';
 import type { ModelDecision } from '@/features/models/detail/types';
 
@@ -10,12 +13,32 @@ export function DecisionReasoningModal({
   decision,
   onClose
 }: DecisionReasoningModalProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!decision) {
+      return;
+    }
+
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [decision, onClose]);
+
   if (!decision) {
     return null;
   }
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="model-decision-reasoning-title"
       className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
@@ -42,6 +65,8 @@ export function DecisionReasoningModal({
               )}
             </div>
             <button
+              ref={closeButtonRef}
+              aria-label="Dismiss reasoning modal"
               onClick={onClose}
               className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
             >
@@ -56,7 +81,7 @@ export function DecisionReasoningModal({
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[60vh]">
-          <h4 className="text-sm font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
+          <h4 id="model-decision-reasoning-title" className="text-sm font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
             Reasoning
           </h4>
           {decision.reasoning ? (

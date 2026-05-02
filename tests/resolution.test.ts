@@ -69,53 +69,133 @@ describe('engine/resolution', () => {
     }
   });
 
-  it('exports processResolvedMarket from the settlement module path and records Brier scores', async () => {
-    await withResolutionFixture(async ({ agent, queries }) => {
-      const settlement = await import('@/lib/engine/resolution/settlement');
+  it('records Brier scores after settlement and local market resolution succeed', async () => {
+    const fetchMarketById = vi.fn().mockResolvedValue({ id: 'pm-closed' });
+    const checkResolution = vi.fn().mockReturnValue({ resolved: true, winner: 'YES' });
 
-      const market = queries.upsertMarket({
-        polymarket_id: `pm-resolution-${Date.now()}`,
-        question: 'Will settlement barrel exports keep working?',
-        close_date: '2030-01-01T00:00:00.000Z',
-        status: 'closed',
-        current_price: 0.61,
-        volume: 1000,
-        liquidity: 500
-      });
+    vi.doMock('@/lib/polymarket/client', () => ({
+      fetchMarketById,
+      checkResolution
+    }));
 
-      queries.updateAgentBalance(agent.id, 9_995, 5);
-      const position = queries.upsertPosition(agent.id, market.id, 'YES', 10, 0.5, 5);
-      queries.createTrade({
-        agent_id: agent.id,
-        market_id: market.id,
-        position_id: position.id,
-        trade_type: 'BUY',
-        side: 'YES',
-        shares: 10,
-        price: 0.5,
-        total_amount: 5,
-        implied_confidence: 0.5
-      });
+    try {
+      await withResolutionFixture(async ({ agent, queries, resolution }) => {
+        const market = queries.upsertMarket({
+          polymarket_id: `pm-resolution-${Date.now()}`,
+          question: 'Will settlement barrel exports keep working?',
+          close_date: '2030-01-01T00:00:00.000Z',
+          status: 'closed',
+          current_price: 0.61,
+          volume: 1000,
+          liquidity: 500
+        });
 
-      const result = settlement.processResolvedMarket(market, 'YES');
-      const updatedAgent = queries.getAgentById(agent.id)!;
-      const brierScores = queries.getBrierScoresByAgent(agent.id);
+        queries.updateAgentBalance(agent.id, 9_995, 5);
+        const position = queries.upsertPosition(agent.id, market.id, 'YES', 10, 0.5, 5);
+        queries.createTrade({
+          agent_id: agent.id,
+          market_id: market.id,
+          position_id: position.id,
+          trade_type: 'BUY',
+          side: 'YES',
+          shares: 10,
+          price: 0.5,
+          total_amount: 5,
+          implied_confidence: 0.5
+        });
 
-      expect(result).toEqual({
-        positions_settled: 1,
-        errors: []
+        const result = await resolution.checkAllResolutions();
+        const updatedAgent = queries.getAgentById(agent.id)!;
+        const brierScores = queries.getBrierScoresByAgent(agent.id);
+
+        expect(result).toMatchObject({
+          markets_checked: 1,
+          markets_resolved: 1,
+          positions_settled: 1,
+          errors: []
+        });
+        expect(queries.getPositionById(position.id)?.status).toBe('settled');
+        expect(queries.getMarketById(market.id)?.status).toBe('resolved');
+        expect(updatedAgent.cash_balance).toBe(10_005);
+        expect(updatedAgent.total_invested).toBe(0);
+        expect(brierScores).toHaveLength(1);
+        expect(brierScores[0]).toMatchObject({
+          market_id: market.id,
+          actual_outcome: 1,
+          forecast_probability: 0.5,
+          brier_score: 0.25
+        });
       });
-      expect(queries.getPositionById(position.id)?.status).toBe('settled');
-      expect(updatedAgent.cash_balance).toBe(10_005);
-      expect(updatedAgent.total_invested).toBe(0);
-      expect(brierScores).toHaveLength(1);
-      expect(brierScores[0]).toMatchObject({
-        market_id: market.id,
-        actual_outcome: 1,
-        forecast_probability: 0.5,
-        brier_score: 0.25
+    } finally {
+      vi.doUnmock('@/lib/polymarket/client');
+    }
+  });
+
+  it('records Brier scores for fully exited positions when the market resolves', async () => {
+    const fetchMarketById = vi.fn().mockResolvedValue({ id: 'pm-closed' });
+    const checkResolution = vi.fn().mockReturnValue({ resolved: true, winner: 'YES' });
+
+    vi.doMock('@/lib/polymarket/client', () => ({
+      fetchMarketById,
+      checkResolution
+    }));
+
+    try {
+      await withResolutionFixture(async ({ agent, queries, resolution }) => {
+        const market = queries.upsertMarket({
+          polymarket_id: `pm-exited-resolution-${Date.now()}`,
+          question: 'Will exited trades still be scored?',
+          close_date: '2030-01-01T00:00:00.000Z',
+          status: 'closed',
+          current_price: 0.7,
+          volume: 1000,
+          liquidity: 500
+        });
+        const position = queries.upsertPosition(agent.id, market.id, 'YES', 10, 0.5, 5);
+        const buyTrade = queries.createTrade({
+          agent_id: agent.id,
+          market_id: market.id,
+          position_id: position.id,
+          trade_type: 'BUY',
+          side: 'YES',
+          shares: 10,
+          price: 0.5,
+          total_amount: 5,
+          implied_confidence: 0.5
+        });
+        queries.createTrade({
+          agent_id: agent.id,
+          market_id: market.id,
+          position_id: position.id,
+          trade_type: 'SELL',
+          side: 'YES',
+          shares: 10,
+          price: 0.7,
+          total_amount: 7,
+          cost_basis: 5,
+          realized_pnl: 2
+        });
+        queries.reducePosition(position.id, 10);
+
+        const result = await resolution.checkAllResolutions();
+        const brierScores = queries.getBrierScoresByAgent(agent.id);
+
+        expect(result).toMatchObject({
+          markets_checked: 1,
+          markets_resolved: 1,
+          positions_settled: 0,
+          errors: []
+        });
+        expect(brierScores).toHaveLength(1);
+        expect(brierScores[0]).toMatchObject({
+          trade_id: buyTrade.id,
+          actual_outcome: 1,
+          brier_score: 0.25
+        });
       });
-    });
+    } finally {
+      vi.doUnmock('@/lib/polymarket/client');
+    }
   });
 
   it('keeps markets closed when any position settlement fails', async () => {
@@ -175,6 +255,28 @@ describe('engine/resolution', () => {
 
       const firstPosition = queries.upsertPosition(agents[0]!.id, market.id, 'YES', 10, 0.5, 5);
       const secondPosition = queries.upsertPosition(agents[1]!.id, market.id, 'YES', 8, 0.5, 4);
+      queries.createTrade({
+        agent_id: agents[0]!.id,
+        market_id: market.id,
+        position_id: firstPosition.id,
+        trade_type: 'BUY',
+        side: 'YES',
+        shares: 10,
+        price: 0.5,
+        total_amount: 5,
+        implied_confidence: 0.5
+      });
+      queries.createTrade({
+        agent_id: agents[1]!.id,
+        market_id: market.id,
+        position_id: secondPosition.id,
+        trade_type: 'BUY',
+        side: 'YES',
+        shares: 8,
+        price: 0.5,
+        total_amount: 4,
+        implied_confidence: 0.5
+      });
 
       const result = await resolution.checkAllResolutions();
 
@@ -187,6 +289,8 @@ describe('engine/resolution', () => {
       expect(queries.getMarketById(market.id)?.status).toBe('closed');
       expect(queries.getPositionById(firstPosition.id)?.status).toBe('settled');
       expect(queries.getPositionById(secondPosition.id)?.status).toBe('open');
+      expect(queries.getBrierScoresByAgent(agents[0]!.id)).toHaveLength(0);
+      expect(queries.getBrierScoresByAgent(agents[1]!.id)).toHaveLength(0);
     } finally {
       vi.doUnmock('@/lib/polymarket/client');
       vi.doUnmock('@/lib/db/queries');

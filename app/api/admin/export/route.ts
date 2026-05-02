@@ -12,7 +12,6 @@
  * GET /api/admin/export?file=export-file.zip
  *  - Streams a previously generated export (admin-auth required)
  */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureAdminAuthenticated } from '@/lib/api/admin-route';
 import { createAdminExport, readAdminExportDownload } from '@/lib/application/admin-export';
@@ -65,6 +64,7 @@ async function handleGet(request: NextRequest) {
     status: 200,
     headers: {
       'Content-Type': 'application/zip',
+      'Cache-Control': 'no-store',
       'Content-Disposition': `attachment; filename="${result.data.filename}"`
     }
   });

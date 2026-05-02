@@ -21,7 +21,8 @@ export function csvEscape(value: unknown): string {
     return '';
   }
 
-  const stringValue = String(value);
+  const rawValue = String(value);
+  const stringValue = /^[=+\-@\t\r]/.test(rawValue) ? `'${rawValue}` : rawValue;
   if (stringValue.includes('"') || stringValue.includes(',') || stringValue.includes('\n')) {
     return `"${stringValue.replace(/"/g, '""')}"`;
   }

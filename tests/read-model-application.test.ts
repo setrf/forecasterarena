@@ -22,7 +22,7 @@ async function withSingleAgentFixture(
 
 describe('markets application', () => {
   it('lists markets with filters, categories, stats, and preserved payload fields', async () => {
-    await withSingleAgentFixture(async ({ queries, agent }) => {
+    await withSingleAgentFixture(async ({ queries, agent, cohort, db }) => {
       const positionedMarket = queries.upsertMarket({
         polymarket_id: 'market-list-positioned',
         question: 'Will the election settle this year?',
@@ -33,6 +33,24 @@ describe('markets application', () => {
         volume: 3200
       });
       queries.upsertPosition(agent.id, positionedMarket.id, 'YES', 10, 0.62, 6.2);
+
+      const archivedOnlyMarket = queries.upsertMarket({
+        polymarket_id: 'market-list-archived-positioned',
+        question: 'Will archived-only activity stay historical?',
+        category: 'Politics',
+        close_date: '2030-01-15T00:00:00.000Z',
+        status: 'active',
+        current_price: 0.51,
+        volume: 2200
+      });
+      db.prepare(`
+        INSERT INTO cohorts (
+          id, cohort_number, started_at, methodology_version, benchmark_config_id, is_archived, archive_reason
+        ) VALUES ('archived-market-list-cohort', ?, '2026-01-01T00:00:00.000Z', 'v1', ?, 1, 'test archive')
+      `).run(cohort.cohort_number + 1, cohort.benchmark_config_id);
+      const [archivedAgent] = queries.createAgentsForCohort('archived-market-list-cohort', cohort.benchmark_config_id);
+      queries.upsertPosition(archivedAgent!.id, positionedMarket.id, 'NO', 4, 0.38, 1.52);
+      queries.upsertPosition(archivedAgent!.id, archivedOnlyMarket.id, 'YES', 3, 0.51, 1.53);
 
       queries.upsertMarket({
         polymarket_id: 'market-list-active',
@@ -75,12 +93,23 @@ describe('markets application', () => {
       });
       expect(result.categories).toEqual(['Politics', 'Sports']);
       expect(result.stats).toEqual({
-        total_markets: 3,
-        active_markets: 2,
+        total_markets: 4,
+        active_markets: 3,
         markets_with_positions: 1,
         categories_count: 2
       });
       expect(result.updated_at).toEqual(expect.any(String));
+
+      const archivedOnlyResult = listMarkets({
+        status: 'active',
+        category: null,
+        search: 'archived-only',
+        sort: 'volume',
+        withCohortBets: true,
+        limit: 10,
+        offset: 0
+      });
+      expect(archivedOnlyResult.total).toBe(0);
     });
   });
 
@@ -438,7 +467,7 @@ describe('models application', () => {
       expect((result.data.recent_decisions[0] as { id: string }).id).toBe(decision2.id);
       expect(result.data.equity_curve).toEqual([
         {
-          snapshot_timestamp: '2026-03-05 00:00:00',
+          snapshot_timestamp: '2026-03-10 00:00:00',
           total_value: 10000
         }
       ]);

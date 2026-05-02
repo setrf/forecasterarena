@@ -10,8 +10,10 @@ export function parseBetDecision(parsed: { bets?: unknown; reasoning: string }, 
     reasoning: parsed.reasoning,
     validate: (bet) => validateBet(bet, agentBalance),
     mapItem: (bet) => ({
-      market_id: bet.market_id,
-      side: bet.side,
+      market_id: bet.market_id.trim(),
+      side: bet.side.trim().toUpperCase() === 'YES' || bet.side.trim().toUpperCase() === 'NO'
+        ? bet.side.trim().toUpperCase()
+        : bet.side.trim(),
       amount: bet.amount
     })
   });
@@ -40,7 +42,7 @@ export function parseSellDecision(parsed: { sells?: unknown; reasoning: string }
     reasoning: parsed.reasoning,
     validate: validateSell,
     mapItem: (sell) => ({
-      position_id: sell.position_id,
+      position_id: sell.position_id.trim(),
       percentage: sell.percentage
     })
   });

@@ -38,7 +38,7 @@ export function commitSellTrade(args: {
       realized_pnl: args.realizedPnL
     });
 
-    reducePosition(args.position.id, args.sharesToSell);
+    reducePosition(args.position.id, args.sharesToSell, args.currentPrice);
     updateAgentBalance(
       args.agentId,
       args.agent.cash_balance + args.proceeds,

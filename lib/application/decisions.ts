@@ -52,7 +52,15 @@ export function getDecisionDetail(decisionId: string): DecisionDetailResult {
 
   const decision = db.prepare(`
     SELECT
-      d.*,
+      d.id,
+      d.agent_id,
+      d.cohort_id,
+      d.decision_week,
+      d.decision_timestamp,
+      d.action,
+      d.reasoning,
+      d.created_at,
+      c.cohort_number,
       COALESCE(dbi.family_display_name, dbi.release_display_name, a.model_id) as model_name,
       COALESCE(dbi.color, '#94A3B8') as model_color,
       COALESCE(dbi.provider, 'Unknown') as model_provider,
@@ -63,6 +71,7 @@ export function getDecisionDetail(decisionId: string): DecisionDetailResult {
       dbi.release_display_name as model_release_name
     FROM decisions d
     JOIN agents a ON d.agent_id = a.id
+    JOIN cohorts c ON d.cohort_id = c.id
     LEFT JOIN decision_benchmark_identity_v dbi ON dbi.decision_id = d.id
     WHERE d.id = ?
   `).get(decisionId) as Record<string, unknown> | undefined;
@@ -73,11 +82,22 @@ export function getDecisionDetail(decisionId: string): DecisionDetailResult {
 
   const trades = db.prepare(`
     SELECT
-      t.*,
+      t.id,
+      t.market_id,
+      t.position_id,
+      t.decision_id,
+      t.trade_type,
+      t.side,
+      t.shares,
+      t.price,
+      t.total_amount,
+      t.implied_confidence,
+      t.cost_basis,
+      t.realized_pnl,
+      t.executed_at,
       m.question as market_question,
       m.slug as market_slug,
-      m.event_slug as market_event_slug,
-      t.market_id
+      m.event_slug as market_event_slug
     FROM trades t
     JOIN markets m ON t.market_id = m.id
     JOIN decisions d ON t.decision_id = d.id

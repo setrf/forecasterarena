@@ -20,6 +20,43 @@ export function createTrade(trade: {
 }): Trade {
   const db = getDb();
   const id = generateId();
+  if (trade.position_id) {
+    const position = db.prepare(`
+      SELECT agent_id, market_id, side
+      FROM positions
+      WHERE id = ?
+    `).get(trade.position_id) as { agent_id: string; market_id: string; side: string } | undefined;
+    if (
+      !position ||
+      position.agent_id !== trade.agent_id ||
+      position.market_id !== trade.market_id ||
+      position.side !== trade.side
+    ) {
+      throw new Error('Trade position does not match agent, market, and side');
+    }
+  }
+
+  if (trade.decision_id) {
+    const decision = db.prepare(`
+      SELECT agent_id
+      FROM decisions
+      WHERE id = ?
+    `).get(trade.decision_id) as { agent_id: string } | undefined;
+    if (!decision || decision.agent_id !== trade.agent_id) {
+      throw new Error('Trade decision does not match agent');
+    }
+  }
+
+  if (trade.family_id && trade.release_id) {
+    const release = db.prepare(`
+      SELECT family_id
+      FROM model_releases
+      WHERE id = ?
+    `).get(trade.release_id) as { family_id: string } | undefined;
+    if (!release || release.family_id !== trade.family_id) {
+      throw new Error('Trade release does not match family');
+    }
+  }
 
   db.prepare(`
     INSERT INTO trades (
