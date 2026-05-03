@@ -241,7 +241,7 @@ Key property:
 
 - Snapshots are timestamped, not day-bucketed, and CLOB pricing anomalies preserve prior value instead of writing suspect Gamma prices into portfolio curves.
 
-### 7. Admin benchmark release / config / rollover flow
+### 7. Admin benchmark release / config flow
 
 Flow:
 
@@ -250,13 +250,13 @@ Flow:
 3. Release creation: [`POST /api/admin/benchmark/releases`](../app/api/admin/benchmark/releases/route.ts) -> [`lib/application/admin-benchmark/createAdminModelRelease.ts`](../lib/application/admin-benchmark/createAdminModelRelease.ts).
 4. Config creation: [`POST /api/admin/benchmark/configs`](../app/api/admin/benchmark/configs/route.ts) -> [`lib/application/admin-benchmark/createAdminBenchmarkConfig.ts`](../lib/application/admin-benchmark/createAdminBenchmarkConfig.ts).
 5. Promotion: [`POST /api/admin/benchmark/default`](../app/api/admin/benchmark/default/route.ts) -> [`lib/application/admin-benchmark/promoteAdminBenchmarkConfig.ts`](../lib/application/admin-benchmark/promoteAdminBenchmarkConfig.ts).
-6. Preview/apply active rollover: [`POST /api/admin/benchmark/rollover`](../app/api/admin/benchmark/rollover/route.ts) -> [`lib/application/admin-benchmark/getAdminBenchmarkRolloverPreview.ts`](../lib/application/admin-benchmark/getAdminBenchmarkRolloverPreview.ts).
+6. Rollover preview: [`POST /api/admin/benchmark/rollover`](../app/api/admin/benchmark/rollover/route.ts) -> [`lib/application/admin-benchmark/getAdminBenchmarkRolloverPreview.ts`](../lib/application/admin-benchmark/getAdminBenchmarkRolloverPreview.ts). Apply attempts are rejected; active cohorts stay frozen.
 
 Key properties:
 
 - A promoted config must cover every active family.
 - A new release must belong to the requested family and cannot duplicate family-local slug or OpenRouter ID.
-- Rollover preview computes affected cohorts, agents, and release changes before any mutation.
+- Rollover preview is informational only; future-default promotion never mutates active cohorts.
 
 ## State, Schema, And Invariants
 
@@ -369,7 +369,6 @@ Primary schema sources:
 ### Confirmed drift and weakly enforced areas
 
 - [`docs/API_REFERENCE.md`](./API_REFERENCE.md) does not currently list [`POST /api/admin/benchmark/rollover`](../app/api/admin/benchmark/rollover/route.ts), even though the route exists and the admin UI uses it.
-- [`tests/public-data-routes.test.ts`](../tests/public-data-routes.test.ts) includes a naming mismatch: the test title says `no-store`, but the leaderboard route actually asserts cacheable `public, max-age=15, stale-while-revalidate=45`.
 - Static informational pages are mostly protected by browser navigation smoke coverage rather than route-specific server-wrapper tests.
 - Most UI regression protection is at the Playwright level; Vitest intentionally focuses more on route contracts, application helpers, engine logic, and persistence than on visual component behavior.
 

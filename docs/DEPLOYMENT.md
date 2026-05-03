@@ -235,31 +235,31 @@ Recommended schedule:
 ```cron
 # Sync markets every 5 minutes
 */5 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/sync-markets \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/sync.log 2>&1
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /var/log/forecaster-arena/sync.log 2>&1
 
 # Start a new cohort every Sunday at 00:00 UTC
 0 0 * * 0 curl -s -X POST http://127.0.0.1:3010/api/cron/start-cohort \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/cohort.log 2>&1
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /var/log/forecaster-arena/cohort.log 2>&1
 
 # Run weekly decisions every Sunday at 00:05 UTC
 5 0 * * 0 curl -s -X POST http://127.0.0.1:3010/api/cron/run-decisions \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/decisions.log 2>&1
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /var/log/forecaster-arena/decisions.log 2>&1
 
 # Check resolutions hourly
 0 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/check-resolutions \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/resolutions.log 2>&1
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /var/log/forecaster-arena/resolutions.log 2>&1
 
 # Take snapshots every 10 minutes
 */10 * * * * curl -s -X POST http://127.0.0.1:3010/api/cron/take-snapshots \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/snapshots.log 2>&1
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /var/log/forecaster-arena/snapshots.log 2>&1
 
 # Check OpenRouter for newer general-purpose benchmark candidates every Monday
 0 9 * * 1 curl -s -X POST http://127.0.0.1:3010/api/cron/check-model-lineup \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/model-lineup.log 2>&1
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /var/log/forecaster-arena/model-lineup.log 2>&1
 
 # Create a daily database backup
 0 2 * * * curl -s -X POST http://127.0.0.1:3010/api/cron/backup \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /opt/forecasterarena/logs/backup.log 2>&1
+  -H "Authorization: Bearer YOUR_CRON_SECRET" >> /var/log/forecaster-arena/backup.log 2>&1
 ```
 
 Why this schedule works with the current code:

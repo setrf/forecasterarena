@@ -16,12 +16,30 @@ export function jsonError(error: unknown, status = 500): NextResponse {
   return NextResponse.json({ error: safeErrorMessage(error) }, { status });
 }
 
+export function jsonMessageError(error: string, status = 500): NextResponse {
+  return NextResponse.json({ error }, { status });
+}
+
 export function applicationResultJson<T>(result: ApplicationResult<T>): NextResponse {
   if (!result.ok) {
     return jsonError(result.error, result.status);
   }
 
   return NextResponse.json(result.data);
+}
+
+export function jsonWithCache<T>(
+  body: T,
+  cacheControl: string,
+  init?: ResponseInit
+): NextResponse {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', cacheControl);
+  return response;
+}
+
+export function noStoreJson<T>(body: T, init?: ResponseInit): NextResponse {
+  return jsonWithCache(body, 'no-store', init);
 }
 
 export async function cronResultJson<T>(
@@ -37,7 +55,7 @@ export async function cronResultJson<T>(
 
 export function lookupResultJson<T>(result: LookupResult<T>): NextResponse {
   if (result.status === 'not_found') {
-    return NextResponse.json({ error: result.error }, { status: 404 });
+    return jsonMessageError(result.error, 404);
   }
 
   return NextResponse.json(result.data);

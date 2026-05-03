@@ -1,5 +1,9 @@
 # Release Readiness Audit Report
 
+> Historical document: this audit captured the April 22, 2026 release-candidate
+> state. Its findings are retained for audit history and should not be read as
+> current open issues without re-verifying against the current codebase.
+
 Date: 2026-04-22
 
 Scope: current local workspace on `main`, including the uncommitted simplification refactor, plus pre-existing dirty docs files `docs/README.md` and `docs/CODE_MAP.md`.

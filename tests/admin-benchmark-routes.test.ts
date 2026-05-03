@@ -9,6 +9,29 @@ afterEach(() => {
 });
 
 describe('admin benchmark routes', () => {
+  function adminRouteMock(authenticated = true) {
+    const unauthorized = () => Response.json({ error: 'Unauthorized' }, { status: 401 });
+    return {
+      ensureAdminAuthenticated: () => (authenticated ? null : unauthorized()),
+      adminNoStoreJson: (body: unknown, init?: ResponseInit) => Response.json(body, {
+        ...init,
+        headers: { ...init?.headers, 'Cache-Control': 'no-store' }
+      }),
+      adminSafeErrorJson: (error: unknown) => Response.json({ error: String(error) }, { status: 500 }),
+      readAdminJsonObject: async (request: Request) => (
+        await request.json().catch(() => ({}))
+      ),
+      adminApplicationResultJson: (result: any) => (
+        result.ok
+          ? Response.json(result.data)
+          : Response.json({ error: result.error }, { status: result.status })
+      ),
+      withAdminAuth: async (handler: () => Response | Promise<Response>) => (
+        authenticated ? handler() : unauthorized()
+      )
+    };
+  }
+
   it('returns the admin benchmark overview through the route adapter', async () => {
     const payload = {
       default_config_id: 'config-1',
@@ -17,13 +40,7 @@ describe('admin benchmark routes', () => {
       updated_at: '2026-03-07T00:00:00.000Z'
     };
 
-    vi.doMock('@/lib/api/admin-route', () => ({
-      ensureAdminAuthenticated: () => null,
-      adminNoStoreJson: (body: unknown) => Response.json(body, {
-        headers: { 'Cache-Control': 'no-store' }
-      }),
-      adminSafeErrorJson: (error: unknown) => Response.json({ error: String(error) }, { status: 500 })
-    }));
+    vi.doMock('@/lib/api/admin-route', () => adminRouteMock());
     vi.doMock('@/lib/application/admin-benchmark', () => ({
       getAdminBenchmarkOverview: () => payload
     }));
@@ -37,9 +54,7 @@ describe('admin benchmark routes', () => {
   });
 
   it('adapts release, config, and promotion mutations without reshaping errors', async () => {
-    vi.doMock('@/lib/api/admin-route', () => ({
-      ensureAdminAuthenticated: () => null
-    }));
+    vi.doMock('@/lib/api/admin-route', () => adminRouteMock());
     vi.doMock('@/lib/application/admin-benchmark', () => ({
       createAdminModelReleaseRecord: vi.fn(() => ({
         ok: true as const,
@@ -95,9 +110,7 @@ describe('admin benchmark routes', () => {
   });
 
   it('preserves unauthorized responses across the benchmark admin routes', async () => {
-    vi.doMock('@/lib/api/admin-route', () => ({
-      ensureAdminAuthenticated: () => Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }));
+    vi.doMock('@/lib/api/admin-route', () => adminRouteMock(false));
 
     const overviewRoute = await import('@/app/api/admin/benchmark/route');
     const releaseRoute = await import('@/app/api/admin/benchmark/releases/route');
@@ -148,10 +161,7 @@ describe('admin benchmark routes', () => {
   });
 
   it('adapts lineup review check, approval, and dismissal mutations', async () => {
-    vi.doMock('@/lib/api/admin-route', () => ({
-      ensureAdminAuthenticated: () => null,
-      adminSafeErrorJson: (error: unknown) => Response.json({ error: String(error) }, { status: 500 })
-    }));
+    vi.doMock('@/lib/api/admin-route', () => adminRouteMock());
     vi.doMock('@/lib/application/admin-benchmark', () => ({
       checkModelLineupReview: vi.fn(async () => ({
         id: 'review-1',
@@ -215,9 +225,7 @@ describe('admin benchmark routes', () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {
-      vi.doMock('@/lib/api/admin-route', () => ({
-        ensureAdminAuthenticated: () => null
-      }));
+      vi.doMock('@/lib/api/admin-route', () => adminRouteMock());
 
       const releaseRoute = await import('@/app/api/admin/benchmark/releases/route');
       const configRoute = await import('@/app/api/admin/benchmark/configs/route');

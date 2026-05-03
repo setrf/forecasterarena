@@ -304,7 +304,7 @@ export default function MethodologyPageContent({ models }: MethodologyPageConten
               <a href={`${GITHUB_URL}/blob/main/docs/METHODOLOGY_v2.md`} target="_blank" rel="noreferrer" className="btn btn-secondary text-sm">
                 View Methodology v2 Source
               </a>
-              <a href={`${GITHUB_URL}/blob/main/docs/METHODOLOGY_v1.md`} target="_blank" rel="noreferrer" className="btn btn-secondary text-sm">
+              <a href={`${GITHUB_URL}/blob/main/docs/archive/METHODOLOGY_v1.md`} target="_blank" rel="noreferrer" className="btn btn-secondary text-sm">
                 Historical v1 Methodology
               </a>
             </div>

@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import {
   getPerformanceDataWithDiagnostics,
   resolvePerformanceRequestScope
 } from '@/lib/application/performance';
-import { safeErrorMessage } from '@/lib/utils/security';
+import { jsonError, jsonMessageError, jsonWithCache } from '@/lib/api/result-response';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +15,14 @@ export async function GET(request: NextRequest) {
       searchParams.get('family_id')
     );
     if (!scope.ok) {
-      return NextResponse.json({ error: scope.error }, { status: scope.status });
+      return jsonMessageError(scope.error, scope.status);
     }
 
     const result = getPerformanceDataWithDiagnostics(searchParams.get('range'), scope.scope);
-    const response = NextResponse.json(result.payload);
-
-    response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
+    const response = jsonWithCache(
+      result.payload,
+      'public, max-age=60, stale-while-revalidate=600'
+    );
     response.headers.set(
       'Server-Timing',
       [
@@ -34,6 +35,6 @@ export async function GET(request: NextRequest) {
     );
     return response;
   } catch (error) {
-    return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
+    return jsonError(error);
   }
 }

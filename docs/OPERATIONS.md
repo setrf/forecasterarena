@@ -1,6 +1,6 @@
 # Forecaster Arena Operations Runbook
 
-Last updated: 2026-04-22
+Last updated: 2026-05-03
 
 This runbook documents how to operate the application that exists in the repository today. It focuses on practical runtime procedures, verification steps, and failure handling.
 
@@ -23,8 +23,7 @@ Current production VPS baseline:
 
 - runtime: Next.js served by `forecasterarena.service` under systemd, behind Nginx
 - public domain: `https://forecasterarena.com`
-- active release shape: copied release snapshots under `/opt/forecasterarena-release-*`
-- current production release path: `/opt/forecasterarena-release-20260308-161644`
+- release shape: immutable directories under `/opt/forecasterarena-release-*`
 - state path: `/opt/forecasterarena-state`
 - database path: `/opt/forecasterarena-state/data/forecaster.db`
 - backup path: `/opt/forecasterarena-state/backups`
@@ -205,31 +204,30 @@ The live benchmark now separates:
 
 - `model_families`: stable public competitor slots
 - `model_releases`: exact OpenRouter targets
-- `benchmark_configs`: default lineup manifests that can seed future cohorts and refresh active cohorts
+- `benchmark_configs`: default lineup manifests for future cohorts
 - `agents`: the frozen family/release/config assignment actually used by a cohort
 
 Operational rule:
 
 - register new releases and promote future configs through the admin benchmark control plane
 - do not mutate old `models` rows expecting historical cohorts to follow along safely
-- unarchived active cohorts refresh to the promoted default lineup before Sunday decision runs
-- only decision-eligible active cohorts receive new LLM calls after that refresh
-- archived v1 cohorts skip lineup refreshes, new decisions, and routine snapshots while remaining available for settlement and historical drilldowns
-- historical decisions, trades, and brier scores keep their frozen release lineage even after active cohorts refresh
+- approving a default config affects future cohorts only
+- active and historical cohorts keep their frozen release lineage
+- only decision-eligible active cohorts receive new LLM calls
+- archived v1 cohorts skip new decisions and routine snapshots while remaining available for settlement and historical drilldowns
 
 Recommended release-rotation workflow:
 
 1. Confirm the new OpenRouter release is reachable and priced correctly.
-2. `POST /api/admin/benchmark/releases` to register the exact release under its existing family.
-3. `POST /api/admin/benchmark/configs` to build the next lineup.
+2. Register the exact release under its existing family.
+3. Build a complete benchmark config for every active family.
 4. Review the admin benchmark page and confirm every family points to the intended release and price snapshot.
-5. `POST /api/admin/benchmark/default` to make that config the default lineup.
-6. Use the admin rollover preview/apply flow if you want currently active cohorts to switch immediately.
-7. Verify the next Sunday decision run refreshes active cohorts to the default lineup while historical decision/trade/brier records still show their original releases.
+5. Promote that config as the future default.
+6. Verify the next cohort starts with the promoted config while existing cohorts keep their original releases.
 
 Rollback rule:
 
-- if the wrong default lineup is promoted, promote the previous config again or use the admin rollover flow to apply the previous config to active cohorts
+- if the wrong default lineup is promoted, promote the previous config again before the next cohort starts
 
 ### 5.2 Cohort Existence
 

@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { listMarkets, type MarketSortOption } from '@/lib/application/markets';
-import { parseIntParam, safeErrorMessage } from '@/lib/utils/security';
+import { jsonError, noStoreJson } from '@/lib/api/result-response';
+import { parseIntParam } from '@/lib/utils/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const response = NextResponse.json(listMarkets({
+    return noStoreJson(listMarkets({
       status: searchParams.get('status') || 'active',
       category: searchParams.get('category'),
       search: searchParams.get('search'),
@@ -17,10 +18,7 @@ export async function GET(request: NextRequest) {
       limit: parseIntParam(searchParams.get('limit'), 50, 100),
       offset: parseIntParam(searchParams.get('offset'), 0)
     }));
-
-    response.headers.set('Cache-Control', 'no-store');
-    return response;
   } catch (error) {
-    return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
+    return jsonError(error);
   }
 }

@@ -6,22 +6,18 @@
  * @route GET /api/leaderboard
  */
 
-import { NextResponse } from 'next/server';
 import { getLeaderboardData } from '@/lib/application/leaderboard';
-import { safeErrorMessage } from '@/lib/utils/security';
+import { jsonError, jsonWithCache } from '@/lib/api/result-response';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const response = NextResponse.json(getLeaderboardData());
-
-    response.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=45');
-    return response;
-  } catch (error) {
-    return NextResponse.json(
-      { error: safeErrorMessage(error) },
-      { status: 500 }
+    return jsonWithCache(
+      getLeaderboardData(),
+      'public, max-age=15, stale-while-revalidate=45'
     );
+  } catch (error) {
+    return jsonError(error);
   }
 }

@@ -1,5 +1,10 @@
 # Forecaster Arena V2 Rollout Plan
 
+> Historical document: this plan captured the April 2026 v2 rollout state and
+> is no longer authoritative production guidance. Use `docs/DEPLOYMENT.md`,
+> `docs/OPERATIONS.md`, and `docs/DEPLOYMENT_CHECKLIST.md` for current release
+> procedures.
+
 Last updated: 2026-04-22
 
 This plan captures the current production VPS reality and the local v2 release

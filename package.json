@@ -15,7 +15,7 @@
     "check:openrouter-lineup": "node scripts/check-openrouter-lineup.mjs",
     "check:openrouter-upgrades": "node scripts/check-openrouter-upgrades.mjs",
     "check:queries": "node scripts/check-query-structure.mjs",
-    "repair:apr28-snapshots": "node scripts/repair-apr28-clob-snapshots.mjs",
+    "repair:apr28-snapshots": "tsx scripts/repair-apr28-clob-snapshots.ts",
     "check:standalone-assets": "node scripts/prepare-standalone-assets.mjs --check",
     "prepare:standalone-assets": "node scripts/prepare-standalone-assets.mjs",
     "test": "vitest run",
@@ -48,6 +48,7 @@
     "playwright": "^1.58.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.0.18"
   }

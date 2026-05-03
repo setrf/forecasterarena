@@ -1,79 +1,36 @@
-# Documentation Index
+# Docs Index
 
-Last updated: 2026-04-23
+Current docs should be dense, operational, and tied to code that exists now.
+Historical plans/audits belong in git history unless they are still needed for
+active audit or migration work.
 
-This directory contains both:
+## Canonical Docs
 
-1. **authoritative current-reference documentation**, and
-2. **historical analysis / audit notes**
+| File | Use it for |
+|---|---|
+| [`../README.md`](../README.md) | project overview, setup, verification, cron summary |
+| [`../ARCHITECTURE.md`](../ARCHITECTURE.md) | layering rules and architecture checks |
+| [`METHODOLOGY_v2.md`](./METHODOLOGY_v2.md) | public v2 evaluation protocol |
+| [`API_REFERENCE.md`](./API_REFERENCE.md) | route contracts and auth/cache behavior |
+| [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md) | tables, constraints, migrations, invariants |
+| [`OPERATIONS.md`](./OPERATIONS.md) | production runbook and VPS procedures |
+| [`SECURITY.md`](./SECURITY.md) | trust boundaries, auth, redaction, export safety |
 
-If you want the current system-of-record, start with the files in the first
-section below.
+## Keep Only If Needed
 
----
+These are useful when changing the specific subsystem, but should not become
+general narrative docs:
 
-## Current Reference Docs
+- [`SCORING.md`](./SCORING.md): P&L math and historical diagnostics.
+- [`ACCOUNTING_STATES.md`](./ACCOUNTING_STATES.md): position/market edge cases.
+- [`PROMPT_DESIGN.md`](./PROMPT_DESIGN.md): prompt behavior not obvious from code.
+- [`DEPLOYMENT_CHECKLIST.md`](./DEPLOYMENT_CHECKLIST.md): release-window checklist.
+- [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md): quick failure triage.
 
-These files are intended to match the codebase as it exists today:
+## Prune Policy
 
-- [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
-  - top-level layering rules, import boundaries, and browser QA expectations
-- [`README.md`](../README.md)
-  - top-level project overview, runtime guarantees, current family lineup,
-    environment setup, and route summary
-- [`API_REFERENCE.md`](./API_REFERENCE.md)
-  - detailed contract-level route documentation
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md)
-  - detailed runtime architecture, engine flow, and invariants
-- [`CODE_MAP.md`](./CODE_MAP.md)
-  - repo-wide code map of routes, subsystems, critical flows, invariants, and coverage
-- [`OPERATIONS.md`](./OPERATIONS.md)
-  - production runbook and operational checks
-- [`SECURITY.md`](./SECURITY.md)
-  - current auth, redaction, integrity, and export hardening behavior
-- [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md)
-  - implementation-aligned schema and index reference
-- [`METHODOLOGY_v2.md`](./METHODOLOGY_v2.md)
-  - current portfolio-value methodology specification
-- [`DECISIONS.md`](./DECISIONS.md)
-  - design-decision log for the current implementation
-- [`DEPLOYMENT.md`](./DEPLOYMENT.md)
-  - deployment guide
-- [`DEPLOYMENT_CHECKLIST.md`](./DEPLOYMENT_CHECKLIST.md)
-  - pre/post deploy checklist
-- [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
-  - operational troubleshooting guide
-- [`SCORING.md`](./SCORING.md)
-  - current v2 portfolio-value/P&L scoring details, with historical diagnostics separated
-- [`ACCOUNTING_STATES.md`](./ACCOUNTING_STATES.md)
-  - position/accounting edge-case explanations
-- [`PROMPT_DESIGN.md`](./PROMPT_DESIGN.md)
-  - live v2 prompt-construction notes
-
----
-
-## Historical / Archival Docs
-
-These files are useful for context, but they are **not** the authoritative
-description of current behavior:
-
-- [`AUDIT_REPORT_2025-12-14.md`](./AUDIT_REPORT_2025-12-14.md)
-- [`AUDIT_SUMMARY.md`](./AUDIT_SUMMARY.md)
-- [`CODE_IMPROVEMENTS.md`](./CODE_IMPROVEMENTS.md)
-- [`METHODOLOGY_v1.md`](./METHODOLOGY_v1.md)
-- [`MULTI_COHORT_AGGREGATION_ANALYSIS.md`](./MULTI_COHORT_AGGREGATION_ANALYSIS.md)
-- [`MULTI_COHORT_FIXES_2025-12-14.md`](./MULTI_COHORT_FIXES_2025-12-14.md)
-
-Use these for historical reasoning, not for present-day operational guidance.
-
----
-
-## Supporting Materials
-
-These directories are useful for presentations or historical launch context, but
-they are not the system-of-record for current runtime behavior:
-
-- [`../launch`](../launch)
-  - historical launch copy, outreach drafts, and launch-day checklists
-- [`../presentation`](../presentation)
-  - optional slide deck assets and PDF-export instructions
+- If a doc restates code without adding operational judgment, delete it.
+- If a doc is historical and not linked by the product or an active runbook,
+  rely on git history instead of keeping a markdown artifact.
+- If a doc contradicts code, fix it or remove it in the same change.
+- Do not add new docs unless they replace more ambiguity than they create.

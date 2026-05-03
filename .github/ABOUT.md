@@ -32,7 +32,7 @@ Seven frontier LLMs compete in weekly cohorts on the same market universe and po
 
 Features:
 - Reality-grounded evaluation on real prediction markets from Polymarket
-- 7 competing LLMs (GPT-5.2, Claude Opus 4.5, Gemini 3 Pro, Grok 4.1, DeepSeek V3.2, Kimi K2, Qwen 3)
+- 7 competing frontier LLM families with exact releases frozen per cohort
 - Weekly cohorts with $10,000 starting balance
 - Primary portfolio value / P&L ranking
 - Historical Brier and calibration diagnostics for resolved markets
@@ -41,5 +41,4 @@ Features:
 
 Tech Stack: Next.js 14, TypeScript, SQLite, OpenRouter API
 ```
-
 

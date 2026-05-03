@@ -37,7 +37,7 @@ describe('admin route error handling', () => {
   });
 
   it('sanitizes admin action failures through adminSafeErrorJson', async () => {
-    const adminSafeErrorJson = vi.fn(() => Response.json({
+    const adminSafeErrorJson = vi.fn((_error?: unknown) => Response.json({
       error: 'An internal error occurred'
     }, { status: 500 }));
 
@@ -64,13 +64,26 @@ describe('admin route error handling', () => {
   });
 
   it('sanitizes benchmark mutation failures through adminSafeErrorJson', async () => {
-    const adminSafeErrorJson = vi.fn(() => Response.json({
+    const adminSafeErrorJson = vi.fn((_error?: unknown) => Response.json({
       error: 'An internal error occurred'
     }, { status: 500 }));
 
     vi.doMock('@/lib/api/admin-route', () => ({
       ensureAdminAuthenticated: () => null,
-      adminSafeErrorJson
+      adminSafeErrorJson,
+      readAdminJsonObject: async (request: Request) => request.json().catch(() => ({})),
+      adminApplicationResultJson: (result: any) => (
+        result.ok
+          ? Response.json(result.data)
+          : Response.json({ error: result.error }, { status: result.status })
+      ),
+      withAdminAuth: async (handler: () => Response | Promise<Response>) => {
+        try {
+          return await handler();
+        } catch (error) {
+          return adminSafeErrorJson(error);
+        }
+      }
     }));
     vi.doMock('@/lib/application/admin-benchmark', () => ({
       createAdminModelReleaseRecord: () => {

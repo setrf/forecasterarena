@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { PageContainer, PageLoadingState } from '@/components/ui/PageContainer';
 import { useAgentCohortDetailData } from '@/features/cohorts/model-detail/useAgentCohortDetailData';
 import { AgentCohortBreadcrumbs } from '@/features/cohorts/model-detail/components/AgentCohortBreadcrumbs';
 import { AgentCohortDetailNotFound } from '@/features/cohorts/model-detail/components/AgentCohortDetailNotFound';
@@ -57,9 +58,9 @@ export default function AgentCohortDetailPageClient({
 
   if (loading) {
     return (
-      <div className="container-wide mx-auto px-6 py-20 text-center text-[var(--text-muted)]">
+      <PageLoadingState>
         Loading...
-      </div>
+      </PageLoadingState>
     );
   }
 
@@ -68,7 +69,7 @@ export default function AgentCohortDetailPageClient({
   }
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
+    <PageContainer>
       <AgentCohortBreadcrumbs
         cohortId={cohortId}
         cohortNumber={data.cohort.cohort_number}
@@ -105,6 +106,6 @@ export default function AgentCohortDetailPageClient({
         decision={selectedDecision}
         onClose={() => setSelectedDecision(null)}
       />
-    </div>
+    </PageContainer>
   );
 }

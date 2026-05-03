@@ -1,15 +1,8 @@
-# Troubleshooting Guide
+# Troubleshooting
 
-This guide is for diagnosing operational problems in the current Forecaster
-Arena implementation.
-
-It focuses on the system as it exists today:
-
-- Next.js app server
-- SQLite database
-- cron-triggered internal endpoints
-- OpenRouter-backed weekly model decisions
-- timestamped portfolio snapshots
+Short operational triage for the current single-node deployment: Next.js under
+systemd, SQLite, cron-triggered internal endpoints, OpenRouter decisions, and
+10-minute portfolio snapshots.
 
 ---
 
@@ -18,15 +11,15 @@ It focuses on the system as it exists today:
 Start with these checks:
 
 ```bash
-pm2 status
-pm2 logs forecaster-arena --lines 100
+systemctl status forecasterarena --no-pager
+journalctl -u forecasterarena --no-pager -n 100
 curl -s https://yourdomain.example/api/health | jq
 sqlite3 /path/to/forecaster.db "PRAGMA integrity_check;"
 ```
 
 Interpretation:
 
-- PM2 unhealthy: app startup/runtime issue
+- systemd unhealthy: app startup/runtime issue
 - `/api/health` degraded: config, DB, or integrity issue
 - integrity check fails: stop and investigate before continuing writes
 
@@ -66,14 +59,14 @@ typecheck to work.
 
 ### Symptoms
 
-- PM2 shows `errored`
+- `forecasterarena.service` is failed or restart-looping
 - reverse proxy returns `502`
 - startup logs stop immediately
 
 ### Checks
 
 ```bash
-pm2 logs forecaster-arena --lines 200
+journalctl -u forecasterarena --no-pager -n 200
 printenv | rg 'OPENROUTER_API_KEY|CRON_SECRET|ADMIN_PASSWORD|DATABASE_PATH|BACKUP_PATH'
 ls -l .env.local
 ```
@@ -162,9 +155,9 @@ of expecting `/api/health` to reveal them.
 
 ```bash
 crontab -l
-tail -n 100 /opt/forecasterarena/logs/sync.log
-tail -n 100 /opt/forecasterarena/logs/decisions.log
-tail -n 100 /opt/forecasterarena/logs/snapshots.log
+tail -n 100 /var/log/forecaster-arena/sync.log
+tail -n 100 /var/log/forecaster-arena/decisions.log
+tail -n 100 /var/log/forecaster-arena/snapshots.log
 ```
 
 ### Manual auth test
@@ -199,8 +192,8 @@ host timezone.
 
 #### Cron exists but points to wrong port
 
-If PM2 runs the app on `3010` but cron targets `3000`, jobs will silently miss
-the live service.
+If systemd runs the app on `3010` but cron targets `3000`, jobs will silently
+miss the live service.
 
 ---
 
@@ -240,7 +233,7 @@ If a run dies mid-flight:
 ### Recovery approach
 
 1. inspect the latest decision rows
-2. inspect PM2 logs for provider or timeout errors
+2. inspect systemd logs for provider or timeout errors
 3. rerun `/api/cron/run-decisions` manually with valid auth if needed
 
 Because the row is claimed before execution, reruns should reuse the same
@@ -449,11 +442,10 @@ If integrity fails:
 
 When something is wrong:
 
-1. check PM2 process health
+1. check `forecasterarena.service` health
 2. hit `/api/health`
 3. inspect app logs
 4. inspect DB integrity
 5. inspect `system_logs`
 6. manually hit the failing endpoint with the expected auth
 7. only then restart cron/app services if the root cause still points there
-

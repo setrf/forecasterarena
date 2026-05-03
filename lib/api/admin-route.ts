@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAuthenticated } from '@/lib/auth';
+import type { ApplicationResult } from '@/lib/api/result-response';
 import { safeErrorMessage } from '@/lib/utils/security';
 
 export function ensureAdminAuthenticated(): NextResponse | null {
@@ -22,4 +23,38 @@ export function adminSafeErrorJson(error: unknown, status: number = 500): NextRe
     { error: safeErrorMessage(error) },
     { status }
   );
+}
+
+export async function readAdminJsonObject(request: Request): Promise<Record<string, unknown>> {
+  const body = await request.json().catch(() => ({}));
+  return body && typeof body === 'object' && !Array.isArray(body)
+    ? body as Record<string, unknown>
+    : {};
+}
+
+export function adminApplicationResultJson<T>(result: ApplicationResult<T>): NextResponse {
+  if (!result.ok) {
+    return adminNoStoreJson({ error: result.error }, { status: result.status });
+  }
+
+  return adminNoStoreJson(result.data);
+}
+
+export async function withAdminAuth(
+  handler: () => NextResponse | Promise<NextResponse>,
+  logPrefix?: string
+): Promise<NextResponse> {
+  const authResponse = ensureAdminAuthenticated();
+  if (authResponse) {
+    return authResponse;
+  }
+
+  try {
+    return await handler();
+  } catch (error) {
+    if (logPrefix) {
+      console.error(`${logPrefix}:`, error);
+    }
+    return adminSafeErrorJson(error);
+  }
 }

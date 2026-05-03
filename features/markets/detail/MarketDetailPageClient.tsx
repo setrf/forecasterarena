@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import { PageContainer, PageLoadingState } from '@/components/ui/PageContainer';
 import { MarketBrierScoresTable } from '@/features/markets/detail/components/MarketBrierScoresTable';
 import { MarketDetailHeader } from '@/features/markets/detail/components/MarketDetailHeader';
 import { MarketDetailNotFound } from '@/features/markets/detail/components/MarketDetailNotFound';
@@ -31,9 +32,9 @@ export default function MarketDetailPageClient({
 
   if (loading) {
     return (
-      <div className="container-wide mx-auto px-6 py-20 text-center text-[var(--text-muted)]">
+      <PageLoadingState>
         Loading market...
-      </div>
+      </PageLoadingState>
     );
   }
 
@@ -42,7 +43,7 @@ export default function MarketDetailPageClient({
   }
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
+    <PageContainer>
       <MarketDetailHeader
         market={market}
         statusBadge={getMarketStatusBadge(market.status)}
@@ -61,6 +62,6 @@ export default function MarketDetailPageClient({
         onNavigateToDecision={(decisionId) => router.push(`/decisions/${decisionId}`)}
       />
       <MarketExternalLink market={market} />
-    </div>
+    </PageContainer>
   );
 }

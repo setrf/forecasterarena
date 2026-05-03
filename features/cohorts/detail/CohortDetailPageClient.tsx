@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { formatDisplayDate } from '@/lib/utils';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { PageContainer, PageLoadingState } from '@/components/ui/PageContainer';
 import { useCohortDetailData } from '@/features/cohorts/detail/useCohortDetailData';
 import { CohortDetailHeader } from '@/features/cohorts/detail/components/CohortDetailHeader';
 import { CohortDetailNotFound } from '@/features/cohorts/detail/components/CohortDetailNotFound';
@@ -44,9 +45,9 @@ export default function CohortDetailPageClient({
 
   if (loading) {
     return (
-      <div className="container-wide mx-auto px-6 py-20 text-center text-[var(--text-muted)]">
+      <PageLoadingState>
         Loading cohort...
-      </div>
+      </PageLoadingState>
     );
   }
 
@@ -55,7 +56,7 @@ export default function CohortDetailPageClient({
   }
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
+    <PageContainer>
       <CohortDetailHeader cohort={cohort} />
       <CohortStatsGrid stats={stats} />
       <CohortPerformanceSection
@@ -79,6 +80,6 @@ export default function CohortDetailPageClient({
         Started {formatDisplayDate(cohort.started_at)}
         {cohort.completed_at && ` • Completed ${formatDisplayDate(cohort.completed_at)}`}
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe('public data routes', () => {
-  it('adapts leaderboard application data into a no-store response', async () => {
+  it('adapts leaderboard application data into a short-lived cacheable response', async () => {
     const payload = {
       leaderboard: [{ family_slug: 'family-1', total_pnl: 123 }],
       models: [],
@@ -35,7 +35,7 @@ describe('public data routes', () => {
     expect(await response.json()).toEqual(payload);
   });
 
-  it('marks leaderboard responses as no-store', async () => {
+  it('includes decision metadata in cacheable leaderboard responses', async () => {
     const ctx = await createIsolatedTestContext({ nodeEnv: 'test' });
 
     try {

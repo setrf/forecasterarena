@@ -9,6 +9,7 @@ type CohortsModule = typeof import('@/lib/db/queries/cohorts');
 type CostsModule = typeof import('@/lib/db/queries/costs');
 type LeaderboardModule = typeof import('@/lib/db/queries/leaderboard');
 type LogsModule = typeof import('@/lib/db/queries/logs');
+type MarketPriceSnapshotsModule = typeof import('@/lib/db/queries/market-price-snapshots');
 type MarketsModule = typeof import('@/lib/db/queries/markets');
 type ModelsModule = typeof import('@/lib/db/queries/models');
 type PositionsModule = typeof import('@/lib/db/queries/positions');
@@ -23,6 +24,7 @@ interface LoadedModules {
   db: ReturnType<DbModule['getDb']>;
   leaderboard: LeaderboardModule;
   logs: LogsModule;
+  marketPriceSnapshots: MarketPriceSnapshotsModule;
   markets: MarketsModule;
   models: ModelsModule;
   snapshots: SnapshotsModule;
@@ -49,6 +51,7 @@ async function withModules(run: (modules: LoadedModules) => Promise<void> | void
       costs,
       leaderboard,
       logs,
+      marketPriceSnapshots,
       markets,
       models,
       snapshots,
@@ -61,6 +64,7 @@ async function withModules(run: (modules: LoadedModules) => Promise<void> | void
       import('@/lib/db/queries/costs'),
       import('@/lib/db/queries/leaderboard'),
       import('@/lib/db/queries/logs'),
+      import('@/lib/db/queries/market-price-snapshots'),
       import('@/lib/db/queries/markets'),
       import('@/lib/db/queries/models'),
       import('@/lib/db/queries/snapshots'),
@@ -76,6 +80,7 @@ async function withModules(run: (modules: LoadedModules) => Promise<void> | void
       db: dbModule.getDb(),
       leaderboard,
       logs,
+      marketPriceSnapshots,
       markets,
       models,
       snapshots,
@@ -579,6 +584,64 @@ describe('db query modules - support and reporting', () => {
       ]);
       expect(snapshots.getSnapshotsByAgent(agent!.id, 1).map(snapshot => snapshot.id)).toEqual([latest.id]);
       expect(snapshots.getLatestSnapshot(agent!.id)?.id).toBe(latest.id);
+    });
+  });
+
+  it('covers market price provenance upserts with nullable and populated fields', async () => {
+    await withModules(({ db, marketPriceSnapshots, markets }) => {
+      const market = createMarket(markets, { question: 'Provenance market' });
+
+      marketPriceSnapshots.upsertMarketPriceSnapshot({
+        market_id: market.id,
+        snapshot_timestamp: '2026-05-03 00:00:00',
+        source: 'clob',
+        accepted_price: 0.42,
+        accepted_prices: JSON.stringify({ YES: 0.42, NO: 0.58 }),
+        gamma_price: 0.9,
+        gamma_prices: JSON.stringify({ YES: 0.9, NO: 0.1 }),
+        clob_token_ids: JSON.stringify(['yes-token', 'no-token']),
+        validation_status: 'accepted_with_gamma_disagreement',
+        anomaly_reason: 'Gamma price differs'
+      });
+
+      expect(db.prepare(`
+        SELECT source, accepted_price, accepted_prices, gamma_price, gamma_prices,
+          clob_token_ids, validation_status, anomaly_reason
+        FROM market_price_snapshots
+        WHERE market_id = ?
+      `).get(market.id)).toEqual({
+        source: 'clob',
+        accepted_price: 0.42,
+        accepted_prices: JSON.stringify({ YES: 0.42, NO: 0.58 }),
+        gamma_price: 0.9,
+        gamma_prices: JSON.stringify({ YES: 0.9, NO: 0.1 }),
+        clob_token_ids: JSON.stringify(['yes-token', 'no-token']),
+        validation_status: 'accepted_with_gamma_disagreement',
+        anomaly_reason: 'Gamma price differs'
+      });
+
+      marketPriceSnapshots.upsertMarketPriceSnapshot({
+        market_id: market.id,
+        snapshot_timestamp: '2026-05-03 00:00:00',
+        source: 'fallback',
+        validation_status: 'fallback'
+      });
+
+      expect(db.prepare(`
+        SELECT source, accepted_price, accepted_prices, gamma_price, gamma_prices,
+          clob_token_ids, validation_status, anomaly_reason
+        FROM market_price_snapshots
+        WHERE market_id = ?
+      `).get(market.id)).toEqual({
+        source: 'fallback',
+        accepted_price: null,
+        accepted_prices: null,
+        gamma_price: null,
+        gamma_prices: null,
+        clob_token_ids: null,
+        validation_status: 'fallback',
+        anomaly_reason: null
+      });
     });
   });
 

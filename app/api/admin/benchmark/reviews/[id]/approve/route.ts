@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { approveModelLineupReviewRecord } from '@/lib/application/admin-benchmark';
-import { adminSafeErrorJson, ensureAdminAuthenticated } from '@/lib/api/admin-route';
+import { adminApplicationResultJson, withAdminAuth } from '@/lib/api/admin-route';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,19 +8,7 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const authResponse = ensureAdminAuthenticated();
-  if (authResponse) {
-    return authResponse;
-  }
-
-  try {
-    const result = approveModelLineupReviewRecord(params.id);
-    if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
-    }
-
-    return NextResponse.json(result.data);
-  } catch (error) {
-    return adminSafeErrorJson(error);
-  }
+  return withAdminAuth(() => adminApplicationResultJson(
+    approveModelLineupReviewRecord(params.id)
+  ));
 }

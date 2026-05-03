@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageContainer } from '@/components/ui/PageContainer';
 
 interface ModelDetailNotFoundProps {
   message: string;
@@ -6,7 +7,7 @@ interface ModelDetailNotFoundProps {
 
 export function ModelDetailNotFound({ message }: ModelDetailNotFoundProps) {
   return (
-    <div className="container-wide mx-auto px-6 py-20 text-center">
+    <PageContainer className="py-20 text-center">
       <h1 className="heading-block mb-4">{message}</h1>
       <p className="text-[var(--text-secondary)] mb-6">
         The model you&apos;re looking for doesn&apos;t exist.
@@ -19,6 +20,6 @@ export function ModelDetailNotFound({ message }: ModelDetailNotFoundProps) {
           Read Methodology
         </Link>
       </div>
-    </div>
+    </PageContainer>
   );
 }

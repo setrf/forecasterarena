@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { PageContainer } from '@/components/ui/PageContainer';
 import { PageIntro } from '@/components/ui/PageIntro';
 
 interface AdminPageShellProps {
@@ -28,7 +29,7 @@ export function AdminPageShell({
   const pathname = usePathname();
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
+    <PageContainer>
       <div className="-mx-6 mb-8">
         <PageIntro
           eyebrow="Admin"
@@ -61,6 +62,6 @@ export function AdminPageShell({
       </nav>
 
       {children}
-    </div>
+    </PageContainer>
   );
 }

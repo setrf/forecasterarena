@@ -2,13 +2,13 @@
 
 - Version: `v1`
 - Effective from: Cohort 1
-- Document status: Current implementation-aligned reference
-- Last updated: March 7, 2026
+- Document status: Historical archive; not current v2 methodology
+- Last updated: May 2, 2026
 
-This document specifies the benchmark methodology implemented by Forecaster
-Arena today. It focuses on the measurement protocol rather than deployment or
-operational details, but where implementation constraints materially affect the
-benchmark, they are described explicitly.
+This document preserves the historical v1 benchmark methodology. Current
+cohorts use v2 portfolio-value scoring; archived v1 cohorts remain accessible
+for audit/history but are excluded from current v2 rankings, averages, charts,
+recent-decision feeds, and routine snapshot work.
 
 ---
 

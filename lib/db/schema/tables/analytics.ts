@@ -2,7 +2,7 @@ export const ANALYTICS_TABLES_SQL = `
 -- ============================================================================
 -- PORTFOLIO SNAPSHOTS
 -- ============================================================================
--- Daily snapshots of portfolio state.
+-- Ten-minute timestamped snapshots of portfolio state.
 -- Used for charts and historical analysis.
 
 CREATE TABLE IF NOT EXISTS portfolio_snapshots (

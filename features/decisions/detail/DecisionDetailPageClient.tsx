@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { PageContainer, PageLoadingState } from '@/components/ui/PageContainer';
 import { useDecisionDetailData } from '@/features/decisions/detail/useDecisionDetailData';
 import type { DecisionDetailData, Trade } from '@/features/decisions/detail/types';
 import { formatDisplayDateTime } from '@/lib/utils';
@@ -38,20 +39,20 @@ export default function DecisionDetailPageClient({
 
   if (loading) {
     return (
-      <div className="container-wide mx-auto px-6 py-20 text-center text-[var(--text-muted)]">
+      <PageLoadingState>
         Loading decision...
-      </div>
+      </PageLoadingState>
     );
   }
 
   if (error || !decision) {
     return (
-      <div className="container-wide mx-auto px-6 py-20 text-center">
+      <PageContainer className="py-20 text-center">
         <h1 className="heading-block mb-4">{error || 'Decision Not Found'}</h1>
         <Link href="/markets" className="btn btn-primary">
           Back to Markets
         </Link>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -63,7 +64,7 @@ export default function DecisionDetailPageClient({
   const backToMarketHref = primaryTrade?.market_id ? `/markets/${primaryTrade.market_id}` : '/markets';
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
+    <PageContainer>
       <Link
         href={backToMarketHref}
         className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 mb-6"
@@ -193,6 +194,6 @@ export default function DecisionDetailPageClient({
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

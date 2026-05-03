@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageContainer } from '@/components/ui/PageContainer';
 
 interface AgentCohortDetailNotFoundProps {
   error: string;
@@ -6,7 +7,7 @@ interface AgentCohortDetailNotFoundProps {
 
 export function AgentCohortDetailNotFound({ error }: AgentCohortDetailNotFoundProps) {
   return (
-    <div className="container-wide mx-auto px-6 py-20 text-center">
+    <PageContainer className="py-20 text-center">
       <h1 className="heading-block mb-4">{error || 'Not Found'}</h1>
       <p className="text-[var(--text-secondary)] mb-6">
         {error === 'Agent not found in this cohort'
@@ -21,6 +22,6 @@ export function AgentCohortDetailNotFound({ error }: AgentCohortDetailNotFoundPr
           Browse Model Families
         </Link>
       </div>
-    </div>
+    </PageContainer>
   );
 }

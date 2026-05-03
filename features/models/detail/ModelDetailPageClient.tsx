@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { TimeRange } from '@/components/charts/TimeRangeSelector';
+import { PageContainer } from '@/components/ui/PageContainer';
 import { useModelDetailData } from '@/features/models/detail/useModelDetailData';
 import { ModelCohortPerformancePanel } from '@/features/models/detail/components/ModelCohortPerformancePanel';
 import { ModelDetailHeader } from '@/features/models/detail/components/ModelDetailHeader';
@@ -70,7 +71,7 @@ export default function ModelDetailPageClient({
   }
 
   return (
-    <div className="container-wide mx-auto px-6 py-12">
+    <PageContainer>
       {model && <ModelDetailHeader model={model} />}
       <ModelStatsGrid
         avgPnlPercent={data?.avg_pnl_percent ?? 0}
@@ -120,6 +121,6 @@ export default function ModelDetailPageClient({
         decision={selectedDecision}
         onClose={() => setSelectedDecision(null)}
       />
-    </div>
+    </PageContainer>
   );
 }

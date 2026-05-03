@@ -1,5 +1,5 @@
-import PerformanceChart from '@/components/charts/PerformanceChart';
-import TimeRangeSelector, { type TimeRange } from '@/components/charts/TimeRangeSelector';
+import { PerformanceChartPanel } from '@/components/charts/PerformanceChartPanel';
+import type { TimeRange } from '@/components/charts/TimeRangeSelector';
 import type { ReleaseChangeEvent } from '@/features/cohorts/model-detail/types';
 
 interface AgentPerformanceSectionProps {
@@ -18,19 +18,16 @@ export function AgentPerformanceSection({
   onTimeRangeChange
 }: AgentPerformanceSectionProps) {
   return (
-    <div className="chart-container mb-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-        <h3 className="heading-card">Portfolio Value Over Time</h3>
-        <TimeRangeSelector selected={timeRange} onChange={onTimeRangeChange} />
-      </div>
-      <PerformanceChart
-        data={chartData}
-        models={chartModels}
-        releaseChanges={releaseChanges}
-        height={520}
-        showLegend={false}
-        timeRange={timeRange}
-      />
-    </div>
+    <PerformanceChartPanel
+      title="Portfolio Value Over Time"
+      chartData={chartData}
+      chartModels={chartModels}
+      releaseChanges={releaseChanges}
+      timeRange={timeRange}
+      onTimeRangeChange={onTimeRangeChange}
+      height={520}
+      showLegend={false}
+      className="mb-10"
+    />
   );
 }
