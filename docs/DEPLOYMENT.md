@@ -68,7 +68,7 @@ Optional variables:
 ```env
 DATABASE_PATH=/opt/forecasterarena-state/data/forecaster.db
 BACKUP_PATH=/opt/forecasterarena-state/backups
-BACKUP_RETENTION_COUNT=7
+BACKUP_RETENTION_COUNT=1
 DECISION_COHORT_LIMIT=5
 ```
 
@@ -269,8 +269,8 @@ Why this schedule works with the current code:
 - decision execution is sequential, so giving it a dedicated weekly slot matters
 - snapshots are timestamp-based and intended for 10-minute cadence
 - model-lineup checks are read-only catalog scans; admins approve future defaults separately
-- backup retention must be enforced externally or in code so daily SQLite
-  backups do not fill the root filesystem
+- backup retention defaults to one retained SQLite backup; move longer-term
+  backups off-box if needed
 
 ---
 
@@ -425,8 +425,8 @@ If the problem is database corruption rather than code:
   closed and `/api/health` will return `503`
 - Because SQLite is the source of truth, disk health and backup discipline
   matter
-- Because daily backups can exceed 600 MB each, keep only a bounded retention
-  window on the VPS and move longer-term backups off-box
+- Because daily backups can exceed 600 MB each, the VPS keeps one local
+  backup by default; move longer-term backups off-box
 - Because OpenRouter billing failures produce decision rows with `ERROR`,
   verify account credit before the Sunday decision window
 - Because old cohorts can stay unresolved for months, `run-decisions` only

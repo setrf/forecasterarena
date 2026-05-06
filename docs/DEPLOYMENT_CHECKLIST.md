@@ -31,7 +31,7 @@ than a generic Next.js app.
 - [ ] `NEXT_PUBLIC_SITE_URL` points to the deployment URL
 - [ ] Optional `DATABASE_PATH` and `BACKUP_PATH` are correct for the host
 - [ ] Optional `BACKUP_RETENTION_COUNT` is set intentionally, or the default
-      one-week retention is acceptable
+      single-backup retention is acceptable
 
 ### Host Requirements
 
